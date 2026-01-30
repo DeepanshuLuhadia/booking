@@ -1,0 +1,402 @@
+📘 MULTI-VENDOR APPOINTMENT BOOKING PLATFORM
+COMPLETE FUNCTIONAL WORKFLOW DOCUMENT (v1.2)
+1. SYSTEM OVERVIEW
+
+The platform allows customers to discover nearby vendors (shops), view employee availability, and book same-day appointments via QR code or direct website search. Vendors manage employees, slots, bookings, payments, and business settings from a backend dashboard.
+
+2. USER ROLES
+2.1 Admin
+
+Manages platform
+
+Manages subscription plans
+
+Controls settlements
+
+2.2 Vendor (Shop / Business)
+
+Registers business
+
+Subscribes to a plan
+
+Manages employees, slots, and bookings
+
+Receives payments after settlement cycle
+
+2.3 Employee
+
+Belongs to a vendor
+
+Has defined working hours and slot duration
+
+2.4 Customer
+
+Browses vendors
+
+Books available slots
+
+Pays token/emergency fees (if applicable)
+
+3. VENDOR ONBOARDING WORKFLOW
+3.1 Vendor Registration
+
+Vendor registers with:
+
+Business Name
+
+Owner Name
+
+Mobile / Email (OTP verification)
+
+Password
+
+Vendor account status:
+
+inactive (until plan payment completed)
+
+3.2 Subscription Plan Selection
+Plan Name	Price	Max Employees
+Basic	₹999	2
+Standard	₹1999	5
+Premium	₹3999	15
+
+Rules:
+
+Employee creation restricted by plan
+
+Plan stored against vendor
+
+Upgrade/Downgrade supported later
+
+After successful payment:
+
+Vendor account becomes active
+
+4. VENDOR PROFILE & BUSINESS SETTINGS
+4.1 Business Information
+
+Vendor provides:
+
+Business Name
+
+One Shop Photo (mandatory)
+
+Google Maps Address (paste link or select place)
+
+Auto-extract Latitude & Longitude
+
+Contact Number
+
+4.2 Business Status Control
+
+Business Open / Closed Toggle
+
+Default: OPEN
+
+If CLOSED:
+
+No customer bookings allowed
+
+Vendor manual booking still allowed (optional rule)
+
+4.3 Token (Advance Payment) Settings
+
+Token booking is optional and fully controlled by vendor.
+
+Settings:
+
+Token Booking Toggle
+
+Default: ❌ INACTIVE
+
+Token Amount (only if toggle is ON)
+
+Minimum: ₹10
+
+Maximum: Service price / booking amount
+
+Rules:
+
+If token toggle OFF → no online payment
+
+If token toggle ON → token payment required during booking
+
+Token amount adjustable anytime by vendor
+
+5. EMPLOYEE MANAGEMENT
+5.1 Add Employee
+
+Vendor can add employees within plan limits.
+
+Employee fields:
+
+Name
+
+Working Start Time
+
+Working End Time
+
+Slot Duration (default: 45 minutes)
+
+Active / Inactive status
+
+5.2 Slot Generation Logic
+
+Slots are generated dynamically, not stored.
+
+For each employee (same day only):
+
+Start from working start time
+
+Create slots using slot duration
+
+Stop at working end time
+
+Example:
+
+09:00 – 09:45
+09:45 – 10:30
+10:30 – 11:15
+...
+
+6. SLOT AVAILABILITY ENGINE
+6.1 Slot Filtering Rules
+
+From generated slots, remove:
+
+Past slots
+
+Already booked slots
+
+Disabled or blocked slots
+
+6.2 Advance Booking Rule
+
+Normal booking allowed only after 2 hours from current time
+
+Example:
+
+Current time: 10:00
+Normal booking allowed from: 12:00 onwards
+
+7. EMERGENCY BOOKING LOGIC
+
+Emergency booking is conditional, not guaranteed.
+
+7.1 Emergency Availability Check
+
+Emergency option is shown ONLY if:
+
+Customer selects a specific employee
+
+System checks next 2 hours window
+
+At least one free slot exists in that window
+
+If no free slot exists:
+
+Emergency booking option is NOT shown
+
+7.2 Emergency Charges
+
+Flat emergency fee: ₹20
+
+Paid online at booking time
+
+If token booking is enabled:
+
+Total online payment =
+Token Amount + ₹20 emergency fee
+
+8. MANUAL SLOT OVERRIDE (VENDOR)
+8.1 Future Slot Opening
+
+Vendor can manually open:
+
+Any future time slot
+
+Only if employee is available
+
+Slot must not overlap with existing bookings
+
+Purpose:
+
+Handle rush days
+
+Extended working hours
+
+Manual adjustments
+
+9. CUSTOMER DISCOVERY & SEARCH
+9.1 Nearby Vendor Listing
+
+When customer opens website:
+
+System detects location (GPS / browser / manual search)
+
+Shows nearby vendors sorted by distance
+
+Vendor card includes:
+
+Shop Photo
+
+Business Name
+
+Address
+
+Open / Closed status
+
+9.2 Search Functionality
+
+Customer can search vendor by:
+
+Shop name
+
+Area / locality
+
+Keyword
+
+10. QR CODE BOOKING FLOW
+
+Each vendor has a unique QR code:
+
+/vendor/{vendor_slug}/book
+
+
+QR code redirects customer directly to vendor booking page.
+
+11. CUSTOMER BOOKING FLOW
+
+Customer:
+
+Selects vendor
+
+Selects employee
+
+Views available slots
+
+Chooses normal or emergency booking (if available)
+
+Completes payment (if required)
+
+System validates:
+
+Vendor open status
+
+Employee active
+
+Slot availability
+
+Advance/emergency rules
+
+12. VENDOR SELF-BOOKING FEATURE (NEW)
+
+Vendor can create bookings manually from backend.
+
+12.1 Vendor Booking Flow
+
+Vendor:
+
+Selects employee
+
+Selects available slot
+
+Confirms booking
+
+Rules:
+
+Slot is booked immediately
+
+No payment required
+
+Booking marked as vendor_booked = true
+
+Use cases:
+
+Walk-in customers
+
+Phone bookings
+
+Offline management
+
+13. BOOKING RECORD STRUCTURE
+
+Each booking stores:
+
+Vendor ID
+
+Employee ID
+
+Booking Date (same day)
+
+Slot Start & End Time
+
+Booking Type: normal / emergency / vendor
+
+Token Required (yes/no)
+
+Token Amount
+
+Emergency Fee
+
+Online Paid Amount
+
+Booking Status:
+
+confirmed
+
+cancelled
+
+completed
+
+no_show
+
+Slot becomes locked once booking is confirmed.
+
+14. NOTIFICATIONS
+14.1 Web Push Notifications
+
+On every booking:
+
+Vendor receives web push notification
+
+Contains:
+
+Employee name
+
+Slot time
+
+Booking type
+
+15. PAYMENT & SETTLEMENT
+15.1 Online Payment Handling
+
+Online payments include:
+
+Token amount
+
+Emergency fee (if applicable)
+
+15.2 Settlement Cycle
+
+Payments held by platform
+
+Vendor settlement generated every 15 days
+
+Payout processed after deduction (commission can be added later)
+
+16. HARD SYSTEM RULES
+
+Booking allowed for same day only
+
+Employee limit enforced by subscription plan
+
+Token booking default OFF
+
+Emergency booking only if slot exists
+
+Slot overlap strictly prohibited
+
+Vendor manual booking bypasses payment
+
+Business closed = no customer booking
