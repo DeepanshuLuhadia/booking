@@ -56,9 +56,9 @@ inactive (until plan payment completed)
 
 3.2 Subscription Plan Selection
 Plan Name	Price	Max Employees
-Basic	₹999	2
-Standard	₹1999	5
-Premium	₹3999	15
+Basic	₹199	2
+Standard	₹299	5
+Premium	₹399	15
 
 Rules:
 

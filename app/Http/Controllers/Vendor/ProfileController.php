@@ -29,6 +29,9 @@ class ProfileController extends Controller
             'upi_id' => 'nullable|string|max:255',
             'service_fee' => 'nullable|numeric|min:0',
             'emergency_fee' => 'nullable|numeric|min:0',
+            'vendor_type' => 'nullable|in:doctor,barber,activity,training,consultant',
+            'appointment_mode' => 'nullable|in:time_slot,token',
+            'avg_consultation_time' => 'nullable|integer|min:1',
         ]);
 
         $data = $request->except('shop_photo');

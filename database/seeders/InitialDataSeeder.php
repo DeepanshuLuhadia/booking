@@ -27,19 +27,19 @@ class InitialDataSeeder extends Seeder
         $plans = [
             [
                 'name' => 'Basic',
-                'price' => 999,
+                'price' => 199,
                 'max_employees' => 2,
                 'features' => ['Up to 2 employees', 'Basic analytics', 'Online bookings', 'QR Code'],
             ],
             [
                 'name' => 'Standard',
-                'price' => 1999,
+                'price' => 299,
                 'max_employees' => 5,
                 'features' => ['Up to 5 employees', 'Pro analytics', 'Online bookings', 'Priority support', 'QR Code'],
             ],
             [
                 'name' => 'Premium',
-                'price' => 3999,
+                'price' => 399,
                 'max_employees' => 15,
                 'features' => ['Up to 15 employees', 'Advanced analytics', 'Online bookings', 'Dedicated account manager', 'QR Code'],
             ],

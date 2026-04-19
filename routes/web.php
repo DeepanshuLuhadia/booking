@@ -10,9 +10,10 @@ Route::get('/', [\App\Http\Controllers\CustomerDiscoveryController::class, 'inde
 Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('discover');
 Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
 
+// Guest-accessible booking (no login required)
+Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
+
 Route::middleware(['auth'])->group(function () {
-    Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])->name('bookings.store');
-    
     Route::get('/verify-otp', [\App\Http\Controllers\Auth\OtpController::class, 'show'])->name('otp.verify');
     Route::post('/verify-otp', [\App\Http\Controllers\Auth\OtpController::class, 'verify']);
     Route::get('/resend-otp', [\App\Http\Controllers\Auth\OtpController::class, 'resend'])->name('otp.resend');

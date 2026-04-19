@@ -1,50 +1,66 @@
-<x-app-layout>
-    <div class="flex items-center justify-center min-h-[80vh]">
-        <div class="glass-card w-full max-w-md p-10 relative overflow-hidden">
-            <!-- Decorative blur -->
-            <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary-500/20 blur-3xl rounded-full"></div>
-            
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-bold mb-2">Welcome Back</h2>
-                <p class="text-gray-400">Login to manage your bookings</p>
+<x-app-layout page-title="Secure Portal Access | Appointment Platform">
+    <div class="relative min-h-[90vh] flex items-center justify-center py-20 bg-theme-main">
+        <!-- Subtle Institutional Pattern -->
+        <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
+
+        <div class="relative z-10 w-full max-w-xl px-6 animate-reveal">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 rounded-full text-white/70 text-[9px] font-black uppercase tracking-widest mb-8">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    Institutional Security Protocol
+                </div>
+                <h1 class="text-5xl md:text-[4rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
+                    Authorize <span class="text-theme-primary">Access.</span>
+                </h1>
+                <p class="text-lg font-medium text-white/80 max-w-sm mx-auto italic leading-relaxed">Login to manage your professional appointments and registry credentials.</p>
             </div>
 
-            <form method="POST" action="/login" class="space-y-6">
-                @csrf
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
-                    <input type="email" name="email" required class="w-full glass-input" placeholder="admin@gmail.com">
-                    @error('email')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
+            <div class="glass-card p-4 overflow-hidden shadow-2xl">
+                <form method="POST" action="/login" class="p-8 space-y-8 rounded-[3rem]">
+                    @csrf
+                    
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">User Identification</label>
+                        <input type="email" name="email" required 
+                               class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg placeholder:text-slate-400 text-slate-900" 
+                               placeholder="Primary Email Identity" value="{{ old('email') }}">
+                        @error('email')
+                            <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-6">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Password</label>
-                    <input type="password" name="password" required class="w-full glass-input" placeholder="••••••••">
-                    @error('password')
-                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Security Credential</label>
+                        <input type="password" name="password" required 
+                               class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg placeholder:text-slate-400 text-slate-900" 
+                               placeholder="••••••••">
+                        @error('password')
+                            <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-6">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                <div class="flex items-center justify-between text-sm">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="rounded border-white/10 bg-white/5 text-primary-500 focus:ring-primary-500">
-                        <span class="text-gray-400">Remember me</span>
-                    </label>
-                    <a href="#" class="text-primary-400 hover:underline">Forgot password?</a>
-                </div>
+                    <div class="flex items-center justify-between pt-2 px-4">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" name="remember" class="w-5 h-5 rounded-lg border-2 border-slate-200 bg-slate-50 text-theme-primary focus:ring-theme-primary/10">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Persistent Sync</span>
+                        </label>
+                        <a href="#" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-theme-primary transition-colors">Recover Keys</a>
+                    </div>
 
-                <button type="submit" class="btn-primary w-full py-4 text-lg">
-                    Sign In
-                </button>
-
-                <p class="text-center text-sm text-gray-400">
-                    Don't have an account? 
-                    <a href="/register" class="text-primary-400 font-bold hover:underline">Sign up</a>
-                </p>
-            </form>
+                    <button type="submit" class="btn-premium w-full h-20 !rounded-2xl !text-sm">
+                        INITIALIZE ACCESS
+                        <svg class="w-6 h-6 transition-transform group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </button>
+                    
+                    <div class="pt-8 text-center border-t border-slate-100">
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-loose">
+                            Uncataloged Provider? 
+                            <a href="/register" class="text-slate-900 hover:text-theme-primary transition-all ml-2 underline decoration-theme-primary/30 decoration-4 underline-offset-8 italic">New Registry Registration</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
         </div>
     </div>
 </x-app-layout>

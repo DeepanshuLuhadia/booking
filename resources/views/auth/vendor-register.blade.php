@@ -1,87 +1,195 @@
-<x-app-layout>
-    <div class="max-w-4xl mx-auto py-12">
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-black mb-4">Start Your Business with <span class="bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent italic">BOOKAI</span></h1>
-            <p class="text-gray-400">Join thousands of vendors using AI-powered booking systems.</p>
-        </div>
+<x-app-layout page-title="Vendor Onboarding | Appointment Platform">
+    <div class="relative min-h-screen pb-32 bg-theme-main">
+        <!-- Subtle Institutional Pattern -->
+        <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
-        <form method="POST" action="/register/vendor" class="space-y-8">
-            @csrf
-            
-            <div class="glass-card p-10">
-                <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
-                    <span class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-sm">1</span>
-                    Basic Information
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Business Name</label>
-                        <input type="text" name="business_name" value="{{ old('business_name') }}" required class="w-full glass-input" placeholder="e.g. Modern Hair Saloon">
-                        @error('business_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Owner Name</label>
-                        <input type="text" name="owner_name" value="{{ old('owner_name') }}" required class="w-full glass-input" placeholder="e.g. John Doe">
-                        @error('owner_name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
-                        <input type="email" name="email" value="{{ old('email') }}" required class="w-full glass-input" placeholder="john@example.com">
-                        @error('email') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Mobile Number</label>
-                        <input type="text" name="mobile" value="{{ old('mobile') }}" required class="w-full glass-input" placeholder="+91 9876543210">
-                        @error('mobile') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Password</label>
-                        <input type="password" name="password" required class="w-full glass-input" placeholder="••••••••">
-                        @error('password') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
-                        <input type="password" name="password_confirmation" required class="w-full glass-input" placeholder="••••••••">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Referral Code (Optional)</label>
-                        <input type="text" name="referral_code" value="{{ old('referral_code', request('ref')) }}" class="w-full glass-input" placeholder="VND-XXXXXXXX">
-                        @error('referral_code') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
+        <div class="relative z-10 max-w-5xl mx-auto px-6 pt-20">
+            <!-- Header Section -->
+            <div class="text-center mb-20 animate-text-reveal">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-white text-[9px] font-black uppercase tracking-widest mb-8">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Enterprise Onboarding Protocol
                 </div>
+                <h1
+                    class="text-6xl md:text-[5.5rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
+                    Scale Your <span class="text-theme-primary">Enterprise.</span>
+                </h1>
+                <p class="text-xl font-medium text-white/50 max-w-xl mx-auto italic leading-relaxed">Join the global
+                    infrastructure for professional appointment-based service providers.</p>
             </div>
 
-            <div class="glass-card p-10">
-                <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
-                    <span class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-sm">2</span>
-                    Select Subscription Plan
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    @foreach($plans as $plan)
-                        <label class="relative cursor-pointer group">
-                            <input type="radio" name="subscription_plan_id" value="{{ $plan->id }}" class="peer sr-only" {{ $loop->first ? 'checked' : '' }}>
-                            <div class="glass-card p-6 border-white/5 peer-checked:border-primary-500/50 peer-checked:bg-primary-500/5 transition-all group-hover:bg-white/5">
-                                <h4 class="font-bold text-lg">{{ $plan->name }}</h4>
-                                <p class="text-2xl font-black my-2">₹{{ number_format($plan->price) }}</p>
-                                <p class="text-xs text-gray-500">Up to {{ $plan->max_employees }} employees</p>
-                                
-                                <div class="absolute top-4 right-4 text-primary-500 hidden peer-checked:block">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
+            <style>
+                .plan-card-input:checked + .plan-card-content {
+                    background-color: #000000 !important;
+                    border-color: #000000 !important;
+                    color: #ffffff !important;
+                }
+                .plan-card-input:checked + .plan-card-content .pricing-cycle {
+                    color: rgba(255, 255, 255, 0.4) !important;
+                }
+                .plan-card-input:checked + .plan-card-content .check-icon {
+                    opacity: 1 !important;
+                    transform: scale(1.1) !important;
+                }
+                .plan-card-input:checked + .plan-card-content h4,
+                .plan-card-input:checked + .plan-card-content span {
+                    color: #ffffff !important;
+                }
+            </style>
+
+            <form method="POST" action="/register/vendor" class="space-y-16 animate-reveal delay-100">
+                @csrf
+
+                <!-- STEP 1: IDENTITY -->
+                <div class="glass-card p-4 overflow-hidden shadow-2xl">
+                    <div class="p-10 md:p-14 rounded-[3rem]">
+                        <div class="flex items-center gap-6 mb-12">
+                            <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black italic shadow-xl">01</div>
+                            <div>
+                                <h3 class="text-3xl font-black italic tracking-tight uppercase text-slate-900">Registry Identity</h3>
+                                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">CORE ESTABLISHMENT DATA</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                            <!-- Category -->
+                            <div class="space-y-2 group">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Specialization Sector</label>
+                                <div class="relative">
+                                    <select name="vendor_type" required
+                                        class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 appearance-none cursor-pointer transition-all">
+                                        <option value="doctor" class="bg-white text-slate-900">Medical & Healthcare</option>
+                                        <option value="barber" class="bg-white text-slate-900">Beauty & Grooming</option>
+                                        <option value="activity" class="bg-white text-slate-900">Sports & Fitness</option>
+                                        <option value="training" class="bg-white text-slate-900">Learning & Skills</option>
+                                        <option value="consultant" class="bg-white text-slate-900" selected>Professional Services</option>
+                                    </select>
+                                    <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <svg class="w-5 h-5 text-slate-300 group-focus-within:text-theme-primary transition-colors"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
 
-            <div class="flex items-center justify-between">
-                <p class="text-sm text-gray-500">By registerting you agree to our Terms of Service.</p>
-                <button type="submit" class="btn-primary px-12">
-                    Create Account & Continue
-                </button>
-            </div>
-        </form>
+                            <!-- Business Name -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Institutional Name</label>
+                                <input type="text" name="business_name" value="{{ old('business_name') }}" required
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="Business Nomenclature">
+                            </div>
+
+                            <!-- Owner Name -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Principal Representative</label>
+                                <input type="text" name="owner_name" value="{{ old('owner_name') }}" required
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="Legal Full Name">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Primary Communication Hub</label>
+                                <input type="email" name="email" value="{{ old('email') }}" required
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="Corporate Email Identity">
+                            </div>
+
+                            <!-- Mobile -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Mobile Uplink Number</label>
+                                <input type="tel" name="mobile" value="{{ old('mobile') }}" required maxlength="10"
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="10-digit primary uplink">
+                            </div>
+
+                            <!-- Referral -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Registry Referral (OPTIONAL)</label>
+                                <input type="text" name="referral_code" value="{{ old('referral_code', request('ref')) }}"
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="XXXX-XXXX">
+                            </div>
+
+                            <!-- Password -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Secure Access Key</label>
+                                <input type="password" name="password" required
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="••••••••">
+                            </div>
+
+                            <!-- Confirm -->
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Confirm Key</label>
+                                <input type="password" name="password_confirmation" required
+                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    placeholder="••••••••">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: PLAN -->
+                <div class="glass-card p-4 overflow-hidden shadow-2xl">
+                    <div class="p-10 md:p-14 rounded-[3rem]">
+                        <div class="flex items-center gap-6 mb-12">
+                            <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black italic shadow-xl">02</div>
+                            <div>
+                                <h3 class="text-3xl font-black italic tracking-tight uppercase text-slate-900">Operational Tier</h3>
+                                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">SCALING CAPACITY SELECTION</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            @foreach($plans as $plan)
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="subscription_plan_id" value="{{ $plan->id }}"
+                                    class="peer sr-only plan-card-input" {{ $loop->first ? 'checked' : '' }}>
+                                <div class="plan-card-content h-full p-8 bg-slate-50/50 border-2 border-slate-100 rounded-[2.5rem] transition-all duration-300 text-slate-900 group-hover:translate-y-[-4px] group-hover:shadow-xl antialiased">
+                                    <h4 class="text-xl font-black mb-2 italic">{{ $plan->name }}</h4>
+                                    <div class="flex items-baseline gap-1 mb-6">
+                                        <span class="text-4xl font-black tracking-tighter italic">₹{{ number_format($plan->price) }}</span>
+                                        <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-slate-400">/ CYCLE</span>
+                                    </div>
+
+                                    <div class="space-y-4 mb-4">
+                                        <div class="flex items-center gap-3">
+                                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                            <span class="text-[10px] font-black uppercase tracking-widest">{{ $plan->max_employees }} Specialists</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                            <span class="text-[10px] font-black uppercase tracking-widest">Global Scheduling</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="check-icon absolute top-8 right-8 w-10 h-10 rounded-xl bg-theme-primary text-white flex items-center justify-center opacity-0 transition-all transform scale-90 shadow-xl shadow-theme-primary/10">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                    </div>
+                                </div>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBMIT -->
+                <div class="flex flex-col md:flex-row items-center justify-between gap-12 pt-8">
+                    <p class="text-slate-500 font-medium italic max-w-sm text-center md:text-left text-sm leading-relaxed">
+                        By initializing deployment, you authorize acceptance of our <a href="#" class="text-slate-900 font-black italic underline underline-offset-4">Institutional Master Protocols</a>.
+                    </p>
+                    <button type="submit" class="btn-premium w-full md:w-auto h-24 px-16 !rounded-[2rem] !text-2xl">
+                        INITIALIZE DEPLOYMENT
+                        <svg class="w-8 h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </x-app-layout>

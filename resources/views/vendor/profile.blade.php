@@ -12,129 +12,151 @@
             }
         }
     }">
-        <h1 class="text-4xl font-black mb-8">Shop Settings</h1>
+        <div class="mb-12">
+            <h1 class="text-4xl font-black italic tracking-tight uppercase text-slate-900">Protocols <span class="text-blue-600">& Config.</span></h1>
+            <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">INSTITUTIONAL REGISTRY SETTINGS</p>
+        </div>
 
         <form action="{{ route('vendor.profile.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 space-y-8">
-                    <div class="glass-card p-8 space-y-6">
-                        <h3 class="text-xl font-bold border-b border-white/5 pb-4">Business Information</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                <div class="lg:col-span-2 space-y-12">
+                    <div class="bg-white p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem] space-y-10">
+                        <div class="border-b border-slate-50 pb-6">
+                            <h3 class="text-xl font-black italic uppercase italic text-slate-900 tracking-tight">Business Intelligence</h3>
+                        </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Business Name</label>
-                                <input type="text" name="business_name" value="{{ $vendor->business_name }}" required class="w-full glass-input">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Institutional Class</label>
+                                <select name="vendor_type" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all appearance-none cursor-pointer">
+                                    <option value="doctor" {{ $vendor->vendor_type == 'doctor' ? 'selected' : '' }}>Healthcare / Medical</option>
+                                    <option value="barber" {{ $vendor->vendor_type == 'barber' ? 'selected' : '' }}>Beauty / Grooming</option>
+                                    <option value="activity" {{ $vendor->vendor_type == 'activity' ? 'selected' : '' }}>Fitness / Coaching</option>
+                                    <option value="training" {{ $vendor->vendor_type == 'training' ? 'selected' : '' }}>Learning / Skills</option>
+                                    <option value="consultant" {{ $vendor->vendor_type == 'consultant' ? 'selected' : '' }}>Professional Services</option>
+                                </select>
                             </div>
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Owner Name</label>
-                                <input type="text" name="owner_name" value="{{ $vendor->owner_name }}" required class="w-full glass-input">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Establishment Name</label>
+                                <input type="text" name="business_name" value="{{ $vendor->business_name }}" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-2">Address</label>
-                            <textarea name="address" rows="3" required class="w-full glass-input">{{ $vendor->address }}</textarea>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Principal Delegate</label>
+                                <input type="text" name="owner_name" value="{{ $vendor->owner_name }}" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
+                            </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Latitude</label>
-                                <input type="text" name="latitude" value="{{ $vendor->latitude }}" class="w-full glass-input">
+                        <div class="space-y-4">
+                            <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Physical Coordinates / Address</label>
+                            <textarea name="address" rows="3" required class="w-full bg-slate-50 border-none rounded-[2rem] p-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">{{ $vendor->address }}</textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Latitude Reference</label>
+                                <input type="text" name="latitude" value="{{ $vendor->latitude }}" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Longitude</label>
-                                <input type="text" name="longitude" value="{{ $vendor->longitude }}" class="w-full glass-input">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Longitude Reference</label>
+                                <input type="text" name="longitude" value="{{ $vendor->longitude }}" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
                         </div>
                     </div>
 
-                    <div class="glass-card p-8 space-y-6">
-                        <h3 class="text-xl font-bold border-b border-white/5 pb-4">Booking Preferences</h3>
+                    <div class="bg-white p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem] space-y-10">
+                        <div class="border-b border-slate-50 pb-6">
+                            <h3 class="text-xl font-black italic uppercase italic text-slate-900 tracking-tight">Financial & Temporal Sync</h3>
+                        </div>
                         
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h4 class="font-bold">Enable Token Booking</h4>
-                                <p class="text-xs text-gray-500">Require customers to pay a small token amount to confirm slot.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Appointment Mode</label>
+                                <select name="appointment_mode" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all appearance-none cursor-pointer">
+                                    <option value="time_slot" {{ $vendor->appointment_mode == 'time_slot' ? 'selected' : '' }}>Time Slot System</option>
+                                    <option value="token" {{ $vendor->appointment_mode == 'token' ? 'selected' : '' }}>Token System</option>
+                                </select>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="token_booking_enabled" value="1" {{ $vendor->token_booking_enabled ? 'checked' : '' }} class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Token Amount (₹)</label>
-                                <input type="number" name="token_amount" value="{{ $vendor->token_amount }}" min="0" class="w-full glass-input" placeholder="e.g. 100">
-                            </div>
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">UPI ID for Settlements</label>
-                                <input type="text" name="upi_id" value="{{ $vendor->upi_id }}" class="w-full glass-input" placeholder="e.g., yourname@paytm">
-                                <p class="text-[10px] text-gray-500 mt-1">Required to receive settlement payments.</p>
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Avg Consultation Time (Min)</label>
+                                <input type="number" name="avg_consultation_time" value="{{ $vendor->avg_consultation_time }}" min="1" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Service Fee (₹)</label>
-                                <input type="number" name="service_fee" value="{{ $vendor->service_fee }}" min="0" class="w-full glass-input" placeholder="e.g. 50">
-                                <p class="text-[10px] text-gray-500 mt-1">Default fee for all bookings.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Token Payload (₹)</label>
+                                <input type="number" name="token_amount" value="{{ $vendor->token_amount }}" min="0" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
-                            <div>
-                                <label class="block text-sm text-gray-400 mb-2">Premium/Express Fee (₹)</label>
-                                <input type="number" name="emergency_fee" value="{{ $vendor->emergency_fee }}" min="0" class="w-full glass-input" placeholder="e.g. 200">
-                                <p class="text-[10px] text-gray-500 mt-1">Extra fee for urgent/premium slots.</p>
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">UPI Settlement Link</label>
+                                <input type="text" name="upi_id" value="{{ $vendor->upi_id }}" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Base Service Fee (₹)</label>
+                                <input type="number" name="service_fee" value="{{ $vendor->service_fee }}" min="0" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all">
+                            </div>
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Premium Express Offset (₹)</label>
+                                <input type="number" name="emergency_fee" value="{{ $vendor->emergency_fee }}" min="0" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="space-y-8">
-                    <!-- Shop Photo with Preview -->
-                    <div class="glass-card p-8">
-                        <h3 class="text-xl font-bold border-b border-white/5 pb-4 mb-6">Shop Photo</h3>
+                <div class="space-y-12">
+                    <!-- Establishment Visual Identification -->
+                    <div class="bg-white p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem]">
+                        <h3 class="text-xl font-black italic uppercase italic text-slate-900 tracking-tight mb-8">Visual ID</h3>
                         
-                        <div class="relative w-full aspect-video rounded-xl overflow-hidden mb-6 bg-white/5 border-2 border-dashed border-white/10 flex items-center justify-center">
+                        <div class="relative w-full aspect-square rounded-[2.5rem] overflow-hidden mb-8 bg-slate-50 border border-slate-100 flex items-center justify-center shadow-inner group">
                             <template x-if="photoPreview">
-                                <img :src="photoPreview" class="w-full h-full object-cover">
+                                <img :src="photoPreview" class="w-full h-full object-cover opacity-90 transition-opacity group-hover:opacity-100">
                             </template>
                             <template x-if="!photoPreview">
-                                <span class="text-gray-500">No photo selected</span>
+                                <span class="text-[9px] font-black text-slate-200 uppercase tracking-widest italic">Awaiting Visual Input</span>
                             </template>
+                            <div class="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/5 transition-all pointer-events-none"></div>
                         </div>
 
                         <input type="file" name="shop_photo" id="shop_photo_input" class="hidden" accept="image/*" @change="handleFileChange($event)">
-                        <button type="button" @click="document.getElementById('shop_photo_input').click()" class="btn-outline w-full py-3">
-                            <span x-text="photoPreview ? 'Change Photo' : 'Select Photo'"></span>
+                        <button type="button" @click="document.getElementById('shop_photo_input').click()" class="w-full h-16 bg-slate-50 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center italic">
+                            <span x-text="photoPreview ? 'REPLACE VISUAL' : 'INITIATE VISUAL UPLOAD'"></span>
                         </button>
                     </div>
 
-                    <div class="glass-card p-8 bg-gradient-to-br from-primary-600/10 to-transparent border-primary-500/20">
-                        <h3 class="text-xl font-bold mb-2">Subscription</h3>
-                        <p class="text-sm text-gray-400 mb-6">Your current active plan.</p>
+                    <div class="bg-white p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem]">
+                        <h3 class="text-xl font-black italic uppercase italic text-slate-900 tracking-tight mb-2">Tier Sync</h3>
+                        <p class="text-[9px] font-black text-slate-300 uppercase italic tracking-[0.2em] mb-8">ACTIVE OPERATIONAL SUB-LOGIC</p>
                         
-                        <div class="p-4 bg-black/30 rounded-xl border border-white/5 mb-6">
-                            <div class="text-xs text-gray-500 uppercase font-black">Current Plan</div>
-                            <div class="text-2xl font-black text-primary-400">{{ $vendor->subscriptionPlan->name }}</div>
+                        <div class="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-900/20 mb-8">
+                            <div class="text-[8px] text-white/40 uppercase font-black italic tracking-widest mb-1">CURRENT RANK</div>
+                            <div class="text-3xl font-black italic tracking-tighter">{{ $vendor->subscriptionPlan->name }}</div>
                         </div>
 
-                        <ul class="space-y-3 mb-8 text-sm">
+                        <ul class="space-y-4 mb-10">
                             @foreach($vendor->subscriptionPlan->features as $feature)
-                                <li class="flex items-center gap-3 text-gray-300">
-                                    <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
+                                <li class="flex items-center gap-4 text-[10px] font-black text-slate-700 italic tracking-tight uppercase">
+                                    <svg class="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7"/></svg>
                                     {{ $feature }}
                                 </li>
                             @endforeach
                         </ul>
 
-                        <button type="button" onclick="window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'UPGRADE MODULE OFFLINE - CONTACT SUPPORT', type: 'info' } }))" class="btn-primary w-full">Upgrade Plan</button>
+                        <button type="button" onclick="window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'TIER UPGRADE LINK INACTIVE', type: 'info' } }))" class="w-full h-16 border-2 border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all italic text-slate-400">Upgrade Rank</button>
                     </div>
 
-                    <div class="flex justify-end pt-4">
-                        <button type="submit" class="btn-primary w-full py-4 text-xl">Save All Settings</button>
+                    <div class="pt-8">
+                        <button type="submit" class="w-full h-24 bg-slate-900 text-white rounded-[2.5rem] text-xl font-black italic uppercase tracking-widest hover:bg-black transition-all shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex items-center justify-center gap-6 group">
+                            CONFIRM ALL SETTINGS
+                            <svg class="w-8 h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
                     </div>
                 </div>
             </div>

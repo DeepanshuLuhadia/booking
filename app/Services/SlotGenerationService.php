@@ -29,11 +29,26 @@ class SlotGenerationService
             ->map(fn($time) => Carbon::parse($time)->format('H:i'))
             ->toArray();
 
+        $now = Carbon::now();
+        $startTimeDateTime = Carbon::parse("$date " . $startTime->format('H:i'));
+        
+        if (Carbon::today()->isSameDay($date)) {
+            $endTimeLimit = $now->copy()->addHours(4);
+        } else {
+            $endTimeLimit = $startTimeDateTime->copy()->addHours(4);
+        }
+
         while ($current->copy()->addMinutes($duration)->lte($endTime)) {
             $slotStart = $current->format('H:i');
             $slotEnd = $current->copy()->addMinutes($duration)->format('H:i');
+            $slotDateTime = Carbon::parse("$date $slotStart");
             
-            $isPast = Carbon::parse("$date $slotStart")->isPast();
+            // Limit to 4 hours window if applicable
+            if ($slotDateTime->isAfter($endTimeLimit)) {
+                break;
+            }
+            
+            $isPast = $slotDateTime->isPast();
             
             if (!$isPast) {
                 $isBooked = in_array($slotStart, $bookedSlots);

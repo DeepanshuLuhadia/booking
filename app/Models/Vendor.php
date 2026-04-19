@@ -13,7 +13,7 @@ class Vendor extends Model
         'token_booking_enabled', 'token_amount', 'service_fee', 'emergency_fee',
         'subscription_plan_id', 'subscription_expires_at', 'qr_code_path', 'status',
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
-        'upi_id'
+        'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
     ];
 
     protected $casts = [
@@ -53,6 +53,11 @@ class Vendor extends Model
     public function referrals()
     {
         return $this->hasMany(Vendor::class, 'referred_by_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(VendorCategory::class, 'vendor_category_id');
     }
 
     public function user()

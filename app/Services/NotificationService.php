@@ -11,8 +11,11 @@ class NotificationService
      * Send a web push notification to a user.
      * For production, integrate with OneSignal or Pusher Beam.
      */
-    public function sendWebPush(User $user, $title, $message, $data = [])
+    public function sendWebPush($user, $title, $message, $data = [])
     {
+        if (!$user) {
+            return false;
+        }
         // Placeholder for real integration
         Log::info("Web Push sent to {$user->email}: {$title} - {$message}", $data);
         
@@ -25,6 +28,11 @@ class NotificationService
     public function notifyVendorNewBooking($vendor, $booking)
     {
         $user = $vendor->user;
+
+        if (!$user) {
+            Log::warning("Vendor #{$vendor->id} has no linked user — skipping booking notification.");
+            return;
+        }
         $isPremium = $booking->booking_type === 'emergency';
         
         $title = $isPremium ? "🔥 PREMIUM BOOKING RECEIVED!" : "New Booking Received!";

@@ -21,6 +21,7 @@ class VendorRegistrationController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'vendor_type' => 'required|in:doctor,barber,activity,training,consultant',
             'business_name' => 'required|string|max:255',
             'owner_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -46,6 +47,7 @@ class VendorRegistrationController extends Controller
 
         $vendor = Vendor::create([
             'user_id' => $user->id,
+            'vendor_type' => $request->vendor_type,
             'business_name' => $request->business_name,
             'owner_name' => $request->owner_name,
             'contact_number' => $request->mobile,

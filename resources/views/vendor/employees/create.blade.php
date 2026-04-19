@@ -1,49 +1,89 @@
 <x-vendor-layout>
-    <div class="max-w-2xl">
-        <h1 class="text-4xl font-black mb-8">Add Professional</h1>
+    <div x-data="{ 
+        photoPreview: null,
+        handleFileChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    }">
+        <div class="mb-12">
+            <h1 class="text-4xl font-black italic tracking-tight uppercase text-slate-900">Enlist <span class="text-blue-600">Specialist.</span></h1>
+            <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">ROSTER INITIALIZATION PROTOCOL</p>
+        </div>
         
-        <form action="{{ route('vendor.employees.store') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
+        <form action="{{ route('vendor.employees.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             
-            <div class="glass-card p-10">
-                <div class="space-y-6">
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Full Name</label>
-                        <input type="text" name="name" required class="w-full glass-input" placeholder="e.g. Rahul Sharma">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-2">Start Time</label>
-                            <input type="time" name="working_start_time" required class="w-full glass-input" value="09:00">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                <div class="lg:col-span-2 space-y-12">
+                    <div class="bg-white p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem] space-y-10">
+                        <div class="border-b border-slate-50 pb-6">
+                            <h3 class="text-xl font-black italic uppercase italic text-slate-900 tracking-tight">Specialist Identity</h3>
                         </div>
-                        <div>
-                            <label class="block text-sm text-gray-400 mb-2">End Time</label>
-                            <input type="time" name="working_end_time" required class="w-full glass-input" value="20:00">
-                        </div>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Service Fee Override (₹)</label>
-                        <input type="number" name="service_fee_override" step="0.01" class="w-full glass-input" placeholder="Leave empty to use shop default">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Slot Duration (Minutes)</label>
-                        <input type="number" name="slot_duration" value="45" required class="w-full glass-input">
+                        <div class="space-y-4">
+                            <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Full Name (Registry Display)</label>
+                            <input type="text" name="name" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all" placeholder="e.g. Rahul Sharma">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Operational Start</label>
+                                <input type="time" name="working_start_time" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all" value="09:00">
+                            </div>
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Operational End</label>
+                                <input type="time" name="working_end_time" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all" value="20:00">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Service Fee Offset (₹)</label>
+                                <input type="number" name="service_fee_override" step="0.01" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all" placeholder="OPTIONAL OVERRIDE">
+                                <p class="text-[8px] font-black text-slate-200 uppercase tracking-widest ml-4 mt-1 italic">LEAVE EMPTY FOR DEFAULT</p>
+                            </div>
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Temporal Slot (MIN)</label>
+                                <input type="number" name="slot_duration" value="45" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Profile Photo (Optional)</label>
-                        <input type="file" name="photo" class="w-full glass-input">
+                <div class="space-y-12">
+                    <div class="bg-white p-10 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem]">
+                        <h3 class="text-xl font-black italic uppercase italic text-slate-900 tracking-tight mb-8">Specialist ID</h3>
+                        
+                        <div class="relative w-full aspect-square rounded-[2.5rem] overflow-hidden mb-8 bg-slate-50 border border-slate-100 flex items-center justify-center shadow-inner group">
+                            <template x-if="photoPreview">
+                                <img :src="photoPreview" class="w-full h-full object-cover opacity-90 transition-opacity group-hover:opacity-100">
+                            </template>
+                            <template x-if="!photoPreview">
+                                <span class="text-[9px] font-black text-slate-200 uppercase tracking-widest italic text-center px-4">AWAITING VISUAL IDENTIFICATION</span>
+                            </template>
+                        </div>
+
+                        <input type="file" name="photo" id="photo_input" class="hidden" accept="image/*" @change="handleFileChange($event)">
+                        <button type="button" @click="document.getElementById('photo_input').click()" class="w-full h-16 bg-slate-50 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center italic">
+                            UPLOAD VISUAL ID
+                        </button>
+                    </div>
+
+                    <div class="pt-8">
+                        <button type="submit" class="w-full h-24 bg-slate-900 text-white rounded-[2.5rem] text-xl font-black italic uppercase tracking-widest hover:bg-black transition-all shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex items-center justify-center gap-6 group">
+                            CONFIRM ENLISTMENT
+                            <svg class="w-8 h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                        <a href="{{ route('vendor.employees.index') }}" class="block w-full text-center mt-8 text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-rose-500 transition-colors italic">Abort Sequence</a>
                     </div>
                 </div>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <button type="submit" class="btn-primary px-12">Save Professional</button>
-                <a href="{{ route('vendor.employees.index') }}" class="btn-outline">Cancel</a>
             </div>
         </form>
     </div>

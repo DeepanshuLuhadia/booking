@@ -42,7 +42,7 @@ class PaymentController extends Controller
 
             $order = $api->order->create([
                 'receipt' => 'rcpt_' . $vendor->id,
-                'amount' => $plan->price * 100, // amount in paise
+                'amount' => (int)($plan->price * 100),
                 'currency' => 'INR'
             ]);
 
@@ -50,35 +50,51 @@ class PaymentController extends Controller
                 'vendor' => $vendor,
                 'plan' => $plan,
                 'order' => $order,
-                'keyId' => $keyId
+                'keyId' => $keyId,
+                'demoMode' => false
             ]);
         } catch (\Exception $e) {
-            \Log::error('Razorpay Order Creation Failed: ' . $e->getMessage());
+            \Log::error('Razorpay Error: ' . $e->getMessage());
             return view('auth.payment', [
                 'vendor' => $vendor,
                 'plan' => $plan,
-                'error' => 'Unable to initiate payment with Razorpay. Error: ' . $e->getMessage()
+                'error' => 'Razorpay Gateway Error: ' . $e->getMessage(),
+                'demoMode' => true
             ]);
         }
     }
 
     public function callback(Request $request)
     {
-        $user = Auth::user();
-        $vendor = $user->vendor;
+        \Log::info('Razorpay Callback Received', $request->all());
 
-        // In a real app, verify signature here
-        // For this task, we assume success if they hit this callback with payment_id
-        
+        $user = Auth::user();
+        if (!$user) {
+            \Log::error('Razorpay Callback: No authenticated user found.');
+            return redirect()->route('login')->with('error', 'Session expired. Please login again.');
+        }
+
+        $vendor = $user->vendor;
+        if (!$vendor) {
+            \Log::error('Razorpay Callback: User has no associated vendor record.');
+            return redirect('/')->with('error', 'Invalid account type.');
+        }
+
         if ($request->has('razorpay_payment_id')) {
+            \Log::info('Razorpay Payment Success Data Received. Updating vendor status.', [
+                'vendor_id' => $vendor->id,
+                'payment_id' => $request->razorpay_payment_id
+            ]);
+
             $vendor->update([
                 'status' => 'active',
-                'subscription_expires_at' => Carbon::now()->addMonth(), // Default to 1 month
+                'subscription_expires_at' => Carbon::now()->addMonth(),
             ]);
 
             return redirect()->route('vendor.dashboard')->with('success', 'Payment successful! Your account is now active.');
         }
 
-        return redirect()->route('payment.razorpay')->with('error', 'Payment failed. Please try again.');
+        \Log::warning('Razorpay Callback hit without payment_id.', $request->all());
+        return redirect()->route('payment.razorpay')->with('error', 'Payment failed or was cancelled. Please try again.');
     }
 }
