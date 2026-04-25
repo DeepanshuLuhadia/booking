@@ -34,44 +34,47 @@
 <body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
 
     <div class="relative z-10 flex flex-col min-h-screen">
-        <!-- Navigation -->
-        <nav class="sticky top-0 z-[100] theme-nav px-8 py-5 flex items-center justify-between shadow-sm">
+        <!-- Navigation (Section 4) -->
+        <nav x-data="{ scrolled: false }" 
+             @scroll.window="scrolled = (window.pageYOffset > 50)"
+             :class="{ 'bg-slate-950/80 backdrop-blur-2xl border-b border-white/5 py-3': scrolled, 'bg-transparent py-6': !scrolled }"
+             class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-8 flex items-center justify-between">
             <div class="flex items-center gap-10">
                 <a href="/" class="group flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-theme-primary to-theme-accent flex items-center justify-center text-white text-xl font-black shadow-lg transition-transform group-hover:rotate-12">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-orange-400 flex items-center justify-center text-white text-2xl font-black shadow-[0_10px_20px_-5px_rgba(249,115,22,0.4)] transition-transform group-hover:rotate-12 group-hover:scale-110">
                         {{ $theme['icon'] ?? 'B' }}
                     </div>
-                    <span class="text-2xl font-black tracking-tighter text-slate-900">
-                        BOOK<span class="text-theme-primary">AI</span>
+                    <span class="text-2xl font-black tracking-tighter text-white">
+                        BOOK<span class="text-orange-500">AI</span>
                     </span>
                 </a>
             </div>
 
-            <div class="flex items-center gap-8">
-                <div class="hidden md:flex items-center gap-8">
-                    <a href="{{ route('home') }}" class="nav-link">Explore</a>
+            <div class="flex items-center gap-10">
+                <div class="hidden md:flex items-center gap-10">
+                    <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-orange-500 transition-colors">Explore</a>
                     @auth
                         @if(auth()->user()->isAdmin())
-                            <a href="/admin/dashboard" class="nav-link">Admin Portal</a>
+                            <a href="/admin/dashboard" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-orange-500 transition-colors">Admin Portal</a>
                         @elseif(auth()->user()->isVendor())
-                            <a href="/vendor/dashboard" class="nav-link theme-text-primary">Business Hub</a>
+                            <a href="/vendor/dashboard" class="text-xs font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors">Business Hub</a>
                         @endif
                     @endauth
                 </div>
 
-                <div class="h-6 w-px bg-slate-900/10 hidden sm:block"></div>
+                <div class="h-6 w-px bg-white/10 hidden sm:block"></div>
 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-6">
                     @auth
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Logout</button>
+                            <button type="submit" class="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">Logout</button>
                         </form>
                     @else
-                        <a href="/login" class="text-sm font-bold text-slate-700">Sign In</a>
+                        <a href="/login" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-white">Sign In</a>
                         <a href="/register/vendor" 
-                           class="btn-premium py-2.5 px-6 rounded-xl text-xs">
-                            List My Business
+                           class="btn-premium px-8 py-3 rounded-xl text-[10px] shadow-none hover:shadow-orange-500/20">
+                            Join Now
                         </a>
                     @endauth
                 </div>
@@ -79,28 +82,38 @@
         </nav>
 
         <!-- Page Content -->
-        <main class="flex-grow relative z-10">
+        <main class="flex-grow">
             {{ $slot }}
         </main>
 
-        <!-- Footer -->
-        <footer class="mt-auto py-12 border-t border-slate-900/5 text-slate-400">
-            <div class="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-                <div class="flex flex-col items-center md:items-start gap-4">
-                    <div class="text-xl font-black text-slate-900/40">BOOKAI</div>
-                    <p class="text-[10px] font-bold uppercase tracking-widest max-w-xs text-center md:text-left">
-                        The Next-Generation Multi-Vendor Booking Experience.
-                    </p>
-                </div>
-                
-                <div class="flex items-center gap-8 text-[10px] font-black uppercase tracking-widest">
-                    <a href="#" class="hover:theme-text-primary transition-colors">Privacy</a>
-                    <a href="#" class="hover:theme-text-primary transition-colors">Terms</a>
-                    <a href="#" class="hover:theme-text-primary transition-colors">Support</a>
+        <!-- Footer (Section 12) -->
+        <footer class="bg-slate-950 pt-24 pb-12 border-t border-white/5">
+            <div class="container mx-auto px-8">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-12 mb-16">
+                    <div class="flex flex-col items-center md:items-start gap-6">
+                        <div class="text-3xl font-black text-white tracking-tighter">BOOK<span class="text-orange-500">AI</span></div>
+                        <p class="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm text-center md:text-left text-white/30 leading-loose">
+                            The Next-Generation Multi-Vendor Booking Experience for Global Professionals.
+                        </p>
+                    </div>
+                    
+                    <div class="flex flex-wrap justify-center gap-10 text-[10px] font-black uppercase tracking-[0.3em] text-white/50">
+                        <a href="#" class="hover:text-orange-500 transition-colors">Privacy Policy</a>
+                        <a href="#" class="hover:text-orange-500 transition-colors">Terms of Service</a>
+                        <a href="#" class="hover:text-orange-500 transition-colors">Help Center</a>
+                        <a href="#" class="hover:text-orange-500 transition-colors">Contact Us</a>
+                    </div>
                 </div>
 
-                <div class="text-[10px] font-medium opacity-50">
-                    &copy; {{ date('Y') }} All Rights Reserved.
+                <div class="flex flex-col md:flex-row items-center justify-between pt-12 border-t border-white/5 gap-6">
+                    <div class="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+                        &copy; {{ date('Y') }} BOOKAI PLATFORM. ALL RIGHTS RESERVED.
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">𝕏</div>
+                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">📸</div>
+                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">💼</div>
+                    </div>
                 </div>
             </div>
         </footer>
