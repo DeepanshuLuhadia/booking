@@ -15,13 +15,14 @@ class VendorRegistrationController extends Controller
     public function create()
     {
         $plans = SubscriptionPlan::where('is_active', true)->get();
-        return view('auth.vendor-register', compact('plans'));
+        $vendorCategories = \App\Models\VendorCategory::all();
+        return view('auth.vendor-register', compact('plans', 'vendorCategories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'vendor_type' => 'required|in:doctor,barber,activity,training,consultant',
+            'vendor_type' => 'required|exists:vendor_categories,slug',
             'business_name' => 'required|string|max:255',
             'owner_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',

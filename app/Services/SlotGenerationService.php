@@ -14,8 +14,22 @@ class SlotGenerationService
     public function generateSlots(Employee $employee, $date = null)
     {
         $date = $date ?: Carbon::today()->toDateString();
+        $vendor = $employee->vendor;
+        
+        // Base start/end on employee working times
         $startTime = Carbon::parse($employee->working_start_time);
         $endTime = Carbon::parse($employee->working_end_time);
+
+        // Bound by Vendor's Global Times if set
+        if ($vendor->global_opening_time) {
+            $globalStart = Carbon::parse($vendor->global_opening_time);
+            if ($startTime->lt($globalStart)) $startTime = $globalStart;
+        }
+        if ($vendor->global_closing_time) {
+            $globalEnd = Carbon::parse($vendor->global_closing_time);
+            if ($endTime->gt($globalEnd)) $endTime = $globalEnd;
+        }
+
         $duration = $employee->slot_duration;
 
         $slots = [];

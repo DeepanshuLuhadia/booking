@@ -15,11 +15,11 @@ class BookingController extends Controller
         $vendor = auth()->user()->vendor;
         $bookings = Booking::where('vendor_id', $vendor->id)
             ->with('employee')
-            ->when($request->status, function($q) use ($request) {
-                return $q->where('status', $request->status);
-            })
+            ->when($request->status, function ($q) use ($request) {
+            return $q->where('status', $request->status);
+        })
             ->latest()
-            ->paginate(15);
+            ->paginate(5);
 
         return view('vendor.bookings.index', compact('bookings'));
     }
@@ -27,7 +27,7 @@ class BookingController extends Controller
     public function store(Request $request)
     {
         $vendor = auth()->user()->vendor;
-        
+
         $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'customer_name' => 'required|string|max:255',
@@ -37,7 +37,7 @@ class BookingController extends Controller
         ]);
 
         $employee = Employee::find($request->employee_id);
-        
+
         // Ensure employee belongs to vendor
         if ($employee->vendor_id !== $vendor->id) {
             return back()->with('error', 'Unauthorized.');

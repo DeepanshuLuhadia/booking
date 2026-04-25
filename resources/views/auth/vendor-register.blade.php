@@ -50,7 +50,7 @@
                             <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black italic shadow-xl">01</div>
                             <div>
                                 <h3 class="text-3xl font-black italic tracking-tight uppercase text-slate-900">Registry Identity</h3>
-                                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">CORE ESTABLISHMENT DATA</p>
+                                <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">CORE ESTABLISHMENT DATA</p>
                             </div>
                         </div>
 
@@ -60,12 +60,12 @@
                                 <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Specialization Sector</label>
                                 <div class="relative">
                                     <select name="vendor_type" required
-                                        class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 appearance-none cursor-pointer transition-all">
-                                        <option value="doctor" class="bg-white text-slate-900">Medical & Healthcare</option>
-                                        <option value="barber" class="bg-white text-slate-900">Beauty & Grooming</option>
-                                        <option value="activity" class="bg-white text-slate-900">Sports & Fitness</option>
-                                        <option value="training" class="bg-white text-slate-900">Learning & Skills</option>
-                                        <option value="consultant" class="bg-white text-slate-900" selected>Professional Services</option>
+                                        class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 appearance-none cursor-pointer transition-all">
+                                        @foreach($vendorCategories as $category)
+                                            <option value="{{ $category->slug }}" class="bg-white text-slate-900" {{ old('vendor_type') == $category->slug ? 'selected' : '' }}>
+                                                {{ $category->name }}
+                                            </option>
+                                        @endforeach
                                     </select>
                                     <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none">
                                         <svg class="w-5 h-5 text-slate-300 group-focus-within:text-theme-primary transition-colors"
@@ -78,57 +78,57 @@
 
                             <!-- Business Name -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Institutional Name</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Institutional Name</label>
                                 <input type="text" name="business_name" value="{{ old('business_name') }}" required
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="Business Nomenclature">
                             </div>
 
                             <!-- Owner Name -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Principal Representative</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Principal Representative</label>
                                 <input type="text" name="owner_name" value="{{ old('owner_name') }}" required
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="Legal Full Name">
                             </div>
 
                             <!-- Email -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Primary Communication Hub</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Primary Communication Hub</label>
                                 <input type="email" name="email" value="{{ old('email') }}" required
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="Corporate Email Identity">
                             </div>
 
                             <!-- Mobile -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Mobile Uplink Number</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Mobile Uplink Number</label>
                                 <input type="tel" name="mobile" value="{{ old('mobile') }}" required maxlength="10"
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="10-digit primary uplink">
                             </div>
 
                             <!-- Referral -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Registry Referral (OPTIONAL)</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Registry Referral (OPTIONAL)</label>
                                 <input type="text" name="referral_code" value="{{ old('referral_code', request('ref')) }}"
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="XXXX-XXXX">
                             </div>
 
                             <!-- Password -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Secure Access Key</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Secure Access Key</label>
                                 <input type="password" name="password" required
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="••••••••">
                             </div>
 
                             <!-- Confirm -->
                             <div class="space-y-2">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Confirm Key</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Confirm Key</label>
                                 <input type="password" name="password_confirmation" required
-                                    class="premium-input w-full h-18 px-10 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-lg text-slate-900 placeholder:text-slate-300 transition-all"
+                                    class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-slate-900 placeholder:text-slate-300 transition-all"
                                     placeholder="••••••••">
                             </div>
                         </div>

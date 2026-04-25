@@ -81,23 +81,23 @@
             <!-- Stats Bar -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-8 max-w-5xl mx-auto pt-16 border-t border-white/5">
                 <div class="stat-pill">
-                    <span class="stat-value">80k+</span>
+                    <span class="stat-value" data-counter data-target="80" data-suffix="k+">0</span>
                     <span class="stat-label">Happy Clients</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">500+</span>
+                    <span class="stat-value" data-counter data-target="500" data-suffix="+">0</span>
                     <span class="stat-label">Cities</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">1.2M</span>
+                    <span class="stat-value" data-counter data-target="1.2" data-suffix="M" data-decimals="1">0</span>
                     <span class="stat-label">Appointments</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">4.9<span class="text-orange-500 text-sm ml-1">★</span></span>
+                    <span class="stat-value"><span data-counter data-target="4.9" data-decimals="1">0</span><span class="text-orange-500 text-sm ml-1">★</span></span>
                     <span class="stat-label">Average Rated</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">4.9<span class="text-orange-500 text-sm ml-1">★</span></span>
+                    <span class="stat-value"><span data-counter data-target="4.9" data-decimals="1">0</span><span class="text-orange-500 text-sm ml-1">★</span></span>
                     <span class="stat-label">Top Experts</span>
                 </div>
             </div>
@@ -157,10 +157,17 @@
                                         <span class="text-[9px] font-black uppercase tracking-widest text-white/30 mb-0.5">Appointment Rate</span>
                                         <span class="text-xl font-black text-white italic">₹{{ number_format($vendor->service_fee) }}</span>
                                     </div>
+                                    @if($isOpen)
                                     <a href="{{ route('vendor.show', $vendor->slug) }}" 
-                                       class="btn-premium w-14 h-14 rounded-2xl flex items-center justify-center p-0 hover:scale-110 active:scale-95 shadow-lg {{ $isOpen ? 'shadow-orange-500/20' : '' }}">
+                                       class="btn-premium w-14 h-14 rounded-2xl flex items-center justify-center p-0 hover:scale-110 active:scale-95 shadow-lg shadow-orange-500/20">
                                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                                     </a>
+                                    @else
+                                    <button disabled
+                                       class="btn-premium w-14 h-14 rounded-2xl flex items-center justify-center p-0 opacity-50 cursor-not-allowed">
+                                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -236,4 +243,50 @@
         </div>
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/5 blur-[120px] rounded-full"></div>
     </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const counters = document.querySelectorAll('[data-counter]');
+            
+            const animateCounter = (el) => {
+                const target = parseFloat(el.dataset.target);
+                const duration = 2000; // 2 seconds
+                const decimals = parseInt(el.dataset.decimals) || 0;
+                const suffix = el.dataset.suffix || '';
+                const startTime = performance.now();
+
+                function update(now) {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function: easeOutQuart
+                    const easeProgress = 1 - Math.pow(1 - progress, 4);
+                    
+                    const current = easeProgress * target;
+                    el.innerText = current.toFixed(decimals) + suffix;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        el.innerText = target.toFixed(decimals) + suffix;
+                    }
+                }
+                requestAnimationFrame(update);
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateCounter(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { 
+                threshold: 0.1, 
+                rootMargin: '0px 0px -50px 0px' 
+            });
+
+            counters.forEach(counter => observer.observe(counter));
+        });
+    </script>
 </x-app-layout>

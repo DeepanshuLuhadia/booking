@@ -14,6 +14,7 @@ class Vendor extends Model
         'subscription_plan_id', 'subscription_expires_at', 'qr_code_path', 'status',
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
         'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
+        'global_opening_time', 'global_closing_time',
     ];
 
     protected $casts = [
@@ -87,7 +88,7 @@ class Vendor extends Model
 
     public function hasAvailableSlotsToday()
     {
-        if (!$this->is_open || $this->status !== 'active') {
+        if (!$this->isEffectivelyOpen()) {
             return false;
         }
 
@@ -101,7 +102,35 @@ class Vendor extends Model
                 }
             }
         }
-
         return false;
+    }
+
+    public function isProfileComplete()
+    {
+        return !empty($this->appointment_mode) && 
+               !empty($this->global_opening_time) && 
+               !empty($this->global_closing_time) && 
+               !empty($this->upi_id);
+    }
+
+    public function isEffectivelyOpen()
+    {
+        if (!$this->is_open || $this->status !== 'active') {
+            return false;
+        }
+
+        if (!$this->global_opening_time || !$this->global_closing_time) {
+            return true;
+        }
+
+        $now = now()->format('H:i:s');
+        $open = $this->global_opening_time;
+        $close = $this->global_closing_time;
+
+        if ($open < $close) {
+            return ($now >= $open && $now <= $close);
+        } else {
+            return ($now >= $open || $now <= $close);
+        }
     }
 }

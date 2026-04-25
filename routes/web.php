@@ -46,6 +46,7 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     
     Route::get('/profile', [\App\Http\Controllers\Vendor\ProfileController::class, 'edit'])->name('vendor.profile.edit');
     Route::post('/profile', [\App\Http\Controllers\Vendor\ProfileController::class, 'update'])->name('vendor.profile.update');
+    Route::get('/plans', [\App\Http\Controllers\Vendor\ProfileController::class, 'plans'])->name('vendor.plans');
     Route::post('/status/toggle', [\App\Http\Controllers\Vendor\ProfileController::class, 'toggleStatus'])->name('vendor.status.toggle');
 
     Route::resource('/employees', \App\Http\Controllers\Vendor\EmployeeController::class, ['as' => 'vendor']);

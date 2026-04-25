@@ -4,7 +4,8 @@
             <h1 class="text-4xl font-black italic tracking-tight uppercase">Specialist <span class="text-blue-600">Roster.</span></h1>
             <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">OPERATIONAL TEAM MANAGEMENT</p>
         </div>
-        <a href="{{ route('vendor.employees.create') }}" class="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-3 italic">
+        <a @if($vendor->isProfileComplete()) href="{{ route('vendor.employees.create') }}" @endif
+           class="w-full md:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-3 italic {{ !$vendor->isProfileComplete() ? 'opacity-20 cursor-not-allowed grayscale' : '' }}">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             Enlist Professional
         </a>
@@ -60,7 +61,8 @@
                     <svg class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 </div>
                 <p class="text-xl font-black text-slate-300 uppercase italic tracking-widest mb-10">Roster Empty</p>
-                <a href="{{ route('vendor.employees.create') }}" class="px-12 py-5 bg-slate-900 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all italic shadow-2xl shadow-slate-900/20">Initialize Team</a>
+                <a @if($vendor->isProfileComplete()) href="{{ route('vendor.employees.create') }}" @endif
+                   class="px-12 py-5 bg-slate-900 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all italic shadow-2xl shadow-slate-900/20 {{ !$vendor->isProfileComplete() ? 'opacity-20 cursor-not-allowed grayscale' : '' }}">Initialize Team</a>
             </div>
         @endforelse
     </div>

@@ -45,6 +45,20 @@ class EmployeeController extends Controller
             'service_fee_override' => 'nullable|numeric|min:0',
         ]);
 
+        if ($vendor->global_opening_time) {
+            $globalStart = \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i');
+            if ($request->working_start_time < $globalStart) {
+                return back()->withInput()->withErrors(['working_start_time' => "Start time cannot be earlier than shop opening time ($globalStart)."]);
+            }
+        }
+        
+        if ($vendor->global_closing_time) {
+            $globalEnd = \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i');
+            if ($request->working_end_time > $globalEnd) {
+                return back()->withInput()->withErrors(['working_end_time' => "End time cannot be later than shop closing time ($globalEnd)."]);
+            }
+        }
+
         $data = $request->except('photo');
         $data['vendor_id'] = $vendor->id;
 
@@ -76,6 +90,21 @@ class EmployeeController extends Controller
             'is_active' => 'required|boolean',
             'service_fee_override' => 'nullable|numeric|min:0',
         ]);
+
+        $vendor = auth()->user()->vendor;
+        if ($vendor->global_opening_time) {
+            $globalStart = \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i');
+            if ($request->working_start_time < $globalStart) {
+                return back()->withInput()->withErrors(['working_start_time' => "Start time cannot be earlier than shop opening time ($globalStart)."]);
+            }
+        }
+        
+        if ($vendor->global_closing_time) {
+            $globalEnd = \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i');
+            if ($request->working_end_time > $globalEnd) {
+                return back()->withInput()->withErrors(['working_end_time' => "End time cannot be later than shop closing time ($globalEnd)."]);
+            }
+        }
 
         $data = $request->except('photo');
 

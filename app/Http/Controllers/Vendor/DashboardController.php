@@ -36,7 +36,7 @@ class DashboardController extends Controller
 
         $recentBookings = Booking::where('vendor_id', $vendor->id)
             ->latest()
-            ->take(12)
+            ->take(5)
             ->get();
 
         return view('vendor.dashboard', compact('vendor', 'stats', 'recentBookings'));

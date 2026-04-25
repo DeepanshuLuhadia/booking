@@ -51,23 +51,23 @@
             <!-- Stats Bar -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-8 max-w-5xl mx-auto pt-12 border-t border-white/5">
                 <div class="stat-pill">
-                    <span class="stat-value">80k+</span>
+                    <span class="stat-value" data-counter data-target="80" data-suffix="k+">0</span>
                     <span class="stat-label">Happy Clients</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">500+</span>
+                    <span class="stat-value" data-counter data-target="500" data-suffix="+">0</span>
                     <span class="stat-label">Cities</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">1.2M</span>
+                    <span class="stat-value" data-counter data-target="1.2" data-suffix="M" data-decimals="1">0</span>
                     <span class="stat-label">Appointments</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">4.9<svg class="w-4 h-4 inline ml-1 text-orange-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg></span>
+                    <span class="stat-value"><span data-counter data-target="4.9" data-decimals="1">0</span><svg class="w-4 h-4 inline ml-1 text-orange-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg></span>
                     <span class="stat-label">Average Rated</span>
                 </div>
                 <div class="stat-pill">
-                    <span class="stat-value">4.9<svg class="w-4 h-4 inline ml-1 text-orange-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg></span>
+                    <span class="stat-value"><span data-counter data-target="4.9" data-decimals="1">0</span><svg class="w-4 h-4 inline ml-1 text-orange-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg></span>
                     <span class="stat-label">Top Experts</span>
                 </div>
             </div>
@@ -181,4 +181,50 @@
             </a>
         </div>
     </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const counters = document.querySelectorAll('[data-counter]');
+            
+            const animateCounter = (el) => {
+                const target = parseFloat(el.dataset.target);
+                const duration = 2000; // 2 seconds
+                const decimals = parseInt(el.dataset.decimals) || 0;
+                const suffix = el.dataset.suffix || '';
+                const startTime = performance.now();
+
+                function update(now) {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function: easeOutQuart
+                    const easeProgress = 1 - Math.pow(1 - progress, 4);
+                    
+                    const current = easeProgress * target;
+                    el.innerText = current.toFixed(decimals) + suffix;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        el.innerText = target.toFixed(decimals) + suffix;
+                    }
+                }
+                requestAnimationFrame(update);
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateCounter(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { 
+                threshold: 0.1, 
+                rootMargin: '0px 0px -50px 0px' 
+            });
+
+            counters.forEach(counter => observer.observe(counter));
+        });
+    </script>
 </x-app-layout>

@@ -34,16 +34,16 @@ class CustomerDiscoveryController extends Controller
             $query->where('is_open', true)
                   ->where(function($q) use ($now) {
                       $q->where(function($q2) use ($now) {
-                          $q2->whereColumn('shop_open_time', '<', 'shop_close_time')
-                             ->where('shop_open_time', '<=', $now)
-                             ->where('shop_close_time', '>=', $now);
+                          $q2->whereColumn('global_opening_time', '<', 'global_closing_time')
+                             ->where('global_opening_time', '<=', $now)
+                             ->where('global_closing_time', '>=', $now);
                       })->orWhere(function($q2) use ($now) {
-                          $q2->whereColumn('shop_open_time', '>=', 'shop_close_time')
+                          $q2->whereColumn('global_opening_time', '>=', 'global_closing_time')
                              ->where(function($q3) use ($now) {
-                                 $q3->where('shop_open_time', '<=', $now)
-                                    ->orWhere('shop_close_time', '>=', $now);
+                                 $q3->where('global_opening_time', '<=', $now)
+                                    ->orWhere('global_closing_time', '>=', $now);
                              });
-                      })->orWhereNull('shop_open_time');
+                      })->orWhereNull('global_opening_time');
                   });
         }
 
@@ -62,15 +62,15 @@ class CustomerDiscoveryController extends Controller
         } elseif ($sort === 'rating') {
             $query->orderBy('id', 'desc');
         } else {
-            // Sort by dynamically open first
+            // Sort by dynamically open first using global times
             $query->orderByRaw(
                 "(is_open = 1 AND 
                   (
-                    (shop_open_time < shop_close_time AND ? BETWEEN shop_open_time AND shop_close_time)
+                    (global_opening_time < global_closing_time AND ? BETWEEN global_opening_time AND global_closing_time)
                     OR 
-                    (shop_open_time >= shop_close_time AND (? >= shop_open_time OR ? <= shop_close_time))
+                    (global_opening_time >= global_closing_time AND (? >= global_opening_time OR ? <= global_closing_time))
                     OR
-                    (shop_open_time IS NULL)
+                    (global_opening_time IS NULL)
                   )
                 ) DESC", [$now, $now, $now]
             )->latest();
@@ -78,15 +78,15 @@ class CustomerDiscoveryController extends Controller
 
         $vendors = $query->paginate(12);
         
-        // Dynamically compute 'is_currently_open' for blade view
+        // Dynamically compute 'is_currently_open' for blade view using global times
         $vendors->getCollection()->transform(function($v) use ($now) {
             if (!$v->is_open || $v->status !== 'active') {
                 $v->is_currently_open = false;
                 return $v;
             }
-            if ($v->shop_open_time && $v->shop_close_time) {
-                $open = $v->shop_open_time;
-                $close = $v->shop_close_time;
+            if ($v->global_opening_time && $v->global_closing_time) {
+                $open = $v->global_opening_time;
+                $close = $v->global_closing_time;
                 if ($open < $close) {
                     $v->is_currently_open = ($now >= $open && $now <= $close);
                 } else {
@@ -117,6 +117,16 @@ class CustomerDiscoveryController extends Controller
             $employeeOpensAt = \Carbon\Carbon::parse($selectedEmployee->working_start_time);
             $employeeClosesAt = \Carbon\Carbon::parse($selectedEmployee->working_end_time);
 
+            // Global Vendor Constraints
+            if ($vendor->global_opening_time) {
+                $vStart = \Carbon\Carbon::parse($vendor->global_opening_time);
+                if ($employeeOpensAt->lt($vStart)) $employeeOpensAt = $vStart;
+            }
+            if ($vendor->global_closing_time) {
+                $vEnd = \Carbon\Carbon::parse($vendor->global_closing_time);
+                if ($employeeClosesAt->gt($vEnd)) $employeeClosesAt = $vEnd;
+            }
+
             $opensAtToday = $now->copy()->setTimeFrom($employeeOpensAt);
             $closesAtToday = $now->copy()->setTimeFrom($employeeClosesAt);
             $windowOpensAt = $opensAtToday->copy()->subHours(2);
@@ -140,6 +150,16 @@ class CustomerDiscoveryController extends Controller
         $now        = \Carbon\Carbon::now();
         $opensAt    = \Carbon\Carbon::parse($employee->working_start_time);
         $closesAt   = \Carbon\Carbon::parse($employee->working_end_time);
+
+        // Global Vendor Constraints
+        if ($vendor->global_opening_time) {
+            $vStart = \Carbon\Carbon::parse($vendor->global_opening_time);
+            if ($opensAt->lt($vStart)) $opensAt = $vStart;
+        }
+        if ($vendor->global_closing_time) {
+            $vEnd = \Carbon\Carbon::parse($vendor->global_closing_time);
+            if ($closesAt->gt($vEnd)) $closesAt = $vEnd;
+        }
 
         // Normalise: if the comparison is cross-midnight, use today's full datetime
         $opensAtToday  = $now->copy()->setTimeFrom($opensAt);

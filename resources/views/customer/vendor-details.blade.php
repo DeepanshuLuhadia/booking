@@ -135,9 +135,12 @@
                                 <span class="text-orange-500 font-black text-[10px] uppercase tracking-widest italic block mb-2">Step 02</span>
                                 <h3 class="text-3xl font-black text-white tracking-tighter italic">Choose Time</h3>
                             </div>
-                            <div class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2">
+                            <div class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2" x-show="!isOffline">
                                 <span class="open-pulse bg-emerald-500"></span>
                                 Online Now
+                            </div>
+                            <div class="px-4 py-2 bg-slate-500/10 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-500/20 flex items-center gap-2" x-show="isOffline" style="display: none;">
+                                Closed
                             </div>
                         </div>
 
@@ -152,7 +155,7 @@
                             <div x-show="!loading && selectedEmployee" class="animate-reveal">
                                 
                                 <!-- Token Flow -->
-                                <template x-if="isTokenEnabled">
+                                <template x-if="isTokenEnabled && !isOffline">
                                     <div class="p-6 space-y-6">
                                         <div class="bg-white/5 p-8 rounded-[2.5rem] text-center text-white relative overflow-hidden shadow-2xl shadow-black/20 border border-white/10">
                                             <div class="absolute inset-0 bg-orange-500 opacity-5"></div>
@@ -247,7 +250,7 @@
         <!-- APPOINTMENT CONFIRMATION -->
         <div x-show="bookingModal" class="fixed inset-0 z-[200] flex items-center justify-center p-6" x-cloak x-transition>
             <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl" @click="bookingModal = false"></div>
-            <div class="relative bg-slate-900/90 text-white rounded-[4rem] p-12 text-center max-w-xl shadow-[0_100px_200px_-50px_rgba(0,0,0,0.8)] border border-white/10">
+            <div class="relative bg-slate-900/90 text-white rounded-[2rem] sm:rounded-[4rem] p-6 sm:p-12 text-center w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-[0_100px_200px_-50px_rgba(0,0,0,0.8)] border border-white/10">
                 <div class="mb-10">
                     <span class="inline-block px-4 py-1 bg-orange-500/10 text-orange-500 border border-orange-500/20 rounded-full text-[9px] font-black uppercase tracking-widest italic mb-6">Security Clearance</span>
                     <h2 class="text-4xl font-black italic tracking-tighter uppercase mb-2">{{ $theme['customer_label'] }} Details</h2>
@@ -255,17 +258,23 @@
                 </div>
 
                 <div class="space-y-5 text-left mb-10">
-                    <div class="relative group">
-                        <span class="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-orange-500 transition-colors">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        </span>
-                        <input type="text" x-model="guestName" class="premium-input w-full h-16 pl-14 bg-white/5 border-white/10 text-white placeholder-white/20" placeholder="Full {{ $theme['customer_label'] }} Name">
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 shrink-0 text-left block">Guest Name</label>
+                        <div class="relative group">
+                            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-orange-500 transition-colors">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            </span>
+                            <input type="text" x-model="guestName" class="premium-input w-full h-14 pl-12 text-base bg-white/5 border-white/10 text-white placeholder-white/20" placeholder="Full {{ $theme['customer_label'] }} Name">
+                        </div>
                     </div>
-                    <div class="relative group">
-                        <span class="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-orange-500 transition-colors">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                        </span>
-                        <input type="tel" x-model="guestPhone" maxlength="10" class="premium-input w-full h-16 pl-14 bg-white/5 border-white/10 text-white placeholder-white/20" placeholder="10 Digit Primary Number">
+                    <div class="space-y-2">
+                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 shrink-0 text-left block">Phone Number</label>
+                        <div class="relative group">
+                            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-orange-500 transition-colors">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                            </span>
+                            <input type="tel" x-model="guestPhone" maxlength="10" class="premium-input w-full h-14 pl-12 text-base bg-white/5 border-white/10 text-white placeholder-white/20" placeholder="10 Digit Primary Number">
+                        </div>
                     </div>
                 </div>
 
