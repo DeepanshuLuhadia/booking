@@ -394,6 +394,14 @@ body[class*="theme-"] {
 }
 ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
 /* ─────────────────────────────────────────────── */
 /*  ANIMATIONS                                     */
 /* ─────────────────────────────────────────────── */
@@ -489,13 +497,15 @@ body[class*="theme-"] {
   --cat2: #ffea00;
   --theme-glow: 0 0 40px rgba(255, 214, 0, 0.4);
 }
+.vendor-theme--default, 
+.vendor-theme--business-advisor,
 .vendor-theme--consultant {
   --cat1: #2979ff;
   --cat2: #00b0ff;
   --theme-glow: 0 0 40px rgba(41, 121, 255, 0.4);
 }
-.vendor-theme--default, 
-.vendor-theme--business-advisor {
+.vendor-theme--education,
+.vendor-theme--training {
   --cat1: #1a237e;
   --cat2: #3949ab;
   --theme-glow: 0 0 40px rgba(26, 35, 126, 0.4);

@@ -8,13 +8,13 @@ use Illuminate\Support\Str;
 class Vendor extends Model
 {
     protected $fillable = [
-        'user_id', 'business_name', 'slug', 'owner_name', 'contact_number',
+        'user_id', 'vendor_category_id', 'business_name', 'slug', 'owner_name', 'contact_number',
         'shop_photo', 'address', 'latitude', 'longitude', 'is_open',
         'token_booking_enabled', 'token_amount', 'service_fee', 'emergency_fee',
-        'subscription_plan_id', 'subscription_expires_at', 'qr_code_path', 'status',
+        'subscription_plan_id', 'subscription_expires_at', 'qr_code_path', 'status', 'is_profile_complete',
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
         'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
-        'global_opening_time', 'global_closing_time',
+        'global_opening_time', 'global_closing_time', 'allow_booking_until_closing',
     ];
 
     protected $casts = [
@@ -23,6 +23,8 @@ class Vendor extends Model
         'subscription_expires_at' => 'datetime',
         'referral_balance' => 'decimal:2',
         'referral_reward_paid' => 'boolean',
+        'is_profile_complete' => 'boolean',
+        'allow_booking_until_closing' => 'boolean',
     ];
 
     protected static function boot()
@@ -31,6 +33,10 @@ class Vendor extends Model
         static::creating(function ($vendor) {
             $vendor->slug = Str::slug($vendor->business_name) . '-' . Str::random(5);
             $vendor->referral_code = 'VND-' . strtoupper(Str::random(8));
+        });
+
+        static::saving(function ($vendor) {
+            $vendor->is_profile_complete = $vendor->isProfileComplete();
         });
 
         static::updated(function ($vendor) {
@@ -107,10 +113,12 @@ class Vendor extends Model
 
     public function isProfileComplete()
     {
-        return !empty($this->appointment_mode) && 
+        return !empty($this->contact_number) && 
+               !empty($this->vendor_category_id) && 
+               !empty($this->address) && 
+               !empty($this->appointment_mode) && 
                !empty($this->global_opening_time) && 
-               !empty($this->global_closing_time) && 
-               !empty($this->upi_id);
+               !empty($this->global_closing_time);
     }
 
     public function isEffectivelyOpen()

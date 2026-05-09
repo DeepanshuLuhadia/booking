@@ -20,7 +20,23 @@ class CustomerDiscoveryController extends Controller
         $now = now()->format('H:i:s');
 
         // All active vendors (closed ones shown greyed-out)
-        $query = Vendor::where('status', 'active');
+        // Mandatory filter: Profile must be complete
+        $query = Vendor::where('status', 'active')
+            ->where('is_profile_complete', true)
+            ->with(['employees' => function($q) {
+                $q->where('is_active', true)->where(function($q2) {
+                    $q2->where('service_fee_override', '>', 0)
+                       ->orWhereNull('service_fee_override');
+                });
+            }, 'category']);
+
+        // Exclude vendors where ALL employees have 0 fee
+        $query->whereHas('employees', function($q) {
+            $q->where('is_active', true)->where(function($q2) {
+                $q2->where('service_fee_override', '>', 0)
+                   ->orWhereNull('service_fee_override');
+            });
+        });
 
         // Role filter
         if ($filterType && array_key_exists($filterType, ThemeService::getAllThemes())) {
@@ -78,23 +94,63 @@ class CustomerDiscoveryController extends Controller
 
         $vendors = $query->paginate(12);
         
-        // Dynamically compute 'is_currently_open' for blade view using global times
         $vendors->getCollection()->transform(function($v) use ($now) {
-            if (!$v->is_open || $v->status !== 'active') {
+            $activeEmployeesWithFee = $v->employees->where('is_active', true)->filter(function($e) {
+                return is_null($e->service_fee_override) || $e->service_fee_override > 0;
+            });
+            
+            // Calculate starting fee
+            $v->starting_fee = $activeEmployeesWithFee->min('service_fee_override') ?? $v->service_fee;
+
+            if (!$v->is_open || $v->status !== 'active' || $activeEmployeesWithFee->isEmpty()) {
                 $v->is_currently_open = false;
                 return $v;
             }
-            if ($v->global_opening_time && $v->global_closing_time) {
-                $open = $v->global_opening_time;
-                $close = $v->global_closing_time;
-                if ($open < $close) {
-                    $v->is_currently_open = ($now >= $open && $now <= $close);
-                } else {
-                    $v->is_currently_open = ($now >= $open || $now <= $close);
+
+            $nowDt = \Carbon\Carbon::now();
+            $hasAvailableEmployee = false;
+
+            foreach ($activeEmployeesWithFee as $emp) {
+                $empStart = \Carbon\Carbon::parse($emp->working_start_time);
+                $empEnd   = \Carbon\Carbon::parse($emp->working_end_time);
+
+                // Apply Global Vendor Constraints
+                if ($v->global_opening_time) {
+                    $vOpen = \Carbon\Carbon::parse($v->global_opening_time);
+                    if ($empStart->lt($vOpen)) $empStart = $vOpen;
                 }
-            } else {
-                $v->is_currently_open = true;
+                if ($v->global_closing_time) {
+                    $vClose = \Carbon\Carbon::parse($v->global_closing_time);
+                    if ($empEnd->gt($vClose)) $empEnd = $vClose;
+                }
+
+                $startDt = $nowDt->copy()->setTimeFrom($empStart);
+                $endDt   = $nowDt->copy()->setTimeFrom($empEnd);
+
+                // Requirement 3: 2-hour rule for appointments
+                if ($v->appointment_mode === 'appointment') {
+                    $effectiveStartDt = $startDt->copy()->subHours(2);
+                    $effectiveEndDt = $endDt;
+                } else {
+                    $effectiveStartDt = $startDt;
+                    $effectiveEndDt = $endDt;
+                }
+                
+                // Handle cases where shift starts but hasn't ended (e.g. cross midnight)
+                if ($effectiveStartDt->gt($effectiveEndDt)) {
+                    if ($nowDt->gte($effectiveStartDt) || $nowDt->lte($effectiveEndDt)) {
+                        $hasAvailableEmployee = true;
+                        break;
+                    }
+                } else {
+                    if ($nowDt->between($effectiveStartDt, $effectiveEndDt)) {
+                        $hasAvailableEmployee = true;
+                        break;
+                    }
+                }
             }
+
+            $v->is_currently_open = $hasAvailableEmployee;
             return $v;
         });
 
@@ -106,6 +162,44 @@ class CustomerDiscoveryController extends Controller
     public function show(Vendor $vendor, SlotGenerationService $slotService)
     {
         $vendor->load(['employees', 'category']);
+
+        $nowDt = \Carbon\Carbon::now();
+        foreach ($vendor->employees as $emp) {
+            if (!$emp->is_active) {
+                $emp->is_available = false;
+                continue;
+            }
+
+            $empStart = \Carbon\Carbon::parse($emp->working_start_time);
+            $empEnd   = \Carbon\Carbon::parse($emp->working_end_time);
+
+            // Bound by Vendor's Global Times if set
+            if ($vendor->global_opening_time) {
+                $vStart = \Carbon\Carbon::parse($vendor->global_opening_time);
+                if ($empStart->lt($vStart)) $empStart = $vStart;
+            }
+            if ($vendor->global_closing_time) {
+                $vEnd = \Carbon\Carbon::parse($vendor->global_closing_time);
+                if ($empEnd->gt($vEnd)) $empEnd = $vEnd;
+            }
+
+            $startDt = $nowDt->copy()->setTimeFrom($empStart);
+            $endDt   = $nowDt->copy()->setTimeFrom($empEnd);
+
+            if ($vendor->appointment_mode === 'appointment') {
+                $effectiveStartDt = $startDt->copy()->subHours(2);
+                $effectiveEndDt = $endDt;
+            } else {
+                $effectiveStartDt = $startDt;
+                $effectiveEndDt = $endDt;
+            }
+
+            if ($effectiveStartDt->gt($effectiveEndDt)) {
+                $emp->is_available = ($nowDt->gte($effectiveStartDt) || $nowDt->lte($effectiveEndDt));
+            } else {
+                $emp->is_available = $nowDt->between($effectiveStartDt, $effectiveEndDt);
+            }
+        }
 
         $selectedEmployee = $vendor->employees()->where('is_active', true)->first();
         $slots = [];
@@ -129,9 +223,13 @@ class CustomerDiscoveryController extends Controller
 
             $opensAtToday = $now->copy()->setTimeFrom($employeeOpensAt);
             $closesAtToday = $now->copy()->setTimeFrom($employeeClosesAt);
-            $windowOpensAt = $opensAtToday->copy()->subHours(2);
 
-            $isOffline = $now->lt($windowOpensAt) || $now->gt($closesAtToday);
+            if ($vendor->appointment_mode === 'appointment') {
+                $windowOpensAt = $opensAtToday->copy()->subHours(2);
+                $isOffline = $now->lt($windowOpensAt) || $now->gt($closesAtToday);
+            } else {
+                $isOffline = $now->lt($opensAtToday) || $now->gt($closesAtToday);
+            }
             $opensAt = $employeeOpensAt->format('h:i A');
 
             if (!$isOffline) {
@@ -165,16 +263,15 @@ class CustomerDiscoveryController extends Controller
         $opensAtToday  = $now->copy()->setTimeFrom($opensAt);
         $closesAtToday = $now->copy()->setTimeFrom($closesAt);
 
-        // Window opens 2 hours before the employee's working_start_time
-        $windowOpensAt = $opensAtToday->copy()->subHours(2);
+        // Visibility / Window Logic
+        if ($vendor->appointment_mode === 'appointment') {
+            $windowOpensAt = $opensAtToday->copy()->subHours(2);
+            $isOffline = $now->lt($windowOpensAt) || $now->gt($closesAtToday);
+        } else {
+            $isOffline = $now->lt($opensAtToday) || $now->gt($closesAtToday);
+        }
 
-        // We're "offline" if:
-        //   - current time is before the 2-hour pre-open window, AND
-        //   - the shop has not yet closed for the day (i.e. we haven't passed closing)
-        $shopNotYetOpenWindow = $now->lt($windowOpensAt);
-        $shopAlreadyClosed    = $now->gt($closesAtToday);
-
-        if ($shopNotYetOpenWindow || $shopAlreadyClosed) {
+        if ($isOffline) {
             return response()->json([
                 'offline'  => true,
                 'opens_at' => $opensAt->format('h:i A'),
@@ -197,7 +294,7 @@ class CustomerDiscoveryController extends Controller
         return response()->json([
             'offline' => false,
             'slots'   => $slots,
-            'queue_index' => $queueIndex,
+            'queue_index' => $queueIndex ?? 0,
             'running_token' => $runningToken ?? 0
         ]);
     }

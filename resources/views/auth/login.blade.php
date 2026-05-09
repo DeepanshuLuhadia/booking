@@ -1,5 +1,8 @@
 <x-app-layout page-title="Secure Portal Access | Appointment Platform">
-    <div class="relative min-h-[90vh] flex items-center justify-center py-20 bg-theme-main">
+    <div class="relative min-h-[90vh] flex items-center justify-center py-20" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
+        <!-- Glowing Orbs (From Index) -->
+        <div style="position:absolute; top:0; left:25%; width:500px; height:500px; background:rgba(255,109,0,.08); border-radius:50%; filter:blur(120px); pointer-events:none;"></div>
+        <div style="position:absolute; bottom:0; right:25%; width:600px; height:600px; background:rgba(255,109,0,.04); border-radius:50%; filter:blur(150px); pointer-events:none;"></div>
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
@@ -14,7 +17,7 @@
                     Institutional Security Protocol
                 </div>
                 <h1 class="text-5xl md:text-[4rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
-                    Authorize <span class="text-theme-primary">Access.</span>
+                    Authorize <span style="color:transparent; background:linear-gradient(135deg,#ff8c42,#ffab40); -webkit-background-clip:text; background-clip:text;">Access.</span>
                 </h1>
                 <p class="text-lg font-medium text-white/80 max-w-sm mx-auto italic leading-relaxed">Login to manage
                     your professional appointments and registry credentials.</p>
@@ -25,10 +28,10 @@
                     @csrf
 
                     <div class="space-y-2">
-                        <label class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Email
+                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Email
                             Address</label>
                         <input type="email" name="email" required
-                            class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base placeholder:text-slate-400 text-slate-900"
+                            class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base placeholder:text-white/40 text-white focus:bg-white/10"
                             placeholder="Primary Email Identity" value="{{ old('email') }}">
                         @error('email')
                         <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-6">{{
@@ -38,9 +41,9 @@
 
                     <div class="space-y-2">
                         <label
-                            class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 ml-6">Password</label>
+                            class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Password</label>
                         <input type="password" name="password" required
-                            class="premium-input w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base placeholder:text-slate-400 text-slate-900"
+                            class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base placeholder:text-white/40 text-white focus:bg-white/10"
                             placeholder="••••••••">
                         @error('password')
                         <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-6">{{
@@ -51,12 +54,12 @@
                     <div class="flex items-center justify-between pt-2 px-4">
                         <label class="flex items-center gap-3 cursor-pointer group">
                             <input type="checkbox" name="remember"
-                                class="w-5 h-5 rounded-lg border-2 border-slate-200 bg-slate-50 text-theme-primary focus:ring-theme-primary/10">
-                            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Remember
+                                class="w-5 h-5 rounded-lg border-2 border-white/20 bg-white/5" style="color:#ff8c42;">
+                            <span class="text-[10px] font-black uppercase tracking-widest text-white/60">Remember
                                 Me</span>
                         </label>
                         <a href="#"
-                            class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-theme-primary transition-colors">Forgot
+                            class="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Forgot
                             Password</a>
                     </div>
 
@@ -69,11 +72,11 @@
                         </svg>
                     </button>
 
-                    <div class="pt-8 text-center border-t border-slate-100">
-                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-loose">
+                    <div class="pt-8 text-center border-t border-white/10">
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 leading-loose">
                             New Provider?
                             <a href="/register/vendor"
-                                class="text-slate-900 hover:text-theme-primary transition-all ml-2 underline decoration-theme-primary/30 decoration-4 underline-offset-8 italic">New
+                                class="text-white transition-all ml-2 underline decoration-4 underline-offset-8 italic" style="text-decoration-color:rgba(255,140,66,0.3);">New
                                 Registry Registration</a>
                         </p>
                     </div>

@@ -1,7 +1,7 @@
 <x-vendor-layout>
     <div class="flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
         <div>
-            <h1 class="text-4xl font-black italic tracking-tight uppercase text-slate-900">Appointment <span
+            <h1 class="text-4xl font-black italic tracking-tight uppercase ">Appointment <span
                     class="text-blue-600">Registry.</span></h1>
             <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">HISTORICAL
                 TRANSACTION ARCHIVE</p>
@@ -117,9 +117,11 @@
                 align-items: center;
                 justify-content: space-between;
             }
+
             .pagination-container nav div:first-child {
                 display: none;
             }
+
             @media (min-width: 640px) {
                 .pagination-container nav div:first-child {
                     display: flex;
@@ -128,9 +130,10 @@
                     justify-content: space-between;
                 }
             }
-            .pagination-container a, 
-            .pagination-container span[aria-current="page"] > span,
-            .pagination-container span[aria-disabled="true"] > span {
+
+            .pagination-container a,
+            .pagination-container span[aria-current="page"]>span,
+            .pagination-container span[aria-disabled="true"]>span {
                 padding: 0.5rem 1rem;
                 border: 1px solid #e2e8f0;
                 border-radius: 0.75rem;
@@ -142,26 +145,31 @@
                 transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
                 transition-duration: 150ms;
             }
+
             .pagination-container a {
                 background-color: #ffffff;
                 color: #475569;
                 text-decoration: none;
             }
+
             .pagination-container a:hover {
                 background-color: #0f172a;
                 color: #ffffff;
                 border-color: #0f172a;
             }
-            .pagination-container span[aria-current="page"] > span {
+
+            .pagination-container span[aria-current="page"]>span {
                 background-color: #0f172a;
                 color: #ffffff;
                 border-color: #0f172a;
             }
-            .pagination-container span[aria-disabled="true"] > span {
+
+            .pagination-container span[aria-disabled="true"]>span {
                 background-color: #f8fafc;
                 color: #cbd5e1;
                 cursor: not-allowed;
             }
+
             .pagination-container svg {
                 width: 1.25rem;
                 height: 1.25rem;
