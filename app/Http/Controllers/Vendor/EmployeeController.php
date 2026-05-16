@@ -43,6 +43,8 @@ class EmployeeController extends Controller
             'slot_duration' => 'required|integer|min:15|max:120',
             'photo' => 'nullable|image|max:1024',
             'service_fee_override' => 'nullable|numeric|min:0',
+            'premium_fee' => 'nullable|numeric|min:0',
+            'premium_bookings_count' => 'nullable|integer|min:0',
         ]);
 
         if ($vendor->global_opening_time) {
@@ -89,6 +91,8 @@ class EmployeeController extends Controller
             'photo' => 'nullable|image|max:1024',
             'is_active' => 'required|boolean',
             'service_fee_override' => 'nullable|numeric|min:0',
+            'premium_fee' => 'nullable|numeric|min:0',
+            'premium_bookings_count' => 'nullable|integer|min:0',
         ]);
 
         $vendor = auth()->user()->vendor;

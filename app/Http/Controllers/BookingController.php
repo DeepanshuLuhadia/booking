@@ -20,41 +20,25 @@ class BookingController extends Controller
                 'employee_id' => 'required|exists:employees,id',
                 'slot_start' => 'required',
                 'slot_end' => 'required',
-                'booking_type' => 'required|in:normal,emergency',
-                'customer_name' => 'required|string|max:255',
-                'customer_phone' => 'required|string|size:10',
+                'booking_type' => 'required|in:normal,premium',
+                'customer_name' => 'required|string|max:50',
+                'customer_phone' => 'required|digits:10',
                 'payment_id' => 'nullable|string'
             ]);
 
             $vendor = Vendor::find($request->vendor_id);
             $employee = Employee::find($request->employee_id);
 
-            // Safety Check: Enforce 2-hour pre-opening window
-            $now = \Carbon\Carbon::now();
-            $opensAt = \Carbon\Carbon::parse($employee->working_start_time);
-            $closesAt = \Carbon\Carbon::parse($employee->working_end_time);
-            
-            $opensAtToday = $now->copy()->setTimeFrom($opensAt);
-            $closesAtToday = $now->copy()->setTimeFrom($closesAt);
-            $windowOpensAt = $opensAtToday->copy()->subHours(2);
-
-            if ($now->lt($windowOpensAt) || $now->gt($closesAtToday)) {
-                return response()->json([
-                    'success' => false,
-                    'error'   => 'Booking is currently offline. Slots open 2 hours before opening time.',
-                ], 403);
-            }
-
             // Pricing Logic: Use employee override if set, otherwise vendor default
             $baseServiceFee = $employee->service_fee_override ?? $vendor->service_fee;
 
-            // Emergency/Premium Fee from Vendor setting
-            $emergencyFee = $request->booking_type === 'emergency' ? $vendor->emergency_fee : 0;
+            // Priority/Premium Booking Fee from Employee setting
+            $premiumFee = $request->booking_type === 'premium' ? ($employee->premium_fee ?? 0) : 0;
 
             $tokenAmount = ($vendor->appointment_mode === 'token') ? $vendor->token_amount : 0;
 
-            // Final amount customer pays online (Token + Emergency Fee)
-            $totalToPay = $tokenAmount + $emergencyFee;
+            // Final amount customer pays online (Token + Premium Fee)
+            $totalToPay = $tokenAmount + $premiumFee;
 
             // Token Generation & Time Slot Logic
             $tokenNumber = null;
@@ -88,7 +72,7 @@ class BookingController extends Controller
                 'token_required'       => ($vendor->appointment_mode === 'token'),
                 'token_number'         => $tokenNumber,
                 'token_amount'         => $tokenAmount,
-                'emergency_fee'        => $emergencyFee,
+                'emergency_fee'        => $premiumFee,
                 'online_paid_amount'   => $totalToPay,
                 'status'               => 'confirmed',
                 'vendor_booked'        => false,

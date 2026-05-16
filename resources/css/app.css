@@ -506,9 +506,9 @@ body[class*="theme-"] {
 }
 .vendor-theme--education,
 .vendor-theme--training {
-  --cat1: #1a237e;
-  --cat2: #3949ab;
-  --theme-glow: 0 0 40px rgba(26, 35, 126, 0.4);
+  --cat1: #7c3aed;
+  --cat2: #a78bfa;
+  --theme-glow: 0 0 40px rgba(124, 58, 237, 0.4);
 }
 
 .theme-gradient-text {

@@ -33,13 +33,13 @@ class NotificationService
             Log::warning("Vendor #{$vendor->id} has no linked user — skipping booking notification.");
             return;
         }
-        $isPremium = $booking->booking_type === 'emergency';
+        $isPremium = $booking->booking_type === 'premium';
         
-        $title = $isPremium ? "🔥 PREMIUM BOOKING RECEIVED!" : "New Booking Received!";
+        $title = $isPremium ? "🔥 PRIORITY BOOKING RECEIVED!" : "New Booking Received!";
         $message = "{$booking->customer_name} booked a slot with {$booking->employee->name} at {$booking->slot_start_time}.";
         
         if ($isPremium) {
-            $message .= " (Premium Fee: ₹{$booking->emergency_fee})";
+            $message .= " (Priority Fee: ₹{$booking->emergency_fee})";
         }
         
         $this->sendWebPush($user, $title, $message, [

@@ -285,10 +285,12 @@
                                                             :class="{
                                                                 'opacity-20 cursor-not-allowed': !slot.available,
                                                                 'border-blue-500 bg-blue-500 text-white shadow-lg shadow-blue-500/20': selectedSlot && selectedSlot.start === slot.start,
-                                                                'border-white/10 hover:border-blue-500/50 hover:bg-white/10': slot.available && (!selectedSlot || selectedSlot.start !== slot.start)
+                                                                'border-violet-500/30 bg-violet-500/5 hover:border-violet-500': slot.is_premium && (!selectedSlot || selectedSlot.start !== slot.start),
+                                                                'border-white/10 hover:border-blue-500/50 hover:bg-white/10': slot.available && !slot.is_premium && (!selectedSlot || selectedSlot.start !== slot.start)
                                                             }">
                                                         <span class="text-xs font-black italic tracking-tighter block" x-text="slot.start"></span>
-                                                        <span class="text-[7px] font-black uppercase tracking-widest opacity-40" x-text="slot.available ? 'Select' : 'Booked'"></span>
+                                                        <span class="text-[7px] font-black uppercase tracking-widest opacity-40" x-text="slot.is_premium ? 'Priority' : (slot.available ? 'Select' : 'Booked')"></span>
+                                                        <div x-show="slot.is_premium" class="mt-1 text-[7px] bg-violet-500 text-white rounded font-black py-0.5" x-text="'+₹' + slot.premium_fee_amount"></div>
                                                     </button>
                                                 </template>
                                             </div>

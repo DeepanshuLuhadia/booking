@@ -41,23 +41,23 @@
              class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-8 flex items-center justify-between">
             <div class="flex items-center gap-10">
                 <a href="/" class="group flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-orange-400 flex items-center justify-center text-white text-2xl font-black shadow-[0_10px_20px_-5px_rgba(249,115,22,0.4)] transition-transform group-hover:rotate-12 group-hover:scale-110">
+                    <div class="w-12 h-12 rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-2xl font-black theme-glow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
                         {{ $theme['icon'] ?? 'B' }}
                     </div>
                     <span class="text-2xl font-black tracking-tighter text-white">
-                        BOOK<span class="text-orange-500">AI</span>
+                        BOOK<span class="theme-gradient-text">AI</span>
                     </span>
                 </a>
             </div>
 
             <div class="flex items-center gap-10">
                 <div class="hidden md:flex items-center gap-10">
-                    <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-orange-500 transition-colors">Explore</a>
+                    <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Explore</a>
                     @auth
                         @if(auth()->user()->isAdmin())
-                            <a href="/admin/dashboard" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-orange-500 transition-colors">Admin Portal</a>
+                            <a href="/admin/dashboard" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Admin Portal</a>
                         @elseif(auth()->user()->isVendor())
-                            <a href="/vendor/dashboard" class="text-xs font-black uppercase tracking-widest text-orange-500 hover:text-orange-400 transition-colors">Business Hub</a>
+                            <a href="/vendor/dashboard" class="text-xs font-black uppercase tracking-widest theme-gradient-text hover:brightness-110 transition-colors">Business Hub</a>
                         @endif
                     @endauth
                 </div>
@@ -73,7 +73,7 @@
                     @else
                         <a href="/login" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-white">Sign In</a>
                         <a href="/register/vendor" 
-                           class="btn-premium px-8 py-3 rounded-xl text-[10px] shadow-none hover:shadow-orange-500/20">
+                           class="theme-btn px-8 py-3 rounded-xl text-[10px] shadow-none">
                             Join Now
                         </a>
                     @endauth
@@ -91,17 +91,17 @@
             <div class="container mx-auto px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-12 mb-16">
                     <div class="flex flex-col items-center md:items-start gap-6">
-                        <div class="text-3xl font-black text-white tracking-tighter">BOOK<span class="text-orange-500">AI</span></div>
+                        <div class="text-3xl font-black text-white tracking-tighter">BOOK<span class="theme-gradient-text">AI</span></div>
                         <p class="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm text-center md:text-left text-white/30 leading-loose">
                             The Next-Generation Multi-Vendor Booking Experience for Global Professionals.
                         </p>
                     </div>
                     
                     <div class="flex flex-wrap justify-center gap-10 text-[10px] font-black uppercase tracking-[0.3em] text-white/50">
-                        <a href="#" class="hover:text-orange-500 transition-colors">Privacy Policy</a>
-                        <a href="#" class="hover:text-orange-500 transition-colors">Terms of Service</a>
-                        <a href="#" class="hover:text-orange-500 transition-colors">Help Center</a>
-                        <a href="#" class="hover:text-orange-500 transition-colors">Contact Us</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Privacy Policy</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Terms of Service</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Help Center</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Contact Us</a>
                     </div>
                 </div>
 
