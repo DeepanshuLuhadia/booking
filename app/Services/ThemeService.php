@@ -141,17 +141,17 @@ class ThemeService
             'slot_label'      => 'Academic Slot',
             'customer_label'  => 'Student',
 
-            'primary'         => '#1a237e',
-            'primary_dark'    => '#3949ab',
+            'primary'         => '#7c3aed',
+            'primary_dark'    => '#a78bfa',
             'accent'          => '#e8eaf6',
             'text_on_primary' => '#ffffff',
 
             'body_bg'         => 'linear-gradient(180deg, #0f172a 0%, #020617 100%)',
             'body_text'       => '#f8fafc',
-            'hero_gradient'   => 'linear-gradient(135deg, #1a237e 0%, #3949ab 100%)',
+            'hero_gradient'   => 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
             'card_bg'         => 'rgba(255, 255, 255, 0.05)',
-            'card_border'     => 'rgba(26, 35, 126, 0.2)',
-            'card_shadow'     => '0 0 30px rgba(26, 35, 126, 0.1)',
+            'card_border'     => 'rgba(124, 58, 237, 0.2)',
+            'card_shadow'     => '0 0 30px rgba(124, 58, 237, 0.1)',
 
             'font_heading'    => 'Outfit',
             'border_radius'   => '1.5rem',
@@ -254,6 +254,8 @@ class ThemeService
         $navText = $theme['nav_text'] ?? '#0f172a';
 
         return ":root {
+            --cat1: {$theme['primary']};
+            --cat2: {$theme['primary_dark']};
             --theme-primary: {$theme['primary']};
             --theme-primary-dark: {$theme['primary_dark']};
             --theme-accent: {$theme['accent']};

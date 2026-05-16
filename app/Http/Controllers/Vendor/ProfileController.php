@@ -20,6 +20,8 @@ class ProfileController extends Controller
 
         $request->validate([
             'business_name' => 'sometimes|required|string|max:255',
+            'contact_number' => 'sometimes|required|string|max:20',
+            'show_contact_number' => 'nullable|boolean',
             'address' => 'sometimes|required|string',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -32,6 +34,7 @@ class ProfileController extends Controller
         ]);
 
         $data = $request->except(['shop_photo', 'token_amount', 'service_fee', 'emergency_fee', 'avg_consultation_time']);
+        $data['show_contact_number'] = $request->has('show_contact_number') ? 1 : 0;
         
         if ($request->hasFile('shop_photo')) {
             if ($vendor->shop_photo) {

@@ -8,7 +8,8 @@ class Employee extends Model
 {
     protected $fillable = [
         'vendor_id', 'name', 'photo', 'working_start_time',
-        'working_end_time', 'slot_duration', 'service_fee_override', 'is_active'
+        'working_end_time', 'slot_duration', 'service_fee_override', 
+        'premium_fee', 'premium_bookings_count', 'is_active'
     ];
 
     protected $casts = [

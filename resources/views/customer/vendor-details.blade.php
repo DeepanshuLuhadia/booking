@@ -259,13 +259,13 @@
                                         <div class="grid grid-cols-2 gap-3">
                                             <template x-for="slot in slots" :key="slot.start">
                                                 <button @click="initiateBooking(slot)"
-                                                    :disabled="!slot.available && !slot.requires_emergency"
+                                                    :disabled="!slot.available"
                                                     class="p-4 md:p-6 rounded-2xl border-2 text-center transition-all duration-300 relative overflow-hidden group shadow-sm bg-white/5"
                                                     :class="{
-                                                            'opacity-30 cursor-not-allowed grayscale border-transparent pointer-events-none': !slot.available && !slot.requires_emergency,
+                                                            'opacity-30 cursor-not-allowed grayscale border-transparent pointer-events-none': !slot.available,
                                                             'theme-gradient-bg border-transparent text-white scale-[1.02] theme-glow-sm': selectedSlot && selectedSlot.start === slot.start && slot.available,
-                                                            'border-white/10 hover:theme-border hover:scale-[1.03] hover:bg-white/10 hover:theme-glow-sm': (!selectedSlot || selectedSlot.start !== slot.start) && slot.available,
-                                                            'border-amber-500/30 bg-amber-500/5 hover:border-amber-500': slot.requires_emergency && !slot.available
+                                                            'border-white/10 hover:theme-border hover:scale-[1.03] hover:bg-white/10 hover:theme-glow-sm': (!selectedSlot || selectedSlot.start !== slot.start) && slot.available && !slot.is_premium,
+                                                            'theme-border/20 bg-white/5 hover:theme-border': slot.is_premium && (!selectedSlot || selectedSlot.start !== slot.start)
                                                         }">
 
                                                     <span
@@ -274,11 +274,11 @@
                                                     <span
                                                         class="text-[9px] font-black uppercase tracking-widest transition-colors"
                                                         :class="selectedSlot && selectedSlot.start === slot.start ? 'text-white/80' : 'text-white/40'"
-                                                        x-text="slot.requires_emergency && !slot.available ? 'Priority' : (slot.available ? 'Select' : 'Booked')"></span>
+                                                        x-text="slot.is_premium ? 'Priority' : (slot.available ? 'Select' : 'Booked')"></span>
 
-                                                    <div x-show="slot.requires_emergency && !slot.available"
-                                                        class="mt-2 text-[8px] bg-amber-500 text-white rounded-lg font-black py-0.5">
-                                                        +₹{{ number_format($vendor->emergency_fee) }}</div>
+                                                    <div x-show="slot.is_premium"
+                                                        class="mt-2 text-[8px] theme-gradient-bg text-white rounded-lg font-black py-0.5" x-text="'+₹' + slot.premium_fee_amount">
+                                                    </div>
                                                 </button>
                                             </template>
                                         </div>
@@ -377,7 +377,7 @@
                                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                             </span>
-                            <input type="text" x-model="guestName"
+                            <input type="text" x-model="guestName" maxlength="50"
                                 class="premium-input w-full h-14 pl-12 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border"
                                 placeholder="Full {{ $theme['customer_label'] }} Name">
                         </div>
@@ -395,6 +395,7 @@
                                 </svg>
                             </span>
                             <input type="tel" x-model="guestPhone" maxlength="10"
+                                @input="guestPhone = guestPhone.replace(/[^0-9]/g, '')"
                                 class="premium-input w-full h-14 pl-12 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border"
                                 placeholder="10 Digit Primary Number">
                         </div>
@@ -410,11 +411,10 @@
                                 Rate</span>
                             <span class="font-black" x-text="'₹' + selectedServiceFee"></span>
                         </div>
-                        <div x-show="selectedSlot?.requires_emergency"
+                        <div x-show="selectedSlot?.is_premium"
                             class="flex justify-between items-center theme-gradient-text">
-                            <span class="text-[9px] font-black uppercase tracking-widest italic">Express Priority
-                                Access</span>
-                            <span class="font-black">₹{{ number_format($vendor->emergency_fee) }}</span>
+                            <span class="text-[9px] font-black uppercase tracking-widest italic">Priority Booking Fee</span>
+                            <span class="font-black" x-text="'₹' + selectedSlot?.premium_fee_amount"></span>
                         </div>
                         <div class="flex justify-between items-center pt-6 border-t border-white/10">
                             <span class="text-xl font-black italic uppercase tracking-tighter">Due Now</span>
@@ -444,18 +444,18 @@
             x-transition>
             <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl"></div>
             <div
-                class="relative bg-slate-900/90 text-white rounded-[5rem] p-16 text-center max-w-lg shadow-[0_100px_200px_-50px_rgba(0,0,0,0.5)] border-8 border-emerald-500/10">
+                class="relative bg-slate-900/90 text-white rounded-[5rem] p-16 text-center max-w-lg shadow-[0_100px_200px_-50px_rgba(0,0,0,0.5)] border-8 border-white/5">
                 <div
-                    class="w-24 h-24 bg-emerald-500 text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 animate-reveal-zoom shadow-2xl shadow-emerald-500/30">
+                    class="w-24 h-24 theme-gradient-bg text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 animate-reveal-zoom shadow-2xl theme-glow-sm">
                     <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h2 class="text-5xl font-black mb-4 italic tracking-tighter uppercase leading-none">Appointment
+                <h2 class="text-5xl font-black mb-4 italic tracking-tighter uppercase leading-none theme-gradient-text">Appointment
                     Segmented</h2>
                 <p class="text-white/60 font-medium text-lg mb-12" x-text="successMsg"></p>
                 <button @click="window.location.href='/'"
-                    class="btn-premium w-full h-24 text-xl rounded-3xl opacity-100 italic shadow-lg shadow-orange-500/20">GLOBAL
+                    class="theme-btn w-full h-24 text-xl rounded-3xl opacity-100 italic">GLOBAL
                     REGISTRY</button>
             </div>
         </div>
@@ -535,8 +535,8 @@
 
         initiateBooking(slot) {
             this.selectedSlot = slot;
-            const expressFee = (slot.requires_emergency && !slot.available) ? this.emergencyFee : 0;
-            this.totalAmount = this.selectedServiceFee + expressFee;
+            const premiumSlotFee = slot.is_premium ? slot.premium_fee_amount : 0;
+            this.totalAmount = this.selectedServiceFee + premiumSlotFee;
             this.bookingModal = true;
         },
 
@@ -561,7 +561,7 @@
                         employee_id: this.selectedEmployee,
                         slot_start: this.selectedSlot.start,
                         slot_end: this.selectedSlot.end,
-                        booking_type: this.selectedSlot.requires_emergency && !this.selectedSlot.available ? 'emergency' : 'normal',
+                        booking_type: this.selectedSlot.is_premium ? 'premium' : 'normal',
                         customer_name: this.guestName,
                         customer_phone: this.guestPhone,
                         payment_id: paymentId

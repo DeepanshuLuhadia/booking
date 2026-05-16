@@ -66,6 +66,19 @@
                                 <input type="text" name="owner_name" value="{{ $vendor->owner_name }}" required
                                     class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
                             </div>
+
+                            <div class="space-y-4 relative">
+                                <label
+                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Contact Number</label>
+                                <input type="text" name="contact_number" value="{{ $vendor->contact_number }}" required
+                                    class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 placeholder:text-slate-100 focus:ring-4 focus:ring-blue-50 transition-all">
+                                
+                                <div class="flex items-center gap-3 pt-2 ml-4">
+                                    <input type="checkbox" name="show_contact_number" value="1" {{ $vendor->show_contact_number ? 'checked' : '' }}
+                                        class="w-5 h-5 bg-slate-100 border-none rounded text-blue-600 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer">
+                                    <span class="text-[9px] font-black text-slate-500 uppercase italic tracking-widest cursor-pointer" onclick="this.previousElementSibling.click()">Display to customers</span>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="space-y-4">

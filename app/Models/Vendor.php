@@ -14,7 +14,7 @@ class Vendor extends Model
         'subscription_plan_id', 'subscription_expires_at', 'qr_code_path', 'status', 'is_profile_complete',
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
         'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
-        'global_opening_time', 'global_closing_time', 'allow_booking_until_closing',
+        'global_opening_time', 'global_closing_time', 'allow_booking_until_closing', 'show_contact_number'
     ];
 
     protected $casts = [
@@ -25,6 +25,7 @@ class Vendor extends Model
         'referral_reward_paid' => 'boolean',
         'is_profile_complete' => 'boolean',
         'allow_booking_until_closing' => 'boolean',
+        'show_contact_number' => 'boolean',
     ];
 
     protected static function boot()
@@ -103,7 +104,7 @@ class Vendor extends Model
             
             $slots = app(\App\Services\SlotGenerationService::class)->generateSlots($employee);
             foreach ($slots as $slot) {
-                if ($slot['available'] || $slot['requires_emergency']) {
+                if ($slot['available']) {
                     return true;
                 }
             }
@@ -114,7 +115,7 @@ class Vendor extends Model
     public function isProfileComplete()
     {
         return !empty($this->contact_number) && 
-               !empty($this->vendor_category_id) && 
+               !empty($this->vendor_type) && 
                !empty($this->address) && 
                !empty($this->appointment_mode) && 
                !empty($this->global_opening_time) && 
