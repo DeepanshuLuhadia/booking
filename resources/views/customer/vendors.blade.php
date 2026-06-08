@@ -44,7 +44,7 @@
 
         /* ── Search Bar ──────────────────────────────────────────────── */
         .bv-search-wrap {
-            max-width: 860px;
+            max-width: 940px;
             margin: 0 auto 40px;
         }
 
@@ -59,6 +59,27 @@
             gap: 0;
         }
 
+        @media(max-width: 600px) {
+            .bv-search-bar {
+                flex-direction: column;
+                gap: 0;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.08);
+                border-radius: 24px;
+            }
+            .bv-search-form {
+                flex-direction: column;
+                width: 100%;
+                gap: 10px;
+            }
+        }
+
+        .bv-search-form {
+            display: flex;
+            width: 100%;
+            align-items: center;
+        }
+
         .bv-search-field {
             display: flex;
             align-items: center;
@@ -68,8 +89,23 @@
             border-right: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        @media(max-width: 600px) {
+            .bv-search-field {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 10px 8px;
+            }
+        }
+
         .bv-search-field:last-of-type {
             border-right: none;
+        }
+
+        @media(max-width: 600px) {
+            .bv-search-field:last-of-type {
+                border-bottom: none;
+            }
         }
 
         .bv-search-field svg {
@@ -105,6 +141,7 @@
 
         .bv-search-btn {
             flex-shrink: 0;
+            width: auto;
             margin-left: 8px;
             background: linear-gradient(135deg, #ff6d00, #ffab40);
             color: #fff;
@@ -114,10 +151,48 @@
             border-radius: 12px;
             padding: 16px 32px;
             cursor: pointer;
-            white-space: nowrap;
+            transition: all .3s ease;
             letter-spacing: .04em;
             transition: filter .2s, transform .2s;
             box-shadow: 0 6px 20px rgba(255, 109, 0, .4);
+        }
+
+        @media(max-width: 600px) {
+            .bv-search-wrap {
+                margin: 0 10px 40px;
+                width: calc(100% - 20px);
+            }
+            .bv-search-bar {
+                flex-direction: column;
+                gap: 12px;
+                padding: 16px;
+                background: rgba(255, 255, 255, 0.08);
+                border-radius: 20px;
+            }
+            .bv-search-field {
+                width: 100%;
+                border-right: none !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 12px 10px;
+            }
+            .bv-search-btn {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-top: 8px !important;
+                padding: 18px !important;
+                font-size: 16px !important;
+                border-radius: 14px;
+            }
+        }
+
+        @media(max-width: 600px) {
+            .bv-search-btn {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 4px;
+                padding: 14px;
+                font-size: 13px;
+            }
         }
 
         .bv-search-btn:hover {
@@ -133,6 +208,53 @@
             gap: 10px;
             flex-wrap: wrap;
             margin-top: 32px;
+        }
+
+        .bv-cat-scroll-wrap {
+            position: relative;
+            margin-top: 32px;
+        }
+
+        .bv-cat-scroll-btn {
+            display: none;
+        }
+
+        @media(max-width: 600px) {
+            .bv-cat-scroll-wrap {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .bv-cat-scroll-btn {
+                display: flex;
+                flex-shrink: 0;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: rgba(255,255,255,0.12);
+                border: 1.5px solid rgba(255,255,255,0.2);
+                color: #fff;
+                cursor: pointer;
+                transition: background .2s;
+                z-index: 2;
+            }
+            .bv-cat-scroll-btn:hover {
+                background: rgba(255,255,255,0.22);
+            }
+            .bv-cat-row {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding-bottom: 10px;
+                margin-top: 0;
+            }
+            .bv-cat-row::-webkit-scrollbar {
+                display: none;
+            }
         }
 
         .bv-cat-pill {
@@ -203,6 +325,15 @@
             text-align: center;
         }
 
+        @media(max-width: 768px) {
+            .bv-stats {
+                gap: 20px;
+                flex-wrap: wrap;
+                margin-top: 40px;
+                padding-top: 30px;
+            }
+        }
+
         .bv-stat-num {
             font-size: 2.4rem;
             font-weight: 900;
@@ -211,6 +342,12 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
+        }
+
+        @media(max-width: 600px) {
+            .bv-stat-num {
+                font-size: 1.4rem;
+            }
         }
 
         .bv-stat-label {
@@ -228,7 +365,7 @@
         }
 
         .bv-section-title {
-            font-size: 2.4rem;
+            font-size: clamp(1.8rem, 5vw, 2.4rem);
             font-weight: 900;
             color: #fff;
             text-align: center;
@@ -950,6 +1087,8 @@
             -webkit-background-clip: text;
             background-clip: text;
             font-style: italic;
+            padding-right: 0.12em;
+            display: inline-block;
         }
 
         .bv-cta-desc {
@@ -1001,28 +1140,27 @@
                     style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:8px 20px; font-size:10px; font-weight:800; color:rgba(255,255,255,.7); text-transform:uppercase; letter-spacing:.25em; margin-bottom:32px;">
                     <span
                         style="width:8px; height:8px; border-radius:50%; background:#ff6d00; display:inline-block; box-shadow:0 0 10px rgba(255,109,0,.6);"></span>
-                    PREMIUM MULTI-VENDOR PLATFORM
+                    TRUSTED BOOKING PLATFORM
                 </div>
 
                 {{-- H1 --}}
                 <h1
-                    style="font-size:clamp(2.8rem,7vw,5rem); font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.03em; margin:0 0 18px;">
-                    Book Verified <span
-                        style="color:transparent; background:linear-gradient(135deg,#ff8c42,#ffab40); -webkit-background-clip:text; background-clip:text; font-style:italic;">Experts</span><br>
-                    In Your City
+                    style="font-size:clamp(2rem,7vw,5rem); font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.03em; margin:0 0 18px;">
+                    Find Trusted <span
+                        style="color:transparent; background:linear-gradient(135deg,#ff8c42,#ffab40); -webkit-background-clip:text; background-clip:text; font-style:italic; padding-right:0.12em; display:inline-block;">Professionals</span><br>
+                    Near You
                 </h1>
 
                 {{-- Subheading --}}
                 <p
                     style="color:rgba(255,255,255,.45); font-size:1.1rem; max-width:520px; margin:0 auto 48px; line-height:1.7;">
-                    Personalized platform to find top-rated professionals near you
+                    Book trusted local services quickly and easily.
                 </p>
 
                 {{-- ── Search Bar ── --}}
                 <div class="bv-search-wrap">
                     <div class="bv-search-bar">
-                        <form action="{{ route('home') }}" method="GET"
-                            style="display:flex; width:100%; align-items:center;">
+                        <form action="{{ route('home') }}" method="GET" class="bv-search-form">
                             @if(request('type'))<input type="hidden" name="type" value="{{ request('type') }}">@endif
 
                             {{-- Expert Name --}}
@@ -1033,20 +1171,26 @@
                                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 <input class="bv-search-input" type="text" name="search" value="{{ request('search') }}"
-                                    placeholder="Expert Name">
+                                    placeholder="Service or Professional">
                             </div>
 
                             {{-- Specialty --}}
-                            <div class="bv-search-field">
+                            <div class="bv-search-field" style="position: relative; overflow: visible;">
                                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
-                                    viewBox="0 0 24 24">
+                                    viewBox="0 0 24 24" style="flex-shrink: 0;">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                                <input class="bv-search-input" type="text" name="specialty"
-                                    value="{{ request('specialty') }}" placeholder="Specialty">
+                                <select class="bv-search-input" name="specialty" style="background: transparent; border: none; color: #fff; outline: none; cursor: pointer; padding-right: 28px; -webkit-appearance: none; -moz-appearance: none; appearance: none; width: 100%; font-size: 15px; font-weight: 600;">
+                                    <option value="" style="background: #0d1333; color: #fff;">All Categories</option>
+                                    @foreach($allThemes as $key => $t)
+                                        <option value="{{ $key }}" {{ request('specialty') == $key ? 'selected' : '' }} style="background: #0d1333; color: #fff;">
+                                            {{ $t['emoji'] ?? '✨' }} {{ $t['label'] ?? ucfirst($key) }}
+                                        </option>
+                                    @endforeach
+                                </select>
                                 <svg class="bv-search-caret" width="14" height="14" fill="none" stroke="white"
-                                    stroke-width="2" viewBox="0 0 24 24">
+                                    stroke-width="2" viewBox="0 0 24 24" style="pointer-events: none; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); opacity: 0.4;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
                             </div>
@@ -1061,23 +1205,27 @@
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <input class="bv-search-input" type="text" name="location"
-                                    value="{{ request('location') }}" placeholder="Location (City)">
-                                <svg class="bv-search-caret" width="14" height="14" fill="none" stroke="white"
+                                    value="{{ request('location') }}" placeholder="Enter City">
+                                {{-- <svg class="bv-search-caret" width="14" height="14" fill="none" stroke="white"
                                     stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
+                                </svg> --}}
                             </div>
 
-                            <button class="bv-search-btn" type="submit">Search</button>
+                            <button class="bv-search-btn" type="submit">Search Services</button>
                         </form>
                     </div>
 
                     {{-- ── Category Pills ── --}}
-                    <div class="bv-cat-row">
+                    <div class="bv-cat-scroll-wrap">
+                        <button class="bv-cat-scroll-btn" id="cat-prev" aria-label="Previous" onclick="document.getElementById('catRow').scrollBy({left:-200,behavior:'smooth'})">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <div class="bv-cat-row" id="catRow">
                         @php
                         $catMeta = [
                         'health' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Green Care'],
-                        'doctor' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Health Care'],
+                        'doctor' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Doctors & Clinics'],
                         'beauty' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Best Stylists'],
                         'barber' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Mens Grooming'],
                         'sports' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
@@ -1120,7 +1268,11 @@
                             </div>
                         </a>
                         @endforeach
-                    </div>
+                        </div>{{-- /bv-cat-row --}}
+                        <button class="bv-cat-scroll-btn" id="cat-next" aria-label="Next" onclick="document.getElementById('catRow').scrollBy({left:200,behavior:'smooth'})">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>{{-- /bv-cat-scroll-wrap --}}
                 </div>
 
                 {{-- ── Stats ── --}}
@@ -1167,7 +1319,13 @@
                     @forelse($vendors as $vendor)
                     @php
                     $vType = $vendor->category?->slug ?? 'consultant';
-                    $vTheme = App\Services\ThemeService::getTheme($vType);
+                    // Use the already-loaded $allThemes array instead of calling ThemeService::getTheme() per card
+                    $vTheme = array_merge([
+                        'primary'      => '#2979ff',
+                        'primary_dark' => '#00b0ff',
+                        'label'        => ucfirst($vType),
+                        'emoji'        => '✨',
+                    ], $allThemes[$vType] ?? ($allThemes['consultant'] ?? []));
                     $isOpen = $vendor->is_currently_open;
                     
                     $c1 = $vTheme['primary'];
@@ -1224,7 +1382,7 @@
                     @endphp
                     <a href="{{ $routeUrl }}" class="bv-dynamic-card bv-card-sports {{ $isOpen ? '' : 'bv-closed pointer-events-none' }}"
                         style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};">
-                        <img src="{{ $img }}" alt="{{ $name }}" loading="lazy">
+                        <img src="{{ $img }}" alt="{{ $name }}" loading="{{ $loop->iteration <= 6 ? 'eager' : 'lazy' }}">
                         <div class="bv-card-sports-overlay">
                             <span
                                 style="display:inline-block; background:rgba(var(--cr),var(--cg),var(--cb),0.9); backdrop-filter:blur(4px); color:#000; font-size:10px; font-weight:900; padding:6px 12px; border-radius:8px; align-self:flex-start; margin-bottom:12px; text-transform:uppercase; letter-spacing:.05em;">
@@ -1399,9 +1557,6 @@
                 };
                 requestAnimationFrame(tick);
             };
-            new IntersectionObserver((entries) => {
-                entries.forEach(en => { if (en.isIntersecting) { animate(en.target); observer.unobserve(en.target); } });
-            }, { threshold: 0.1 }).observe;
 
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(en => { if (en.isIntersecting) { animate(en.target); observer.unobserve(en.target); } });

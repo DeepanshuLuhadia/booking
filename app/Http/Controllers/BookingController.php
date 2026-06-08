@@ -26,8 +26,8 @@ class BookingController extends Controller
                 'payment_id' => 'nullable|string'
             ]);
 
-            $vendor = Vendor::find($request->vendor_id);
-            $employee = Employee::find($request->employee_id);
+            $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
+            $employee = Employee::findOrFail($request->employee_id);
 
             // Pricing Logic: Use employee override if set, otherwise vendor default
             $baseServiceFee = $employee->service_fee_override ?? $vendor->service_fee;
@@ -79,6 +79,9 @@ class BookingController extends Controller
                 'razorpay_payment_id'  => $request->payment_id,
                 'notes'                => "Service Fee: ₹{$baseServiceFee}"
             ]);
+
+            // Eager load employee to prevent N+1 in NotificationService
+            $booking->setRelation('employee', $employee);
 
             // Notify Vendor (safe — handles null user internally)
             $notificationService->notifyVendorNewBooking($vendor, $booking);

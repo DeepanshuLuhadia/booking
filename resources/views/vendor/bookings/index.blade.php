@@ -10,7 +10,7 @@
             <form action="{{ route('vendor.bookings.index') }}" method="GET">
                 <div class="relative group">
                     <select name="status" onchange="this.form.submit()"
-                        class="w-full md:w-64 h-14 bg-white border-2 border-slate-100 rounded-xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all appearance-none cursor-pointer text-[10px] uppercase tracking-widest">
+                        class="w-full md:w-64 h-14 bg-white/5 border-2 border-white/10 rounded-xl px-6 font-black italic text-white focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all appearance-none cursor-pointer text-[10px] uppercase tracking-widest">
                         <option value="">Matrix: All States</option>
                         <option value="confirmed" {{ request('status')=='confirmed' ? 'selected' : '' }}>State:
                             Confirmed</option>
@@ -30,16 +30,16 @@
         </div>
     </div>
 
-    <div class="bg-white shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem] overflow-hidden">
-        <div class="overflow-x-auto">
+    <div class="glass-card overflow-hidden">
+        <div class="table-responsive-wrapper">
             <table class="w-full">
-                <thead class="bg-slate-50 text-left">
+                <thead class="bg-white/5 text-left">
                     <tr>
                         <th class="px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Name</th>
-                        <th class="px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                        <th class="hidden sm:table-cell px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Employee</th>
-                        <th class="px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                        <th class="hidden md:table-cell px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Time </th>
                         <th class="px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Status</th>
@@ -48,25 +48,25 @@
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                     @forelse($bookings as $booking)
-                    <tr class="hover:bg-slate-50/50 transition-all">
+                    <tr class="hover:bg-white/5/50 transition-all">
                         <td class="px-10 py-8">
-                            <div class="font-black text-slate-900 text-lg tracking-tight uppercase italic">{{
+                            <div class="font-black text-white text-lg tracking-tight uppercase italic">{{
                                 $booking->customer_name }}</div>
                             <div class="text-[9px] text-slate-300 font-black mt-1 uppercase tracking-widest italic">{{
                                 $booking->customer_phone }}</div>
                         </td>
-                        <td class="px-10 py-8">
+                        <td class="hidden sm:table-cell px-10 py-8">
                             <div class="flex items-center gap-4">
                                 <div
                                     class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black italic">
                                     {{ substr($booking->employee->name, 0, 1) }}
                                 </div>
-                                <span class="font-black text-slate-700 text-sm uppercase italic">{{
+                                <span class="font-black text-slate-200 text-sm uppercase italic">{{
                                     $booking->employee->name }}</span>
                             </div>
                         </td>
-                        <td class="px-10 py-8">
-                            <div class="text-sm font-black text-slate-900 italic tracking-tight">{{
+                        <td class="hidden md:table-cell px-10 py-8">
+                            <div class="text-sm font-black text-white italic tracking-tight">{{
                                 \Carbon\Carbon::parse($booking->booking_date)->format('l, M d, Y') }}</div>
                             <div class="text-[9px] text-blue-600 font-black mt-1 uppercase tracking-widest italic">{{
                                 $booking->slot_start_time }} - {{ $booking->slot_end_time }}</div>
@@ -77,7 +77,7 @@
                             'confirmed' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
                             'cancelled' => 'bg-rose-50 text-rose-600 border-rose-100',
                             'completed' => 'bg-blue-50 text-blue-600 border-blue-100',
-                            default => 'bg-slate-50 text-slate-600 border-slate-100'
+                            default => 'bg-white/5 text-slate-300 border-white/10'
                             };
                             @endphp
                             <span
@@ -85,13 +85,24 @@
                                 $booking->status }}</span>
                         </td>
                         <td class="px-10 py-8 text-right">
-                            <button
-                                class="p-3 bg-slate-50 text-slate-300 rounded-xl hover:text-blue-600 transition-all">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
-                                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                            </button>
+                            <div class="flex items-center justify-end gap-3">
+                                @if($booking->status === 'confirmed')
+                                    <form action="{{ route('vendor.bookings.complete', $booking) }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" title="Mark as Complete" class="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all border border-blue-100">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                        </button>
+                                    </form>
+                                @endif
+                                <form action="{{ route('vendor.bookings.destroy', $booking) }}" method="POST" class="inline" onsubmit="return confirm('ARE YOU SURE YOU WANT TO DELETE THIS ENTRY?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" title="Delete" class="p-2.5 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all border border-rose-100">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     @empty
@@ -135,7 +146,7 @@
             .pagination-container span[aria-current="page"]>span,
             .pagination-container span[aria-disabled="true"]>span {
                 padding: 0.5rem 1rem;
-                border: 1px solid #e2e8f0;
+                border: 1px solid rgba(255,255,255,0.1);
                 border-radius: 0.75rem;
                 font-size: 10px;
                 font-weight: 900;
@@ -147,26 +158,26 @@
             }
 
             .pagination-container a {
-                background-color: #ffffff;
-                color: #475569;
+                background-color: rgba(255,255,255,0.05);
+                color: rgba(255,255,255,0.7);
                 text-decoration: none;
             }
 
             .pagination-container a:hover {
-                background-color: #0f172a;
+                background-color: rgba(255,255,255,0.15);
                 color: #ffffff;
-                border-color: #0f172a;
+                border-color: rgba(255,255,255,0.3);
             }
 
             .pagination-container span[aria-current="page"]>span {
-                background-color: #0f172a;
+                background-color: #2563EB;
                 color: #ffffff;
-                border-color: #0f172a;
+                border-color: #3b82f6;
             }
 
             .pagination-container span[aria-disabled="true"]>span {
-                background-color: #f8fafc;
-                color: #cbd5e1;
+                background-color: rgba(255,255,255,0.02);
+                color: rgba(255,255,255,0.2);
                 cursor: not-allowed;
             }
 
@@ -175,7 +186,7 @@
                 height: 1.25rem;
             }
         </style>
-        <div class="px-10 py-8 border-t border-slate-50 bg-slate-50/20 pagination-container">
+        <div class="px-10 py-8 border-t border-slate-50 bg-white/5/20 pagination-container">
             {{ $bookings->links() }}
         </div>
         @endif

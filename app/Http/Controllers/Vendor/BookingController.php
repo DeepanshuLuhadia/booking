@@ -58,4 +58,30 @@ class BookingController extends Controller
 
         return back()->with('success', 'Manual booking created successfully!');
     }
+
+    public function complete(Booking $booking)
+    {
+        $vendor = auth()->user()->vendor;
+
+        if ($booking->vendor_id !== $vendor->id) {
+            return back()->with('error', 'Unauthorized.');
+        }
+
+        $booking->update(['status' => 'completed']);
+
+        return back()->with('success', 'Booking marked as completed.');
+    }
+
+    public function destroy(Booking $booking)
+    {
+        $vendor = auth()->user()->vendor;
+
+        if ($booking->vendor_id !== $vendor->id) {
+            return back()->with('error', 'Unauthorized.');
+        }
+
+        $booking->delete();
+
+        return back()->with('success', 'Booking deleted successfully.');
+    }
 }

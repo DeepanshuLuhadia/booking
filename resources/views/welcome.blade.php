@@ -7,8 +7,8 @@
                 Multi-Vendor Appointment Platform
             </div>
 
-            <h1 class="text-5xl md:text-7xl font-black text-white leading-tight mb-6 tracking-tighter">
-                Book Verified <span class="text-orange-500 italic">Experts</span><br>
+            <h1 class="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-[1.1] mb-6 tracking-tighter">
+                Book Verified <span class="text-orange-500 italic">Experts</span><br class="hidden sm:block">
                 In Your City
             </h1>
 
@@ -18,31 +18,31 @@
 
             <!-- Premium Search Matrix -->
             <div class="max-w-4xl mx-auto mb-16">
-                <div class="premium-search-container p-2 md:p-3 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2.5rem] shadow-2xl">
+                <div class="premium-search-container p-2 md:p-3 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl md:rounded-[2.5rem] shadow-2xl">
                     <div class="flex flex-col md:flex-row items-center w-full gap-2">
-                        <div class="flex-grow flex items-center gap-4 px-6 py-3 min-w-0">
-                            <svg class="w-6 h-6 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                            <input type="text" placeholder="Search doctors, barbers, yoga classes..." 
-                                   class="bg-transparent border-none text-white placeholder-white/40 focus:ring-0 w-full text-lg font-medium">
+                        <div class="w-full flex items-center gap-3 md:gap-4 px-4 md:px-6 py-2 md:py-3 min-w-0">
+                            <svg class="w-5 h-5 md:w-6 md:h-6 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <input type="text" placeholder="Search experts..." 
+                                   class="bg-transparent border-none text-white placeholder-white/40 focus:ring-0 w-full text-base md:text-lg font-medium">
                         </div>
                         <div class="h-10 w-px bg-white/10 hidden md:block"></div>
-                        <div class="px-6 flex items-center gap-3 shrink-0">
-                            <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            <span class="text-white font-bold">New York, NY</span>
+                        <div class="w-full md:w-auto px-4 md:px-6 py-2 md:py-0 flex items-center gap-3 shrink-0 border-t border-white/5 md:border-none">
+                            <svg class="w-5 h-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="text-white font-bold text-sm md:text-base truncate">New York, NY</span>
                         </div>
-                        <button class="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white font-black px-10 py-4 rounded-[2rem] transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-orange-500/20">
+                        <button class="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white font-black px-10 py-4 rounded-2xl md:rounded-[2rem] transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-orange-500/20 text-sm md:text-base">
                             Search Now
                         </button>
                     </div>
                 </div>
 
                 <!-- Quick Categories -->
-                <div class="flex flex-wrap justify-center gap-4 mt-8">
+                <div class="flex flex-wrap justify-center gap-2 md:gap-4 mt-8">
                     @foreach(\App\Services\ThemeService::getAllThemes() as $key => $theme)
                         <a href="{{ route('home', ['type' => $key]) }}" 
-                           class="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors group">
-                            <span class="text-xl shrink-0 group-hover:scale-125 transition-transform">{{ $theme['emoji'] ?? $theme['icon'] }}</span>
-                            <span class="text-sm font-bold">{{ $theme['label'] }}</span>
+                           class="flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors group">
+                            <span class="text-lg md:text-xl shrink-0 group-hover:scale-125 transition-transform">{{ $theme['emoji'] ?? $theme['icon'] }}</span>
+                            <span class="text-[11px] md:text-sm font-bold">{{ $theme['label'] }}</span>
                         </a>
                     @endforeach
                 </div>

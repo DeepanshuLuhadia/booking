@@ -43,6 +43,8 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::get('/dashboard', [\App\Http\Controllers\Vendor\DashboardController::class, 'index'])->name('vendor.dashboard');
     Route::get('/bookings', [\App\Http\Controllers\Vendor\BookingController::class, 'index'])->name('vendor.bookings.index');
     Route::post('/bookings', [\App\Http\Controllers\Vendor\BookingController::class, 'store'])->name('vendor.bookings.store');
+    Route::patch('/bookings/{booking}/complete', [\App\Http\Controllers\Vendor\BookingController::class, 'complete'])->name('vendor.bookings.complete');
+    Route::delete('/bookings/{booking}', [\App\Http\Controllers\Vendor\BookingController::class, 'destroy'])->name('vendor.bookings.destroy');
     
     Route::get('/profile', [\App\Http\Controllers\Vendor\ProfileController::class, 'edit'])->name('vendor.profile.edit');
     Route::post('/profile', [\App\Http\Controllers\Vendor\ProfileController::class, 'update'])->name('vendor.profile.update');
@@ -50,6 +52,8 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::post('/status/toggle', [\App\Http\Controllers\Vendor\ProfileController::class, 'toggleStatus'])->name('vendor.status.toggle');
 
     Route::resource('/employees', \App\Http\Controllers\Vendor\EmployeeController::class, ['as' => 'vendor']);
+    Route::post('/plans/{plan}/checkout', [\App\Http\Controllers\PaymentController::class, 'planCheckout'])->name('vendor.plan.checkout');
+    Route::post('/plans/callback', [\App\Http\Controllers\PaymentController::class, 'planCallback'])->name('vendor.plan.callback');
 });
 
 // Admin Panel

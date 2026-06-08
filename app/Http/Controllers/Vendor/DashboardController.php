@@ -35,6 +35,7 @@ class DashboardController extends Controller
         }
 
         $recentBookings = Booking::where('vendor_id', $vendor->id)
+            ->with('employee')
             ->latest()
             ->take(5)
             ->get();

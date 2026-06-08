@@ -1,6 +1,7 @@
 @props([
     'vendorTheme' => null,
     'pageTitle'   => null,
+    'panelType'   => null,
 ])
 @php
     $theme     = $vendorTheme ?? \App\Services\ThemeService::getTheme('consultant');
@@ -14,7 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $pageTitle ?? config('app.name', 'BookAI') }} — Premium Multi-Vendor Platform</title>
+    <title>{{ $pageTitle ?? config('app.name', 'BookAppointment') }} — Premium Multi-Vendor Platform</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,35 +24,53 @@
 
     <!-- Styles + Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
     @livewireStyles
 
     <style>
         {!! \App\Services\ThemeService::getCssVars($theme) !!}
         .theme-nav { background-color: var(--theme-nav-bg) !important; color: var(--theme-nav-text) !important; }
         .nav-link { color: var(--theme-nav-text) !important; }
+        /* Desktop nav menu: hidden by default, flex on lg+ */
+        .nav-desktop-menu {
+            display: none;
+        }
+        /* Mobile hamburger: visible by default, hidden on lg+ */
+        .nav-mobile-toggle {
+            display: flex;
+        }
+        @media (min-width: 1024px) {
+            .nav-desktop-menu {
+                display: flex !important;
+            }
+            .nav-mobile-toggle {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
 
-    <div class="relative z-10 flex flex-col min-h-screen">
+    <div x-data="{ scrolled: false, mobileMenu: false }" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
         <!-- Navigation (Section 4) -->
-        <nav x-data="{ scrolled: false }" 
-             @scroll.window="scrolled = (window.pageYOffset > 50)"
-             :class="{ 'bg-slate-950/80 backdrop-blur-2xl border-b border-white/5 py-3': scrolled, 'bg-transparent py-6': !scrolled }"
-             class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-8 flex items-center justify-between">
-            <div class="flex items-center gap-10">
-                <a href="/" class="group flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-2xl font-black theme-glow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
+        <nav @scroll.window="scrolled = (window.pageYOffset > 50)"
+             :class="{ 'bg-[#0a0f2c]/80 backdrop-blur-2xl border-b border-white/5 py-3': scrolled, 'bg-transparent py-5 md:py-6': !scrolled }"
+             class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-4 md:px-8 flex items-center justify-between overflow-visible">
+            
+            <div class="flex items-center gap-4 md:gap-10 {{ $panelType ? 'lg:hidden' : '' }}">
+                <a href="/" class="group flex items-center gap-2 md:gap-3">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-xl md:text-2xl font-black theme-glow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
                         {{ $theme['icon'] ?? 'B' }}
                     </div>
-                    <span class="text-2xl font-black tracking-tighter text-white">
-                        BOOK<span class="theme-gradient-text">AI</span>
+                    <span class="text-xl md:text-2xl font-black tracking-tighter text-white whitespace-nowrap">
+                         BOOK<span class="theme-gradient-text">APPOINTMENT</span>
                     </span>
                 </a>
             </div>
 
-            <div class="flex items-center gap-10">
-                <div class="hidden md:flex items-center gap-10">
+            <!-- Desktop Menu -->
+            <div class="nav-desktop-menu items-center gap-10 ml-auto">
+                <div class="flex items-center gap-10">
                     <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Explore</a>
                     @auth
                         @if(auth()->user()->isAdmin())
@@ -62,7 +81,7 @@
                     @endauth
                 </div>
 
-                <div class="h-6 w-px bg-white/10 hidden sm:block"></div>
+                <div class="h-6 w-px bg-white/5/10"></div>
 
                 <div class="flex items-center gap-6">
                     @auth
@@ -79,29 +98,185 @@
                     @endauth
                 </div>
             </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button @click="mobileMenu = !mobileMenu" class="nav-mobile-toggle w-10 h-10 rounded-xl bg-white/5/5 border border-white/10 items-center justify-center text-white transition-all hover:bg-white/5/10 active:scale-95">
+                <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <svg x-show="mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" x-cloak><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
         </nav>
+
+        @if(!$panelType)
+        <!-- Mobile Navigation Overlay (Public Site) -->
+        <div x-show="mobileMenu" 
+             class="nav-mobile-toggle fixed inset-0 z-[300]" 
+             x-cloak>
+            {{-- Backdrop --}}
+            <div x-show="mobileMenu" 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="absolute inset-0 bg-[#0a0f2c]/80 backdrop-blur-md"></div>
+
+            {{-- Modal Content --}}
+            <div class="relative h-full flex items-center justify-center p-4">
+                <div x-show="mobileMenu"
+                     @click.away="null"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y-8 scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-8 scale-95"
+                     class="w-full max-w-sm max-h-[85vh] bg-[#f2f2f7] rounded-[2.5rem] flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden">
+                    
+                    <!-- Header with Close Button -->
+                    <div class="flex items-center justify-between p-6 border-b border-white/10">
+                        <div class="text-xl font-black text-white tracking-tighter">
+                            MENU
+                        </div>
+                        <button @click="mobileMenu = false" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-slate-300 transition-colors">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Scrollable Content -->
+                    <div class="flex-grow overflow-y-auto p-6 no-scrollbar">
+                        <div class="flex flex-col gap-4">
+                            @if(isset($mobileMenu))
+                                <div class="vendor-mobile-links">
+                                    {{ $mobileMenu }}
+                                </div>
+                            @endif
+
+                            <div class="flex flex-col gap-3">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Platform</h4>
+                                <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                    Explore
+                                </a>
+                                
+                                @auth
+                                    @if(auth()->user()->isAdmin())
+                                        <a href="/admin/dashboard" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                            <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                            Admin Portal
+                                        </a>
+                                    @elseif(auth()->user()->isVendor())
+                                        <a href="/vendor/dashboard" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                            <svg class="w-5 h-5 theme-gradient-text" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                            Business Hub
+                                        </a>
+                                    @endif
+                                    
+                                    <form method="POST" action="{{ route('logout') }}" class="mt-4">
+                                        @csrf
+                                        <button type="submit" class="w-full h-14 rounded-2xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-[0.2em] italic flex items-center justify-center gap-3">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                                            Logout Account
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="grid grid-cols-1 gap-3 mt-4">
+                                        <a href="/login" class="flex items-center justify-between h-16 px-8 rounded-2xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white shadow-sm transition-all active:scale-[0.98]">
+                                            Sign In Portal
+                                            <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                                        </a>
+                                        <a href="/register/vendor" class="flex items-center justify-between h-16 px-8 rounded-2xl theme-gradient-bg text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98]">
+                                            Become a Provider
+                                            <svg class="w-4 h-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                                        </a>
+                                    </div>
+                                @endauth
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @else
+        <!-- Mobile Navigation Slide-in Sidebar (Admin/Vendor Dashboards) -->
+        <div x-show="mobileMenu" class="fixed inset-0 z-[9999]" x-cloak>
+            <!-- Backdrop -->
+            <div x-show="mobileMenu"
+                 @click="mobileMenu = false"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="absolute inset-0 bg-[#0a0f2c]/60 backdrop-blur-sm"></div>
+
+            <!-- Slide-in Menu -->
+            <div x-show="mobileMenu"
+                 x-transition:enter="transition ease-out duration-300 transform"
+                 x-transition:enter-start="-translate-x-full"
+                 x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transition ease-in duration-200 transform"
+                 x-transition:leave-start="translate-x-0"
+                 x-transition:leave-end="-translate-x-full"
+                 class="dashboard-mobile-sidebar bg-[#f2f2f7] dark:bg-slate-900 border-r border-white/10 dark:border-white/5 flex flex-col">
+                 
+                 <!-- Header with Close Button -->
+                 <div class="flex items-center justify-between p-6 border-b border-white/10 dark:border-white/5">
+                     <div class="text-xs font-black text-white dark:text-white tracking-widest uppercase">
+                         Navigation
+                     </div>
+                     <button @click="mobileMenu = false" class="w-10 h-10 rounded-full bg-white/10 dark:bg-white/5/5 flex items-center justify-center text-white dark:text-white hover:bg-slate-300 dark:hover:bg-white/5/10 transition-colors">
+                         <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                     </button>
+                 </div>
+
+                 <!-- Scrollable Content -->
+                 <div class="flex-grow overflow-y-auto p-6 no-scrollbar" @click="if ($event.target.closest('a')) mobileMenu = false">
+                     @if(isset($mobileMenu))
+                         {{ $mobileMenu }}
+                     @endif
+
+                     <div class="h-px bg-white/10 dark:bg-white/5/5 my-4"></div>
+                     <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-xl bg-white/5 dark:bg-white/5/5 text-white dark:text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm mb-4">
+                         Explore
+                     </a>
+
+                     @auth
+                         <form method="POST" action="{{ route('logout') }}">
+                             @csrf
+                             <button type="submit" class="w-full h-12 rounded-xl bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-[0.2em] italic flex items-center justify-center gap-3">
+                                 Logout
+                             </button>
+                         </form>
+                     @endauth
+                 </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Page Content -->
         <main class="flex-grow">
             {{ $slot }}
         </main>
 
-        <!-- Footer (Section 12) -->
-        <footer class="bg-slate-950 pt-24 pb-12 border-t border-white/5">
-            <div class="container mx-auto px-8">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-12 mb-16">
-                    <div class="flex flex-col items-center md:items-start gap-6">
+        @if(!$panelType)
+        <!-- Footer (Section 12) - Hidden on Dashboards -->
+        <footer class="bg-[#0a0f2c] pt-24 pb-12 border-t border-white/5">
+            <div class="container mx-auto px-4 md:px-8">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-10 mb-16 px-4">
+                    <div class="flex flex-col items-center md:items-start gap-4">
                         <div class="text-3xl font-black text-white tracking-tighter">BOOK<span class="theme-gradient-text">AI</span></div>
-                        <p class="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm text-center md:text-left text-white/30 leading-loose">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] max-w-sm text-center md:text-left text-white/30 leading-loose">
                             The Next-Generation Multi-Vendor Booking Experience for Global Professionals.
                         </p>
                     </div>
                     
-                    <div class="flex flex-wrap justify-center gap-10 text-[10px] font-black uppercase tracking-[0.3em] text-white/50">
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Privacy Policy</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Terms of Service</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Help Center</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Contact Us</a>
+                    <div class="flex flex-wrap justify-center gap-8 md:gap-10 text-[9px] font-black uppercase tracking-[0.3em] text-white/40">
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Privacy</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Terms</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Help</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Contact</a>
                     </div>
                 </div>
 
@@ -110,13 +285,14 @@
                         &copy; {{ date('Y') }} BOOKAI PLATFORM. ALL RIGHTS RESERVED.
                     </div>
                     <div class="flex items-center gap-6">
-                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">𝕏</div>
-                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">📸</div>
-                        <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">💼</div>
+                        <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">𝕏</div>
+                        <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">📸</div>
+                        <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">💼</div>
                     </div>
                 </div>
             </div>
         </footer>
+        @endif
     </div>
 
     <!-- Toast Notifications -->
@@ -143,7 +319,7 @@
                 'bg-rose-600/90 text-white border-rose-400/30': type === 'error',
                 'bg-blue-600/90 text-white border-blue-400/30': type === 'info'
              }" x-cloak>
-            <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+            <div class="w-10 h-10 rounded-2xl bg-white/5/20 flex items-center justify-center shrink-0">
                 <template x-if="type === 'success'"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></template>
                 <template x-if="type === 'error'"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg></template>
             </div>

@@ -8,20 +8,19 @@
 
         <div class="relative z-10 max-w-5xl mx-auto px-6 pt-20">
             <!-- Header Section -->
-            <div class="text-center mb-20 animate-text-reveal">
-                <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-white text-[9px] font-black uppercase tracking-widest mb-8">
+            <div class="text-center mb-12 md:mb-20 animate-text-reveal">
+                {{-- <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-white text-[9px] font-black uppercase tracking-widest mb-6 md:mb-8">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4"
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     Enterprise Onboarding Protocol
-                </div>
+                </div> --}}
                 <h1
-                    class="text-6xl md:text-[5.5rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
-                    Scale Your <span style="color:transparent; background:linear-gradient(135deg,#ff8c42,#ffab40); -webkit-background-clip:text; background-clip:text;">Enterprise.</span>
+                    class="text-4xl sm:text-5xl md:text-6xl lg:text-[5.5rem] font-black text-white mb-6 tracking-tighter leading-[1.1] md:leading-[0.9] italic">
+                    Take Your Business <span style="color:transparent; background:linear-gradient(135deg,#ff8c42,#ffab40); -webkit-background-clip:text; background-clip:text;">Digital.</span>
                 </h1>
-                <p class="text-xl font-medium text-white/50 max-w-xl mx-auto italic leading-relaxed">Join the global
-                    infrastructure for professional appointment-based service providers.</p>
+                <p class="text-base md:text-xl font-medium text-white/50 max-w-xl mx-auto italic leading-relaxed px-4">Create your business profile and start managing appointments online.</p>
             </div>
 
             <style>
@@ -50,20 +49,20 @@
                 @csrf
 
                 <!-- STEP 1: IDENTITY -->
-                <div class="glass-card p-4 overflow-hidden shadow-2xl">
-                    <div class="p-10 md:p-14 rounded-[3rem]">
-                        <div class="flex items-center gap-6 mb-12">
-                            <div class="w-14 h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-xl font-black italic shadow-xl">01</div>
+                <div class="glass-card overflow-hidden shadow-2xl">
+                    <div class="p-6 md:p-14 rounded-[3rem]">
+                        <div class="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
+                            <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl">01</div>
                             <div>
-                                <h3 class="text-3xl font-black italic tracking-tight uppercase text-white">Registry Identity</h3>
-                                <p class="text-xs font-black uppercase tracking-[0.2em] text-white/40">CORE ESTABLISHMENT DATA</p>
+                                <h3 class="text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white">Business Information</h3>
+                                <p class="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-white/40">Enter your business and contact details</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                             <!-- Category -->
                             <div class="space-y-2 group">
-                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-6">Specialization Sector</label>
+                                <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-6">Business Category</label>
                                 <div class="relative">
                                     <select name="vendor_type" required
                                         class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white appearance-none cursor-pointer transition-all focus:bg-white/10">
@@ -84,71 +83,71 @@
 
                             <!-- Business Name -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Institutional Name</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Business Name</label>
                                 <input type="text" name="business_name" value="{{ old('business_name') }}" required
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="Business Nomenclature">
+                                    placeholder="Enter Business Name">
                             </div>
 
                             <!-- Owner Name -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Principal Representative</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Owner Name</label>
                                 <input type="text" name="owner_name" value="{{ old('owner_name') }}" required
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="Legal Full Name">
+                                    placeholder="Enter Owner Full Name">
                             </div>
 
                             <!-- Email -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Primary Communication Hub</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Email Address</label>
                                 <input type="email" name="email" value="{{ old('email') }}" required
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="Corporate Email Identity">
+                                    placeholder="Enter Email Address">
                             </div>
 
                             <!-- Mobile -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Mobile Uplink Number</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Mobile Number</label>
                                 <input type="tel" name="mobile" value="{{ old('mobile') }}" required maxlength="10"
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="10-digit primary uplink">
+                                    placeholder="Enter 10-digit mobile number">
                             </div>
 
                             <!-- Referral -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Registry Referral (OPTIONAL)</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Referral Code</label>
                                 <input type="text" name="referral_code" value="{{ old('referral_code', request('ref')) }}"
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="XXXX-XXXX">
+                                    placeholder="Enter Referral Code (Optional)">
                             </div>
 
                             <!-- Password -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Secure Access Key</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Password</label>
                                 <input type="password" name="password" required
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="••••••••">
+                                    placeholder="Create Password">
                             </div>
 
                             <!-- Confirm -->
                             <div class="space-y-2">
-                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Confirm Key</label>
+                                <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Confirm Password</label>
                                 <input type="password" name="password_confirmation" required
                                     class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="••••••••">
+                                    placeholder="Re-Enter Your Password">
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- STEP 2: PLAN -->
-                <div class="glass-card p-4 overflow-hidden shadow-2xl">
-                    <div class="p-10 md:p-14 rounded-[3rem]">
-                        <div class="flex items-center gap-6 mb-12">
-                            <div class="w-14 h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-xl font-black italic shadow-xl">02</div>
+                <div class="glass-card overflow-hidden shadow-2xl">
+                    <div class="p-6 md:p-14 rounded-[3rem]">
+                        <div class="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
+                            <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl">02</div>
                             <div>
-                                <h3 class="text-3xl font-black italic tracking-tight uppercase text-white">Operational Tier</h3>
-                                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">SCALING CAPACITY SELECTION</p>
+                                <h3 class="text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white">Choose Your Plan</h3>
+                                <p class="text-[10px] md:text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Choose a plan that fits your business</p>
                             </div>
                         </div>
 
@@ -167,11 +166,11 @@
                                     <div class="space-y-4 mb-4">
                                         <div class="flex items-center gap-3">
                                             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                            <span class="text-[10px] font-black uppercase tracking-widest">{{ $plan->max_employees }} Specialists</span>
+                                            <span class="text-[10px] font-black uppercase tracking-widest">Up to {{ $plan->max_employees }} Staff Members</span>
                                         </div>
                                         <div class="flex items-center gap-3">
                                             <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                            <span class="text-[10px] font-black uppercase tracking-widest">Global Scheduling</span>
+                                            <span class="text-[10px] font-black uppercase tracking-widest">Online Appointment Booking</span>
                                         </div>
                                     </div>
 
@@ -186,13 +185,13 @@
                 </div>
 
                 <!-- SUBMIT -->
-                <div class="flex flex-col md:flex-row items-center justify-between gap-12 pt-8">
-                    <p class="text-white/60 font-medium italic max-w-sm text-center md:text-left text-sm leading-relaxed">
-                        By initializing deployment, you authorize acceptance of our <a href="#" class="text-white font-black italic underline underline-offset-4 transition-colors" style="text-decoration-color:rgba(255,140,66,0.3);">Institutional Master Protocols</a>.
+                <div class="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 pt-8">
+                    <p class="text-white/60 font-medium italic max-w-sm text-center md:text-left text-sm leading-relaxed px-4">
+                        By submitting this form, you agree to our terms and conditions.
                     </p>
-                    <button type="submit" class="btn-premium w-full md:w-auto h-24 px-16 !rounded-[2rem] !text-2xl">
-                        INITIALIZE DEPLOYMENT
-                        <svg class="w-8 h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    <button type="submit" class="btn-premium w-full md:w-auto h-20 md:h-24 px-10 md:px-16 !rounded-2xl md:!rounded-[2rem] !text-lg md:!text-2xl">
+                        Create Business Account
+                        <svg class="w-6 h-6 md:w-8 md:h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </button>
                 </div>
             </form>

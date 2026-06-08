@@ -25,7 +25,6 @@ class PaymentController extends Controller
 
         $plan = $vendor->subscriptionPlan;
 
-        // Use fake keys if not set for demo purposes or ask user
         $keyId = env('RAZORPAY_KEY_ID');
         $keySecret = env('RAZORPAY_KEY_SECRET');
         
@@ -33,7 +32,8 @@ class PaymentController extends Controller
              return view('auth.payment', [
                 'vendor' => $vendor,
                 'plan' => $plan,
-                'error' => 'Razorpay API keys are not configured. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your .env file.'
+                'error' => 'Razorpay API keys are not configured. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your .env file.',
+                'demoMode' => true
             ]);
         }
         
@@ -62,6 +62,79 @@ class PaymentController extends Controller
                 'demoMode' => true
             ]);
         }
+    }
+
+    /**
+     * Handle subscription plan upgrade / checkout for existing active vendors.
+     */
+    public function planCheckout(Request $request, \App\Models\SubscriptionPlan $plan)
+    {
+        $user = Auth::user();
+        if (!$user || !$user->isVendor()) return redirect('/');
+
+        $vendor = $user->vendor;
+        $keyId = env('RAZORPAY_KEY_ID');
+        $keySecret = env('RAZORPAY_KEY_SECRET');
+
+        if (empty($keyId) || empty($keySecret)) {
+            return view('vendor.subscription.payment', [
+                'vendor' => $vendor,
+                'plan' => $plan,
+                'error' => 'Razorpay API keys are not configured.',
+                'demoMode' => true,
+            ]);
+        }
+
+        try {
+            $api = new Api($keyId, $keySecret);
+            $order = $api->order->create([
+                'receipt'  => 'upgrade_' . $vendor->id . '_' . $plan->id,
+                'amount'   => (int)($plan->price * 100),
+                'currency' => 'INR',
+            ]);
+
+            return view('vendor.subscription.payment', [
+                'vendor' => $vendor,
+                'plan'   => $plan,
+                'order'  => $order,
+                'keyId'  => $keyId,
+                'demoMode' => false,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Plan Upgrade Razorpay Error: ' . $e->getMessage());
+            return view('vendor.subscription.payment', [
+                'vendor'   => $vendor,
+                'plan'     => $plan,
+                'error'    => 'Payment gateway error: ' . $e->getMessage(),
+                'demoMode' => true,
+            ]);
+        }
+    }
+
+    /**
+     * Handle Razorpay callback for plan upgrade.
+     */
+    public function planCallback(Request $request)
+    {
+        \Log::info('Plan Upgrade Callback', $request->all());
+
+        $user = Auth::user();
+        if (!$user) return redirect()->route('login')->with('error', 'Session expired.');
+
+        $vendor = $user->vendor;
+        $planId = $request->input('plan_id');
+        $plan = \App\Models\SubscriptionPlan::find($planId);
+
+        if ($request->has('razorpay_payment_id') && $plan) {
+            $vendor->update([
+                'subscription_plan_id'    => $plan->id,
+                'status'                  => 'active',
+                'subscription_expires_at' => Carbon::now()->addMonth(),
+            ]);
+            return redirect()->route('vendor.plans')->with('success', "Successfully upgraded to {$plan->name} plan!");
+        }
+
+        return redirect()->route('vendor.plans')->with('error', 'Payment failed or was cancelled.');
     }
 
     public function callback(Request $request)

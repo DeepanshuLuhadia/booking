@@ -462,7 +462,9 @@
     </div>
 
     <!-- LOGICAL ENGINE -->
+    @if($vendor->appointment_mode !== 'token')
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    @endif
     <script>
         function bookingSystem() {
             return {
@@ -486,8 +488,8 @@
                 closingTime: '{{ $vendor->global_closing_time }}',
                 allowBookingUntilClosing: {{ $vendor->allow_booking_until_closing ? 'true' : 'false' }},
                 avgTimePerToken: {{ $vendor->avg_consultation_time ?: 15 }},
-                queueIndex: {{ $selectedEmployee ? ($vendor->bookings()->where('employee_id', $selectedEmployee->id)->where('booking_date', now()->toDateString())->max('token_number') ?: 0) : 0 }},
-                runningToken: {{ $selectedEmployee ? ($vendor->bookings()->where('employee_id', $selectedEmployee->id)->where('booking_date', now()->toDateString())->where('status', 'confirmed')->min('token_number') ?: 0) : 0 }},
+                queueIndex: {{ $queueIndex ?? 0 }},
+                runningToken: {{ $runningToken ?? 0 }},
 
                 canBookToken() {
                     if (this.allowBookingUntilClosing) return true;
@@ -541,11 +543,17 @@
         },
 
                 async confirmBooking() {
+            if (!this.selectedSlot) {
+                window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Please select a valid time slot.', type: 'error' } }));
+                this.bookingModal = false;
+                return;
+            }
             if (!this.guestName || this.guestPhone.length < 10) return;
             this.submitBooking('pay_ext_' + Math.random().toString(36).substr(2, 9));
         },
 
                 async submitBooking(paymentId) {
+            if (!this.selectedSlot) return;
             this.bookingModal = false;
             this.loading = true;
             try {

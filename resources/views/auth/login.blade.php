@@ -6,66 +6,64 @@
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
-        <div class="relative z-10 w-full max-w-xl px-6 animate-reveal">
-            <div class="text-center mb-12">
+        <div class="relative z-10 w-full max-w-xl px-4 md:px-6 animate-reveal">
+            <div class="text-center mb-8 md:mb-12">
                 <div
-                    class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 rounded-full text-white/70 text-[9px] font-black uppercase tracking-widest mb-8">
+                    class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 rounded-full text-white/70 text-[9px] font-black uppercase tracking-widest mb-6 md:mb-8">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4"
                             d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
-                    Institutional Security Protocol
+                    Portal Security Protocol
                 </div>
-                <h1 class="text-5xl md:text-[4rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-[4rem] font-black text-white mb-6 tracking-tighter leading-[1.1] md:leading-[0.9] italic">
                     Authorize <span style="color:transparent; background:linear-gradient(135deg,#ff8c42,#ffab40); -webkit-background-clip:text; background-clip:text;">Access.</span>
                 </h1>
-                <p class="text-lg font-medium text-white/80 max-w-sm mx-auto italic leading-relaxed">Login to manage
+                <p class="text-base md:text-lg font-medium text-white/80 max-w-sm mx-auto italic leading-relaxed px-4">Login to manage
                     your professional appointments and registry credentials.</p>
             </div>
 
-            <div class="glass-card p-4 overflow-hidden shadow-2xl">
-                <form method="POST" action="/login" class="p-8 space-y-8 rounded-[3rem]">
+            <div class="glass-card overflow-hidden shadow-2xl">
+                <form method="POST" action="/login" class="p-6 md:p-8 space-y-6 md:space-y-8 rounded-[3rem]">
                     @csrf
 
                     <div class="space-y-2">
-                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Email
+                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-4 md:ml-6">Email
                             Address</label>
                         <input type="email" name="email" required
                             class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base placeholder:text-white/40 text-white focus:bg-white/10"
                             placeholder="Primary Email Identity" value="{{ old('email') }}">
                         @error('email')
-                        <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-6">{{
+                        <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-4 md:ml-6">{{
                             $message }}</div>
                         @enderror
                     </div>
 
                     <div class="space-y-2">
                         <label
-                            class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Password</label>
+                            class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-4 md:ml-6">Password</label>
                         <input type="password" name="password" required
                             class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base placeholder:text-white/40 text-white focus:bg-white/10"
                             placeholder="••••••••">
                         @error('password')
-                        <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-6">{{
+                        <div class="text-rose-500 text-[10px] font-black uppercase tracking-widest mt-2 ml-4 md:ml-6">{{
                             $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="flex items-center justify-between pt-2 px-4">
-                        <label class="flex items-center gap-3 cursor-pointer group">
+                    <div class="flex items-center justify-between pt-2 px-2 md:px-4">
+                        <label class="flex items-center gap-2 md:gap-3 cursor-pointer group">
                             <input type="checkbox" name="remember"
-                                class="w-5 h-5 rounded-lg border-2 border-white/20 bg-white/5" style="color:#ff8c42;">
-                            <span class="text-[10px] font-black uppercase tracking-widest text-white/60">Remember
-                                Me</span>
+                                class="w-4 h-4 md:w-5 md:h-5 rounded border-2 border-white/20 bg-white/5 text-orange-500">
+                            <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/60">Remember</span>
                         </label>
                         <a href="#"
-                            class="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Forgot
-                            Password</a>
+                            class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Forgot Password</a>
                     </div>
 
-                    <button type="submit" class="btn-premium w-full h-20 !rounded-2xl !text-sm justify-center">
+                    <button type="submit" class="btn-premium w-full h-16 md:h-20 !rounded-2xl !text-sm justify-center">
                         LOGIN
-                        <svg class="w-6 h-6 transition-transform group-hover:translate-x-2" fill="none"
+                        <svg class="w-5 h-5 md:w-6 md:h-6 transition-transform group-hover:translate-x-2" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4"
                                 d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -76,13 +74,11 @@
                         <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 leading-loose">
                             New Provider?
                             <a href="/register/vendor"
-                                class="text-white transition-all ml-2 underline decoration-4 underline-offset-8 italic" style="text-decoration-color:rgba(255,140,66,0.3);">New
-                                Registry Registration</a>
+                                class="text-white transition-all ml-2 underline decoration-2 underline-offset-8 italic" style="text-decoration-color:rgba(255,140,66,0.3);">Register</a>
                         </p>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
     </div>
 </x-app-layout>

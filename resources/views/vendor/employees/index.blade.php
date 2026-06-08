@@ -13,7 +13,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         @forelse($employees as $employee)
-            <div class="bg-white p-2 shadow-2xl shadow-slate-200/50 border border-slate-100 rounded-[3rem] group hover:scale-[1.02] transition-all">
+            <div class="bg-white/5 p-2 shadow-2xl shadow-slate-200/50 border border-white/10 rounded-[3rem] group hover:scale-[1.02] transition-all">
                 <div class="p-8">
                     <div class="flex items-center gap-6 mb-8">
                         <div class="w-20 h-20 rounded-[2rem] bg-slate-900 overflow-hidden flex items-center justify-center font-black italic text-2xl text-white shadow-xl">
@@ -24,7 +24,7 @@
                             @endif
                         </div>
                         <div>
-                            <h3 class="text-xl font-black italic text-slate-900 uppercase tracking-tight">{{ $employee->name }}</h3>
+                            <h3 class="text-xl font-black italic text-white uppercase tracking-tight">{{ $employee->name }}</h3>
                             <div class="mt-2">
                                 <span class="px-3 py-1 {{ $employee->is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100' }} rounded-lg text-[8px] font-black uppercase tracking-widest border italic">
                                     {{ $employee->is_active ? 'ACTIVE DUTY' : 'STANDBY' }}
@@ -33,10 +33,10 @@
                         </div>
                     </div>
 
-                    <div class="space-y-4 mb-10 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                    <div class="space-y-4 mb-10 bg-white/5 p-6 rounded-[2rem] border border-white/10">
                         <div class="flex items-center justify-between">
                             <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Operational Window</span>
-                            <span class="text-[11px] font-black text-slate-900 italic">{{ \Carbon\Carbon::parse($employee->working_start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($employee->working_end_time)->format('h:i A') }}</span>
+                            <span class="text-[11px] font-black text-white italic">{{ \Carbon\Carbon::parse($employee->working_start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($employee->working_end_time)->format('h:i A') }}</span>
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Temporal Slot</span>
@@ -45,7 +45,7 @@
                     </div>
 
                     <div class="flex gap-4">
-                        <a href="{{ route('vendor.employees.edit', $employee) }}" class="flex-grow h-14 bg-slate-50 text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center justify-center italic">Modify Protocol</a>
+                        <a href="{{ route('vendor.employees.edit', $employee) }}" class="flex-grow h-14 bg-white/5 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center italic text-center px-2">Modify Protocol</a>
                         <form action="{{ route('vendor.employees.destroy', $employee) }}" method="POST" onsubmit="return confirm('Decommission specialist?')">
                             @csrf @method('DELETE')
                             <button class="w-14 h-14 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all flex items-center justify-center border border-rose-100">
@@ -56,7 +56,7 @@
                 </div>
             </div>
         @empty
-            <div class="col-span-full bg-white p-24 text-center border-4 border-dashed border-slate-100 rounded-[4rem]">
+            <div class="col-span-full bg-white/5 p-24 text-center border-4 border-dashed border-white/10 rounded-[4rem]">
                 <div class="opacity-10 mb-8 flex justify-center">
                     <svg class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 </div>

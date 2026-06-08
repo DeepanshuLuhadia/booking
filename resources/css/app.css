@@ -770,3 +770,147 @@ body[class*="theme-"] {
   .divider { width: 100% !important; height: 1px !important; margin: 4px 0 !important; }
 }
 /* --- STRICT MODE OVERRIDES END --- */
+
+/* ==========================================
+   DASHBOARD PANELS PREMIUM UI OVERRIDES
+   ========================================== */
+
+/* Scoped variables and overrides for dashboard viewports */
+[data-panel-type] {
+  scroll-behavior: smooth;
+}
+
+/* Base interactive transitions */
+[data-panel-type] a, 
+[data-panel-type] button, 
+[data-panel-type] input, 
+[data-panel-type] select {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scoped definitions for Admin Panel (Dark Theme Glassmorphism) */
+[data-panel-type] {
+  color-scheme: dark;
+}
+
+[data-panel-type] .glass-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-panel-type] .glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Scoped inputs for Admin Form Modules */
+[data-panel-type] .glass-input {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.75rem !important;
+  color: #ffffff !important;
+  padding: 0.75rem 1rem !important;
+  width: 100% !important;
+  font-size: 0.95rem !important;
+}
+
+[data-panel-type] .glass-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+[data-panel-type] .glass-input:focus {
+  outline: none !important;
+  border-color: var(--theme-primary, #0ea5e9) !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Scoped button components for Admin Panel */
+[data-panel-type] .btn-primary {
+  background: linear-gradient(135deg, var(--theme-primary, #0ea5e9), var(--theme-primary-dark, #0284c7)) !important;
+  color: var(--theme-text-on-primary, #ffffff) !important;
+  font-weight: 700 !important;
+  border: none !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.3) !important;
+}
+
+[data-panel-type] .btn-primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px 0 rgba(14, 165, 233, 0.45) !important;
+  filter: brightness(1.1) !important;
+}
+
+[data-panel-type] .btn-outline {
+  background: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+}
+
+[data-panel-type] .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Sidebar slide-in and transition definitions for responsive viewports */
+.dashboard-mobile-sidebar {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 18rem !important; /* w-72 */
+  max-width: 80vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Table responsiveness & helper definitions */
+[data-panel-type] .table-responsive-wrapper {
+  width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Prevent text wrapping and truncation */
+[data-panel-type] .truncate-cell {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Mobile input sizing scaling */
+@media (max-width: 640px) {
+  [data-panel-type] input,
+  [data-panel-type] select,
+  [data-panel-type] textarea,
+  [data-panel-type] button {
+    min-height: 2.75rem !important; /* 44px for easy tap targets */
+  }
+
+  [data-panel-type] .btn-primary,
+  [data-panel-type] .btn-outline {
+    width: 100% !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+}

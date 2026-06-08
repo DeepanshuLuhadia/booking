@@ -8,17 +8,21 @@ use App\Models\Booking;
 use App\Services\SlotGenerationService;
 use App\Services\ThemeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CustomerDiscoveryController extends Controller
 {
 public function index(Request $request)
 {
-    $search        = trim($request->search);
+    $search        = trim($request->search ?? '');
+    $specialty     = trim($request->specialty ?? '');
+    $location      = trim($request->location ?? '');
     $sort          = $request->sort;
     $filterType    = $request->type;
     $filterOpen    = $request->filter === 'open_now';
     $now           = now();
     $currentTime   = $now->format('H:i:s');
+    $allThemes     = Cache::remember('all_themes', 3600, fn() => ThemeService::getAllThemes());
 
     /*
     |--------------------------------------------------------------------------
@@ -26,11 +30,8 @@ public function index(Request $request)
     |--------------------------------------------------------------------------
     |
     | Rules:
-    | - Vendor must be active
-    | - Profile must be complete
-    | - Vendor must be manually open
-    | - Vendor must have global timings
-    | - Vendor must have at least one valid employee
+    | - Vendor must be active (Status Approved)
+    | - Profile must be complete (Minimum Data Required)
     |
     */
 
@@ -40,7 +41,6 @@ public function index(Request $request)
         ->where('is_open', true)
         ->whereNotNull('global_opening_time')
         ->whereNotNull('global_closing_time')
-
         ->with([
             'category',
             'employees' => function ($q) {
@@ -73,14 +73,11 @@ public function index(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | Category Filter
+    | Category Filter (Sidebar/Pills)
     |--------------------------------------------------------------------------
-    */
+    |*/
 
-    if (
-        $filterType &&
-        array_key_exists($filterType, ThemeService::getAllThemes())
-    ) {
+    if ($filterType && array_key_exists($filterType, $allThemes)) {
         $query->whereHas('category', function ($q) use ($filterType) {
             $q->where('slug', $filterType);
         });
@@ -88,23 +85,38 @@ public function index(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | Search Filter
+    | Search Filter (Matrix Search)
     |--------------------------------------------------------------------------
     */
 
-    if ($search) {
-        $query->where(function ($q) use ($search) {
+    if ($search || $specialty || $location) {
+        $query->where(function ($q) use ($search, $specialty, $location) {
+            if ($search) {
+                $q->where(function($q2) use ($search) {
+                    $q2->where('business_name', 'LIKE', "%{$search}%")
+                       ->orWhere('owner_name', 'LIKE', "%{$search}%")
+                       ->orWhere('address', 'LIKE', "%{$search}%");
+                });
+            }
 
-            $q->where('business_name', 'LIKE', "%{$search}%")
-                ->orWhere('owner_name', 'LIKE', "%{$search}%")
-                ->orWhere('address', 'LIKE', "%{$search}%");
+            if ($specialty) {
+                $q->where(function($q2) use ($specialty) {
+                    $q2->where('vendor_type', 'LIKE', "%{$specialty}%")
+                       ->orWhereHas('category', function($q3) use ($specialty) {
+                           $q3->where('name', 'LIKE', "%{$specialty}%");
+                       });
+                });
+            }
 
+            if ($location) {
+                $q->where('address', 'LIKE', "%{$location}%");
+            }
         });
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Open Now Filter
+    | Open Now Filter (Mandatory)
     |--------------------------------------------------------------------------
     |
     | Vendor global timing logic
@@ -112,56 +124,53 @@ public function index(Request $request)
     |
     */
 
-    if ($filterOpen) {
+    $query->where(function ($q) use ($currentTime) {
 
-        $query->where(function ($q) use ($currentTime) {
+        /*
+        |--------------------------------------------------------------------------
+        | Normal Shift
+        | Example: 09:00 -> 22:00
+        |--------------------------------------------------------------------------
+        */
+        $q->where(function ($q2) use ($currentTime) {
 
-            /*
-            |--------------------------------------------------------------------------
-            | Normal Shift
-            | Example: 09:00 -> 22:00
-            |--------------------------------------------------------------------------
-            */
-            $q->where(function ($q2) use ($currentTime) {
+            $q2->whereColumn(
+                    'global_opening_time',
+                    '<',
+                    'global_closing_time'
+                )
+                ->where('global_opening_time', '<=', $currentTime)
+                ->where('global_closing_time', '>=', $currentTime);
 
-                $q2->whereColumn(
-                        'global_opening_time',
-                        '<',
-                        'global_closing_time'
-                    )
-                    ->where('global_opening_time', '<=', $currentTime)
-                    ->where('global_closing_time', '>=', $currentTime);
+        })
 
-            })
+        /*
+        |--------------------------------------------------------------------------
+        | Cross Midnight Shift
+        | Example: 20:00 -> 03:00
+        |--------------------------------------------------------------------------
+        */
+        ->orWhere(function ($q2) use ($currentTime) {
 
-            /*
-            |--------------------------------------------------------------------------
-            | Cross Midnight Shift
-            | Example: 20:00 -> 03:00
-            |--------------------------------------------------------------------------
-            */
-            ->orWhere(function ($q2) use ($currentTime) {
+            $q2->whereColumn(
+                    'global_opening_time',
+                    '>=',
+                    'global_closing_time'
+                )
+                ->where(function ($q3) use ($currentTime) {
 
-                $q2->whereColumn(
-                        'global_opening_time',
-                        '>=',
-                        'global_closing_time'
-                    )
-                    ->where(function ($q3) use ($currentTime) {
+                    $q3->where('global_opening_time', '<=', $currentTime)
+                        ->orWhere(
+                            'global_closing_time',
+                            '>=',
+                            $currentTime
+                        );
 
-                        $q3->where('global_opening_time', '<=', $currentTime)
-                            ->orWhere(
-                                'global_closing_time',
-                                '>=',
-                                $currentTime
-                            );
-
-                    });
-
-            });
+                });
 
         });
-    }
+
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -219,7 +228,7 @@ public function index(Request $request)
     |--------------------------------------------------------------------------
     */
 
-    $vendors = $query->paginate(12);
+    $vendors = $query->paginate(24);
 
     /*
     |--------------------------------------------------------------------------
@@ -268,28 +277,7 @@ public function index(Request $request)
         |--------------------------------------------------------------------------
         */
 
-        $shiftDate = $now->toDateString();
-
-        $vOpen = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_opening_time);
-        $vClose = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_closing_time);
-
-        if ($vClose->lt($vOpen)) {
-            $vClose->addDay();
-        }
-
-        if ($now->lt($vOpen)) {
-            $yDate = $now->copy()->subDay()->toDateString();
-            $yOpen = \Carbon\Carbon::parse("$yDate " . $vendor->global_opening_time);
-            $yClose = \Carbon\Carbon::parse("$yDate " . $vendor->global_closing_time);
-            if ($yClose->lt($yOpen)) {
-                $yClose->addDay();
-            }
-            if ($now->lte($yClose)) {
-                $shiftDate = $yDate;
-                $vOpen = $yOpen;
-                $vClose = $yClose;
-            }
-        }
+        [$shiftDate, $vOpen, $vClose] = $this->resolveShift($now, $vendor->global_opening_time, $vendor->global_closing_time);
 
         $isVendorTimeOpen = $now->between($vOpen, $vClose);
 
@@ -380,23 +368,13 @@ public function index(Request $request)
         return $vendor;
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Optional:
-    | Hide closed vendors after calculation
-    |--------------------------------------------------------------------------
-    |
-    | Uncomment if needed
-    |
-    */
+    $vendors->setCollection(
+        $vendors->getCollection()
+            ->where('is_currently_open', true)
+            ->values()
+    );
 
-    // $vendors->setCollection(
-    //     $vendors->getCollection()
-    //         ->where('is_currently_open', true)
-    //         ->values()
-    // );
-
-    $allThemes = ThemeService::getAllThemes();
+    $allThemes = Cache::remember('all_themes', 3600, fn() => ThemeService::getAllThemes());
 
     return view(
         'customer.vendors',
@@ -415,38 +393,10 @@ public function index(Request $request)
                 continue;
             }
 
-            $shiftDate = $nowDt->toDateString();
-            $empStart = \Carbon\Carbon::parse("$shiftDate " . $emp->working_start_time);
-            $empEnd   = \Carbon\Carbon::parse("$shiftDate " . $emp->working_end_time);
-
-            if ($empEnd->lt($empStart)) {
-                $empEnd->addDay();
-            }
-
-            if ($nowDt->lt($empStart)) {
-                $yDate = $nowDt->copy()->subDay()->toDateString();
-                $yStart = \Carbon\Carbon::parse("$yDate " . $emp->working_start_time);
-                $yEnd = \Carbon\Carbon::parse("$yDate " . $emp->working_end_time);
-                if ($yEnd->lt($yStart)) {
-                    $yEnd->addDay();
-                }
-                if ($nowDt->lte($yEnd)) {
-                    $shiftDate = $yDate;
-                    $empStart = $yStart;
-                    $empEnd = $yEnd;
-                }
-            }
+            [$shiftDate, $empStart, $empEnd] = $this->resolveShift($nowDt, $emp->working_start_time, $emp->working_end_time);
 
             // Bound by Vendor's Global Times if set
-            if ($vendor->global_opening_time) {
-                $vStart = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_opening_time);
-                $vEnd = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_closing_time);
-                if ($vEnd->lt($vStart)) {
-                    $vEnd->addDay();
-                }
-                if ($empStart->lt($vStart)) $empStart = $vStart->copy();
-                if ($empEnd->gt($vEnd)) $empEnd = $vEnd->copy();
-            }
+            [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
 
             if ($vendor->appointment_mode === 'appointment') {
                 $effectiveStartDt = $empStart->copy()->subHours(2);
@@ -463,39 +413,10 @@ public function index(Request $request)
 
         if ($selectedEmployee) {
             $now = \Carbon\Carbon::now();
-            $shiftDate = $now->toDateString();
-            
-            $empStart = \Carbon\Carbon::parse("$shiftDate " . $selectedEmployee->working_start_time);
-            $empEnd = \Carbon\Carbon::parse("$shiftDate " . $selectedEmployee->working_end_time);
-
-            if ($empEnd->lt($empStart)) {
-                $empEnd->addDay();
-            }
-
-            if ($now->lt($empStart)) {
-                $yDate = $now->copy()->subDay()->toDateString();
-                $yStart = \Carbon\Carbon::parse("$yDate " . $selectedEmployee->working_start_time);
-                $yEnd = \Carbon\Carbon::parse("$yDate " . $selectedEmployee->working_end_time);
-                if ($yEnd->lt($yStart)) {
-                    $yEnd->addDay();
-                }
-                if ($now->lte($yEnd)) {
-                    $shiftDate = $yDate;
-                    $empStart = $yStart;
-                    $empEnd = $yEnd;
-                }
-            }
+            [$shiftDate, $empStart, $empEnd] = $this->resolveShift($now, $selectedEmployee->working_start_time, $selectedEmployee->working_end_time);
 
             // Global Vendor Constraints
-            if ($vendor->global_opening_time) {
-                $vStart = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_opening_time);
-                $vEnd = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_closing_time);
-                if ($vEnd->lt($vStart)) {
-                    $vEnd->addDay();
-                }
-                if ($empStart->lt($vStart)) $empStart = $vStart->copy();
-                if ($empEnd->gt($vEnd)) $empEnd = $vEnd->copy();
-            }
+            [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
 
             if ($vendor->appointment_mode === 'appointment') {
                 $windowOpensAt = $empStart->copy()->subHours(2);
@@ -506,52 +427,39 @@ public function index(Request $request)
             $opensAt = (clone $empStart)->format('h:i A');
 
             if (!$isOffline) {
-                $slots = $slotService->generateSlots($selectedEmployee, $shiftDate);
+                $slots = $slotService->generateSlots($selectedEmployee, $shiftDate, $vendor);
             }
         }
 
         // Resolve theme for this vendor's role
-        $theme = ThemeService::getTheme($vendor->category?->slug ?? 'consultant');
+        $theme = Cache::remember('all_themes', 3600, fn() => ThemeService::getAllThemes())[$vendor->category?->slug] ?? ThemeService::getTheme('consultant');
 
-        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt'));
+        $queueIndex = 0;
+        $runningToken = 0;
+
+        if ($selectedEmployee) {
+            $queueIndex = Booking::where('employee_id', $selectedEmployee->id)
+                ->where('booking_date', now()->toDateString())
+                ->whereNotNull('token_number')
+                ->max('token_number') ?? 0;
+                
+            $runningToken = Booking::where('employee_id', $selectedEmployee->id)
+                ->where('booking_date', now()->toDateString())
+                ->where('status', 'confirmed')
+                ->min('token_number') ?? 0;
+        }
+
+        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt', 'queueIndex', 'runningToken'));
     }
 
     public function getSlots(Vendor $vendor, Employee $employee, SlotGenerationService $slotService)
     {
-        $now = \Carbon\Carbon::now();
-        $shiftDate = $now->toDateString();
-        
-        $empStart = \Carbon\Carbon::parse("$shiftDate " . $employee->working_start_time);
-        $empEnd = \Carbon\Carbon::parse("$shiftDate " . $employee->working_end_time);
-        
-        if ($empEnd->lt($empStart)) {
-            $empEnd->addDay();
-        }
-
-        if ($now->lt($empStart)) {
-            $yDate = $now->copy()->subDay()->toDateString();
-            $yStart = \Carbon\Carbon::parse("$yDate " . $employee->working_start_time);
-            $yEnd = \Carbon\Carbon::parse("$yDate " . $employee->working_end_time);
-            if ($yEnd->lt($yStart)) {
-                $yEnd->addDay();
-            }
-            if ($now->lte($yEnd)) {
-                $shiftDate = $yDate;
-                $empStart = $yStart;
-                $empEnd = $yEnd;
-            }
-        }
+        try {
+            $now = \Carbon\Carbon::now();
+            [$shiftDate, $empStart, $empEnd] = $this->resolveShift($now, $employee->working_start_time, $employee->working_end_time);
 
         // Global Vendor Constraints
-        if ($vendor->global_opening_time) {
-            $vStart = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_opening_time);
-            $vEnd = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_closing_time);
-            if ($vEnd->lt($vStart)) {
-                $vEnd->addDay();
-            }
-            if ($empStart->lt($vStart)) $empStart = $vStart->copy();
-            if ($empEnd->gt($vEnd)) $empEnd = $vEnd->copy();
-        }
+        [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
 
         // Visibility / Window Logic
         if ($vendor->appointment_mode === 'appointment') {
@@ -568,7 +476,7 @@ public function index(Request $request)
             ]);
         }
 
-        $slots = $slotService->generateSlots($employee, $shiftDate);
+        $slots = $slotService->generateSlots($employee, $shiftDate, $vendor);
 
         // Token System Metadata
         $queueIndex = Booking::where('employee_id', $employee->id)
@@ -581,11 +489,77 @@ public function index(Request $request)
             ->where('status', 'confirmed')
             ->min('token_number');
 
-        return response()->json([
-            'offline' => false,
-            'slots'   => $slots,
-            'queue_index' => $queueIndex ?? 0,
-            'running_token' => $runningToken ?? 0
-        ]);
+            return response()->json([
+                'offline' => false,
+                'slots'   => $slots,
+                'queue_index' => $queueIndex ?? 0,
+                'running_token' => $runningToken ?? 0
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('CustomerDiscoveryController@getSlots error: ' . $e->getMessage());
+            return response()->json([
+                'offline' => true,
+                'slots'   => [],
+                'queue_index' => 0,
+                'running_token' => 0,
+                'error'   => 'Could not fetch slots.'
+            ], 500);
+        }
+    }
+
+    private function resolveShift(\Carbon\Carbon $now, string $startTime, string $endTime): array
+    {
+        $shiftDate = $now->toDateString();
+        $start = \Carbon\Carbon::parse("$shiftDate " . $startTime);
+        $end = \Carbon\Carbon::parse("$shiftDate " . $endTime);
+
+        if ($end->lt($start)) {
+            $end->addDay();
+        }
+
+        if ($now->lt($start)) {
+            $yDate = $now->copy()->subDay()->toDateString();
+            $yStart = \Carbon\Carbon::parse("$yDate " . $startTime);
+            $yEnd = \Carbon\Carbon::parse("$yDate " . $endTime);
+            
+            if ($yEnd->lt($yStart)) {
+                $yEnd->addDay();
+            }
+            
+            if ($now->lte($yEnd)) {
+                $shiftDate = $yDate;
+                $start = $yStart;
+                $end = $yEnd;
+            }
+        }
+
+        return [$shiftDate, $start, $end];
+    }
+
+    /**
+     * Clamp an employee's start/end times within the vendor's global window.
+     * Extracted from three identical duplicate blocks to a single source of truth.
+     */
+    private function clampEmployeeToVendorWindow(
+        string $shiftDate,
+        \Carbon\Carbon $empStart,
+        \Carbon\Carbon $empEnd,
+        Vendor $vendor
+    ): array {
+        if (!$vendor->global_opening_time) {
+            return [$empStart, $empEnd];
+        }
+
+        $vStart = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_opening_time);
+        $vEnd   = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_closing_time);
+
+        if ($vEnd->lt($vStart)) {
+            $vEnd->addDay();
+        }
+
+        if ($empStart->lt($vStart)) $empStart = $vStart->copy();
+        if ($empEnd->gt($vEnd))    $empEnd   = $vEnd->copy();
+
+        return [$empStart, $empEnd];
     }
 }

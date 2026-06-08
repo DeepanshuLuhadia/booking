@@ -11,10 +11,10 @@ class SlotGenerationService
     /**
      * Generate available slots for an employee for a specific date (default: today).
      */
-    public function generateSlots(Employee $employee, $date = null)
+    public function generateSlots(Employee $employee, $date = null, $vendor = null)
     {
         $date = $date ?: Carbon::today()->toDateString();
-        $vendor = $employee->vendor;
+        $vendor = $vendor ?? $employee->vendor;
         
         // Base start/end on employee working times, using the target date
         $startTime = Carbon::parse("$date " . $employee->working_start_time);
