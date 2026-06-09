@@ -34,6 +34,8 @@ class SessionController extends Controller
             return redirect('/admin/dashboard');
         } elseif ($user->isVendor()) {
             return redirect('/vendor/dashboard');
+        } elseif ($user->isEmployee()) {
+            return redirect('/employee/dashboard');
         }
 
         return redirect('/');

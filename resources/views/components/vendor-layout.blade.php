@@ -32,6 +32,39 @@
                 <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Settings</span>
             </a>
             <div class="h-px bg-white/10 mx-6 my-2"></div>
+            @php $vendor = auth()->user()->vendor; @endphp
+            @if($vendor)
+            <div class="px-6 py-4 flex flex-col gap-4">
+                <!-- Shop Status Toggle -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 italic">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Registry Status</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
+                            <div class="w-2.5 h-2.5 rounded-full {{ $vendor->isEffectivelyOpen() ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-slate-500' }}"></div>
+                            <span class="text-[9px] font-black {{ $vendor->isEffectivelyOpen() ? 'text-emerald-400' : 'text-slate-400' }} uppercase">{{ $vendor->isEffectivelyOpen() ? 'Live' : 'Off' }}</span>
+                            <form action="{{ route('vendor.status.toggle') }}" method="POST" class="m-0 flex">
+                            @csrf
+                            <button type="submit" class="w-12 h-6 {{ $vendor->is_open ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
+                                <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->is_open ? 'left-7' : 'left-1' }}"></div>
+                            </button>
+                            </form>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 p-2">
+                        <img src="{{ asset('storage/' . $vendor->qr_code_path) }}" class="w-12 h-12 rounded-xl border border-white/10 shadow-sm">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest italic">MATRIX ID</span>
+                            <span class="text-[10px] font-black text-white mono">#{{ $vendor->id }}</span>
+                            <a href="{{ asset('storage/' . $vendor->qr_code_path) }}" download="QR_{{ $vendor->business_name }}.png" class="text-[9px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest italic flex items-center gap-1 mt-1 transition-colors">
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Download
+                            </a>
+                        </div>
+                </div>
+            </div>
+            @endif
         </div>
     </x-slot>
 

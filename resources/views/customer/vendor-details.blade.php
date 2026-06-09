@@ -314,6 +314,19 @@
                                         </div>
                                     </div>
                                 </template>
+
+                                <!-- Paused State -->
+                                <template x-if="!isOffline && isPaused">
+                                    <div class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                                        <div class="w-20 h-20 bg-amber-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-500/50">
+                                            <svg class="w-10 h-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <h4 class="text-2xl font-black text-amber-500 italic tracking-tighter uppercase mb-2">Specialist on Break</h4>
+                                        <p class="text-white/40 text-[9px] font-black uppercase tracking-widest mb-6">Appointments are temporarily paused. Please check back shortly.</p>
+                                    </div>
+                                </template>
                             </div>
 
                             <div x-show="!selectedEmployee" class="py-32 text-center opacity-30 animate-fade-in">
@@ -353,7 +366,7 @@
             x-transition>
             <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl" @click="bookingModal = false"></div>
             <div
-                class="relative bg-slate-900/90 text-white rounded-[2rem] sm:rounded-[4rem] p-6 sm:p-12 text-center w-full max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar shadow-[0_100px_200px_-50px_rgba(0,0,0,0.8)] border border-white/10">
+                class="relative bg-[#0a0f2c] text-white rounded-[2rem] sm:rounded-[4rem] p-6 sm:p-12 text-center w-full max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar shadow-[0_100px_200px_-50px_rgba(0,0,0,0.8)] border border-white/10">
                 <div class="mb-10">
                     <span
                         class="inline-block px-4 py-1 theme-gradient-bg text-white border theme-border rounded-full text-[9px] font-black uppercase tracking-widest italic mb-6">Security
@@ -475,6 +488,7 @@
                 loading: false,
                 bookingModal: false,
                 isOffline: {{ $isOffline ? 'true' : 'false' }},
+                isPaused: {{ (isset($isPaused) && $isPaused) ? 'true' : 'false' }},
 
                 successModal: false,
                 successMsg: '',
@@ -519,12 +533,20 @@
                         const data = await res.json();
                         if (data.offline) {
                             this.isOffline = true;
+                            this.isPaused = false;
                             this.openingTime = data.opens_at;
+                            this.slots = [];
+                            this.queueIndex = 0;
+                            this.runningToken = 0;
+                        } else if (data.paused) {
+                            this.isOffline = false;
+                            this.isPaused = true;
                             this.slots = [];
                             this.queueIndex = 0;
                             this.runningToken = 0;
                         } else {
                             this.isOffline = false;
+                            this.isPaused = false;
                             this.slots = data.slots;
                             this.queueIndex = data.queue_index;
                             this.runningToken = data.running_token;
@@ -544,8 +566,6 @@
 
                 async confirmBooking() {
             if (!this.selectedSlot) {
-                window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Please select a valid time slot.', type: 'error' } }));
-                this.bookingModal = false;
                 return;
             }
             if (!this.guestName || this.guestPhone.length < 10) return;

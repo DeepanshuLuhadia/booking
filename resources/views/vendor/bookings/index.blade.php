@@ -129,16 +129,25 @@
                 justify-content: space-between;
             }
 
+            /* Always show prev/next navigation */
             .pagination-container nav div:first-child {
+                display: flex;
+                flex: 1 1 0%;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            /* Hide the detailed page numbers on mobile, show only prev/next */
+            .pagination-container nav div:last-child {
                 display: none;
             }
 
             @media (min-width: 640px) {
-                .pagination-container nav div:first-child {
+                .pagination-container nav div:last-child {
                     display: flex;
                     flex: 1 1 0%;
                     align-items: center;
-                    justify-content: space-between;
+                    justify-content: center;
                 }
             }
 

@@ -61,6 +61,11 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class, 'customer_id');
     }
 
+    public function employee()
+    {
+        return $this->hasOne(Employee::class);
+    }
+
     public function isAdmin()
     {
         return $this->role === 'admin';
@@ -74,5 +79,10 @@ class User extends Authenticatable
     public function isCustomer()
     {
         return $this->role === 'customer';
+    }
+
+    public function isEmployee()
+    {
+        return $this->role === 'employee';
     }
 }

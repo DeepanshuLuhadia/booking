@@ -122,7 +122,7 @@
                  class="absolute inset-0 bg-[#0a0f2c]/80 backdrop-blur-md"></div>
 
             {{-- Modal Content --}}
-            <div class="relative h-full flex items-center justify-center p-4">
+            <div class="relative w-full h-full flex items-center justify-center p-4">
                 <div x-show="mobileMenu"
                      @click.away="null"
                      x-transition:enter="transition ease-out duration-300"
@@ -131,7 +131,7 @@
                      x-transition:leave="transition ease-in duration-200"
                      x-transition:leave-start="opacity-100 translate-y-0 scale-100"
                      x-transition:leave-end="opacity-0 translate-y-8 scale-95"
-                     class="w-full max-w-sm max-h-[85vh] bg-[#f2f2f7] rounded-[2.5rem] flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden">
+                     class="w-full max-w-sm max-h-[85vh] bg-[#0a0f2c] rounded-[2.5rem] flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10">
                     
                     <!-- Header with Close Button -->
                     <div class="flex items-center justify-between p-6 border-b border-white/10">
@@ -174,7 +174,7 @@
                                     
                                     <form method="POST" action="{{ route('logout') }}" class="mt-4">
                                         @csrf
-                                        <button type="submit" class="w-full h-14 rounded-2xl bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-[0.2em] italic flex items-center justify-center gap-3">
+                                        <button type="submit" class="w-full h-14 rounded-2xl bg-rose-950/20 text-rose-400 text-[10px] font-black uppercase tracking-[0.2em] italic flex items-center justify-center gap-3 border border-rose-500/20">
                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                                             Logout Account
                                         </button>
@@ -219,14 +219,14 @@
                  x-transition:leave="transition ease-in duration-200 transform"
                  x-transition:leave-start="translate-x-0"
                  x-transition:leave-end="-translate-x-full"
-                 class="dashboard-mobile-sidebar bg-[#f2f2f7] dark:bg-slate-900 border-r border-white/10 dark:border-white/5 flex flex-col">
+                 class="dashboard-mobile-sidebar bg-[#0a0f2c] border-r border-white/5 flex flex-col">
                  
                  <!-- Header with Close Button -->
-                 <div class="flex items-center justify-between p-6 border-b border-white/10 dark:border-white/5">
-                     <div class="text-xs font-black text-white dark:text-white tracking-widest uppercase">
+                 <div class="flex items-center justify-between p-6 border-b border-white/5">
+                     <div class="text-xs font-black text-white tracking-widest uppercase">
                          Navigation
                      </div>
-                     <button @click="mobileMenu = false" class="w-10 h-10 rounded-full bg-white/10 dark:bg-white/5/5 flex items-center justify-center text-white dark:text-white hover:bg-slate-300 dark:hover:bg-white/5/10 transition-colors">
+                     <button @click="mobileMenu = false" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 transition-colors">
                          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
                      </button>
                  </div>
@@ -237,15 +237,15 @@
                          {{ $mobileMenu }}
                      @endif
 
-                     <div class="h-px bg-white/10 dark:bg-white/5/5 my-4"></div>
-                     <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-xl bg-white/5 dark:bg-white/5/5 text-white dark:text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm mb-4">
+                     <div class="h-px bg-white/5 my-4"></div>
+                     <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm mb-4">
                          Explore
                      </a>
 
                      @auth
                          <form method="POST" action="{{ route('logout') }}">
                              @csrf
-                             <button type="submit" class="w-full h-12 rounded-xl bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-[0.2em] italic flex items-center justify-center gap-3">
+                             <button type="submit" class="w-full h-12 rounded-xl bg-rose-950/20 text-rose-400 text-[10px] font-black uppercase tracking-[0.2em] italic flex items-center justify-center gap-3">
                                  Logout
                              </button>
                          </form>

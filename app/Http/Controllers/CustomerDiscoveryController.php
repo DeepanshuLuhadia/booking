@@ -426,7 +426,9 @@ public function index(Request $request)
             }
             $opensAt = (clone $empStart)->format('h:i A');
 
-            if (!$isOffline) {
+            $isPaused = $selectedEmployee->is_paused;
+
+            if (!$isOffline && !$isPaused) {
                 $slots = $slotService->generateSlots($selectedEmployee, $shiftDate, $vendor);
             }
         }
@@ -449,7 +451,7 @@ public function index(Request $request)
                 ->min('token_number') ?? 0;
         }
 
-        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt', 'queueIndex', 'runningToken'));
+        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt', 'queueIndex', 'runningToken', 'isPaused'));
     }
 
     public function getSlots(Vendor $vendor, Employee $employee, SlotGenerationService $slotService)
@@ -473,6 +475,14 @@ public function index(Request $request)
             return response()->json([
                 'offline'  => true,
                 'opens_at' => (clone $empStart)->format('h:i A'),
+            ]);
+        }
+
+        if ($employee->is_paused) {
+            return response()->json([
+                'offline'  => false,
+                'paused'   => true,
+                'slots'    => [],
             ]);
         }
 

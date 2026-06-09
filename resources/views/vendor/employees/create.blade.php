@@ -32,6 +32,20 @@
                             <input type="text" name="name" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="e.g. Rahul Sharma">
                         </div>
 
+                        <div class="border-t border-white/10 pt-6 mt-6">
+                            <h4 class="text-[10px] font-black italic uppercase text-slate-300 tracking-widest mb-4">Portal Credentials (Optional)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-4">
+                                    <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Email Address</label>
+                                    <input type="email" name="email" class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="For employee login">
+                                </div>
+                                <div class="space-y-4">
+                                    <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Password</label>
+                                    <input type="password" name="password" class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="Min 6 characters">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Operational Start</label>

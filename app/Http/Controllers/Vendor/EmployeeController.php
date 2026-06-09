@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\User;
+use App\Mail\EmployeeCredentialsMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class EmployeeController extends Controller
 {
@@ -45,6 +49,8 @@ class EmployeeController extends Controller
             'service_fee_override' => 'nullable|numeric|min:0',
             'premium_fee' => 'nullable|numeric|min:0',
             'premium_bookings_count' => 'nullable|integer|min:0',
+            'email' => 'nullable|email|unique:users,email',
+            'password' => 'nullable|string|min:6',
         ]);
 
         if ($vendor->global_opening_time) {
@@ -66,6 +72,24 @@ class EmployeeController extends Controller
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('employees', 'public');
+        }
+
+        if ($request->filled('email') && $request->filled('password')) {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'employee',
+                'status' => 'active'
+            ]);
+            $data['user_id'] = $user->id;
+
+            Mail::to($request->email)->send(new EmployeeCredentialsMail(
+                $data['name'],
+                $request->email,
+                $request->password,
+                $vendor->business_name
+            ));
         }
 
         Employee::create($data);
@@ -93,6 +117,8 @@ class EmployeeController extends Controller
             'service_fee_override' => 'nullable|numeric|min:0',
             'premium_fee' => 'nullable|numeric|min:0',
             'premium_bookings_count' => 'nullable|integer|min:0',
+            'email' => 'nullable|email|unique:users,email,' . ($employee->user_id ?? 'null'),
+            'password' => 'nullable|string|min:6',
         ]);
 
         $vendor = auth()->user()->vendor;
@@ -114,6 +140,41 @@ class EmployeeController extends Controller
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('employees', 'public');
+        }
+
+        if ($request->filled('email')) {
+            if ($employee->user) {
+                $employee->user->update([
+                    'name' => $data['name'],
+                    'email' => $request->email,
+                    'password' => $request->filled('password') ? Hash::make($request->password) : $employee->user->password,
+                ]);
+
+                if ($request->filled('password')) {
+                    Mail::to($request->email)->send(new EmployeeCredentialsMail(
+                        $data['name'],
+                        $request->email,
+                        $request->password,
+                        $vendor->business_name
+                    ));
+                }
+            } else if ($request->filled('password')) {
+                $user = User::create([
+                    'name' => $data['name'],
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                    'role' => 'employee',
+                    'status' => 'active'
+                ]);
+                $data['user_id'] = $user->id;
+
+                Mail::to($request->email)->send(new EmployeeCredentialsMail(
+                    $data['name'],
+                    $request->email,
+                    $request->password,
+                    $vendor->business_name
+                ));
+            }
         }
 
         $employee->update($data);

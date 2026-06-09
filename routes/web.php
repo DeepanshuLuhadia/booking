@@ -65,3 +65,10 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/settlements/{id}', [\App\Http\Controllers\Admin\SettlementController::class, 'show'])->name('admin.settlements.show');
     Route::post('/settlements/{id}/mark-paid', [\App\Http\Controllers\Admin\SettlementController::class, 'markAsPaid'])->name('admin.settlements.markAsPaid');
 });
+
+// Employee Panel
+Route::middleware(['auth'])->prefix('employee')->name('employee.')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\Employee\DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/mark-done', [\App\Http\Controllers\Employee\DashboardController::class, 'markDone'])->name('mark-done');
+    Route::post('/toggle-pause', [\App\Http\Controllers\Employee\DashboardController::class, 'togglePause'])->name('toggle-pause');
+});
