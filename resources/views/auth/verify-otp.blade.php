@@ -1,5 +1,5 @@
 <x-app-layout page-title="Security Verification | Appointment Platform">
-    <div class="relative min-h-[90vh] flex items-center justify-center py-20 bg-white">
+    <div class="relative min-h-[90vh] flex items-center justify-center py-24 bg-white">
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-50"></div>
 

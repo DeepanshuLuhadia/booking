@@ -1,5 +1,5 @@
 <x-app-layout page-title="Initialize Partnership | Appointment Platform">
-    <div class="relative min-h-[90vh] flex items-center justify-center py-20" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
+    <div class="relative min-h-[90vh] flex items-center justify-center py-24" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
         <!-- Glowing Orbs (From Index) -->
         <div style="position:absolute; top:0; left:25%; width:500px; height:500px; background:rgba(255,109,0,.08); border-radius:50%; filter:blur(120px); pointer-events:none;"></div>
         <div style="position:absolute; bottom:0; right:25%; width:600px; height:600px; background:rgba(255,109,0,.04); border-radius:50%; filter:blur(150px); pointer-events:none;"></div>

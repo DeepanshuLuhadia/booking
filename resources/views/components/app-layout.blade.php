@@ -55,7 +55,7 @@
         <!-- Navigation (Section 4) -->
         <nav @scroll.window="scrolled = (window.pageYOffset > 50)"
              :class="{ 'bg-[#0a0f2c]/80 backdrop-blur-2xl border-b border-white/5 py-3': scrolled, 'bg-transparent py-5 md:py-6': !scrolled }"
-             class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-4 md:px-8 flex items-center justify-between overflow-visible">
+             class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-4 md:px-8 flex items-center justify-between overflow-visible border-0 border-none">
             
             <div class="flex items-center gap-4 md:gap-10 {{ $panelType ? 'lg:hidden' : '' }}">
                 <a href="/" class="group flex items-center gap-2 md:gap-3">
@@ -69,7 +69,7 @@
             </div>
 
             <!-- Desktop Menu -->
-            <div class="nav-desktop-menu items-center gap-10 ml-auto">
+            <div class="nav-desktop-menu items-center gap-4 ml-auto">
                 <div class="flex items-center gap-10">
                     <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Explore</a>
                     @auth
@@ -81,7 +81,7 @@
                     @endauth
                 </div>
 
-                <div class="h-6 w-px bg-white/5/10"></div>
+                <div class="h-4 w-px bg-white"></div>
 
                 <div class="flex items-center gap-6">
                     @auth
@@ -109,29 +109,18 @@
         @if(!$panelType)
         <!-- Mobile Navigation Overlay (Public Site) -->
         <div x-show="mobileMenu" 
-             class="nav-mobile-toggle fixed inset-0 z-[300]" 
-             x-cloak>
+             x-cloak
+             x-transition.opacity.duration.300ms
+             class="flex lg:hidden fixed inset-0 z-[300]">
+             
             {{-- Backdrop --}}
-            <div x-show="mobileMenu" 
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-200"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="absolute inset-0 bg-[#0a0f2c]/80 backdrop-blur-md"></div>
+            <div class="absolute inset-0 bg-[#0a0f2c]/80 backdrop-blur-md"></div>
 
             {{-- Modal Content --}}
-            <div class="relative w-full h-full flex items-center justify-center p-4">
-                <div x-show="mobileMenu"
-                     @click.away="null"
-                     x-transition:enter="transition ease-out duration-300"
-                     x-transition:enter-start="opacity-0 translate-y-8 scale-95"
-                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave="transition ease-in duration-200"
-                     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                     x-transition:leave-end="opacity-0 translate-y-8 scale-95"
-                     class="w-full max-w-sm max-h-[85vh] bg-[#0a0f2c] rounded-[2.5rem] flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10">
+            <div class="relative w-full h-full flex items-center justify-center p-4" @click="mobileMenu = false">
+                <div @click.stop
+                     :class="mobileMenu ? 'transform translate-y-0 scale-100' : 'transform translate-y-8 scale-95'"
+                     class="transition-all duration-300 w-full max-w-sm max-h-[85vh] bg-[#0a0f2c] rounded-[2.5rem] flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10">
                     
                     <!-- Header with Close Button -->
                     <div class="flex items-center justify-between p-6 border-b border-white/10">
@@ -199,27 +188,18 @@
         </div>
         @else
         <!-- Mobile Navigation Slide-in Sidebar (Admin/Vendor Dashboards) -->
-        <div x-show="mobileMenu" class="fixed inset-0 z-[9999]" x-cloak>
+        <div x-show="mobileMenu"
+             x-cloak
+             x-transition.opacity.duration.300ms
+             class="block lg:hidden fixed inset-0 z-[9999]">
+             
             <!-- Backdrop -->
-            <div x-show="mobileMenu"
-                 @click="mobileMenu = false"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition ease-in duration-200"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="absolute inset-0 bg-[#0a0f2c]/60 backdrop-blur-sm"></div>
+            <div class="absolute inset-0 bg-[#0a0f2c]/60 backdrop-blur-sm" @click="mobileMenu = false"></div>
 
             <!-- Slide-in Menu -->
-            <div x-show="mobileMenu"
-                 x-transition:enter="transition ease-out duration-300 transform"
-                 x-transition:enter-start="-translate-x-full"
-                 x-transition:enter-end="translate-x-0"
-                 x-transition:leave="transition ease-in duration-200 transform"
-                 x-transition:leave-start="translate-x-0"
-                 x-transition:leave-end="-translate-x-full"
-                 class="dashboard-mobile-sidebar bg-[#0a0f2c] border-r border-white/5 flex flex-col">
+            <div @click.stop
+                 :class="mobileMenu ? 'transform translate-x-0' : 'transform -translate-x-full'"
+                 class="transition-all duration-300 dashboard-mobile-sidebar bg-[#0a0f2c] border-r border-white/5 flex flex-col">
                  
                  <!-- Header with Close Button -->
                  <div class="flex items-center justify-between p-6 border-b border-white/5">

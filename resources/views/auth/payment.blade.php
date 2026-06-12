@@ -1,5 +1,5 @@
 <x-app-layout page-title="Payment Gateway | Deployment Protocol">
-    <div class="relative min-h-[90vh] flex items-center justify-center py-20 bg-theme-main">
+    <div class="relative min-h-[90vh] flex items-center justify-center py-24 bg-theme-main">
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-10"></div>
 

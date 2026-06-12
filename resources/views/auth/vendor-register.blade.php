@@ -6,7 +6,7 @@
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
-        <div class="relative z-10 max-w-5xl mx-auto px-6 pt-20">
+        <div class="relative z-10 max-w-5xl mx-auto px-6 pt-24">
             <!-- Header Section -->
             <div class="text-center mb-12 md:mb-20 animate-text-reveal">
                 {{-- <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-white text-[9px] font-black uppercase tracking-widest mb-6 md:mb-8">
@@ -43,6 +43,9 @@
                 .plan-card-input:checked + .plan-card-content span {
                     color: #ffffff !important;
                 }
+                .bottom-space {
+                    margin-bottom: 20px !important;
+                }
             </style>
 
             <form method="POST" action="/register/vendor" class="space-y-16 animate-reveal delay-100">
@@ -52,9 +55,9 @@
                 <div class="glass-card overflow-hidden shadow-2xl">
                     <div class="p-6 md:p-14 rounded-[3rem]">
                         <div class="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
-                            <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl">01</div>
+                            <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl shrink-0">01</div>
                             <div>
-                                <h3 class="text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white">Business Information</h3>
+                                <h3 class="text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white ">Business Information</h3>
                                 <p class="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-white/40">Enter your business and contact details</p>
                             </div>
                         </div>
@@ -141,10 +144,10 @@
                 </div>
 
                 <!-- STEP 2: PLAN -->
-                <div class="glass-card overflow-hidden shadow-2xl">
+                <div class="glass-card overflow-hidden shadow-2xl bottom-space">
                     <div class="p-6 md:p-14 rounded-[3rem]">
                         <div class="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
-                            <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl">02</div>
+                            <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl shrink-0">02</div>
                             <div>
                                 <h3 class="text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white">Choose Your Plan</h3>
                                 <p class="text-[10px] md:text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Choose a plan that fits your business</p>
@@ -185,13 +188,13 @@
                 </div>
 
                 <!-- SUBMIT -->
-                <div class="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 pt-8">
-                    <p class="text-white/60 font-medium italic max-w-sm text-center md:text-left text-sm leading-relaxed px-4">
+                <div class="flex flex-col flex-row items-start justify-between gap-8 md:gap-12 pt-0">
+                    <p class="text-white/60 font-medium italic max-w-lg text-left md:text-left text-sm px-2">
                         By submitting this form, you agree to our terms and conditions.
                     </p>
-                    <button type="submit" class="btn-premium w-full md:w-auto h-20 md:h-24 px-10 md:px-16 !rounded-2xl md:!rounded-[2rem] !text-lg md:!text-2xl">
+                    <button type="submit" class="btn-premium mx-auto w-full md:w-auto px-10 md:px-8 !rounded-2xl md:!rounded-[2rem] !text-lg md:!text-xl">
                         Create Business Account
-                        <svg class="w-6 h-6 md:w-8 md:h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        <svg class="w-4 h-4 md:w-4 md:h-4 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </button>
                 </div>
             </form>

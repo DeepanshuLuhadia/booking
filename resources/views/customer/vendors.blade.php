@@ -72,6 +72,9 @@
                 width: 100%;
                 gap: 10px;
             }
+             .bv-hero {
+                padding: 120px 24px 20px;
+            }
         }
 
         .bv-search-form {
@@ -415,6 +418,9 @@
         @media(max-width:600px) {
             .bv-grid {
                 grid-template-columns: 1fr;
+            }
+             .bv-section {
+                padding: 30px 24px ;
             }
         }
 
@@ -947,10 +953,43 @@
         @media(max-width:768px) {
             .bv-steps-grid {
                 grid-template-columns: 1fr;
+                gap: 60px; /* Increase gap to give room for the curved connecting line */
+                padding: 0 10px;
             }
 
             .bv-steps-grid::before {
                 display: none;
+            }
+
+            /* Draw the line ONLY in the gap below the card */
+            .bv-step-card:not(:last-child)::after {
+                content: "";
+                position: absolute;
+                top: 100%; /* Starts exactly at the bottom of the card */
+                height: 100px; /* Spans the 60px gap and reaches 20px into the next icon */
+                z-index: -1;
+            }
+
+            /* Gentle curve to the right */
+            .bv-step-card:nth-child(odd):not(:last-child)::after {
+                left: 40%;
+                width: 20%; /* Box is 40% to 60%. Center is 50%. */
+                border-right: 2px dashed rgba(255, 255, 255, .3);
+                border-radius: 50%;
+            }
+
+            /* Gentle curve to the left */
+            .bv-step-card:nth-child(even):not(:last-child)::after {
+                right: 40%;
+                width: 20%; /* Box is 40% to 60%. Center is 50%. */
+                border-left: 2px dashed rgba(255, 255, 255, .3);
+                border-radius: 50%;
+            }
+
+        }
+        @media(max-width:600px) {
+            .bv-steps-section {
+               padding: 50px 24px 100px;
             }
         }
 
@@ -1032,6 +1071,17 @@
             color: rgba(255, 255, 255, .35);
             line-height: 1.7;
             margin: 0;
+        }
+
+        @media(max-width:768px) {
+            /* Move step number inside the card on mobile */
+            .bv-step-num {
+                top: auto;
+                bottom: -15px;
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%);
+            }
         }
 
         /* ── CTA section ─────────────────────────────────────────────── */
