@@ -27,6 +27,12 @@ class BookingController extends Controller
             ]);
 
             $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
+            if (!$vendor->isSubscriptionActive()) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'Booking is not allowed as the business subscription has expired or is inactive.',
+                ], 403);
+            }
             $employee = Employee::findOrFail($request->employee_id);
 
             // Pricing Logic: Use employee override if set, otherwise vendor default

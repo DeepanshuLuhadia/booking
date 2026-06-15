@@ -14,7 +14,7 @@ class VendorRegistrationController extends Controller
 {
     public function create()
     {
-        $plans = SubscriptionPlan::where('is_active', true)->get();
+        $plans = SubscriptionPlan::where('is_active', true)->orderBy('price', 'asc')->get();
         $vendorCategories = \App\Models\VendorCategory::all();
         return view('auth.vendor-register', compact('plans', 'vendorCategories'));
     }
@@ -37,13 +37,16 @@ class VendorRegistrationController extends Controller
             $referrer = Vendor::where('referral_code', $request->referral_code)->first();
         }
 
+        $plan = SubscriptionPlan::findOrFail($request->subscription_plan_id);
+        $isFreePlan = ($plan->price == 0);
+
         $user = User::create([
             'name' => $request->owner_name,
             'email' => $request->email,
             'mobile' => $request->mobile,
             'role' => 'vendor',
             'password' => Hash::make($request->password),
-            'status' => 'inactive', // inactive until payment
+            'status' => $isFreePlan ? 'active' : 'inactive',
         ]);
 
         $vendor = Vendor::create([
@@ -52,8 +55,10 @@ class VendorRegistrationController extends Controller
             'business_name' => $request->business_name,
             'owner_name' => $request->owner_name,
             'contact_number' => $request->mobile,
-            'subscription_plan_id' => $request->subscription_plan_id,
+            'subscription_plan_id' => $plan->id,
             'referred_by_id' => $referrer ? $referrer->id : null,
+            'status' => $isFreePlan ? 'active' : 'inactive',
+            'subscription_expires_at' => $isFreePlan ? now()->addMonth() : null,
         ]);
 
         // Logic for awarding points: The user said "once refer purchase any plan".
@@ -64,6 +69,10 @@ class VendorRegistrationController extends Controller
         // Let's create a hook or add it where activation happens.
 
         Auth::login($user);
+        
+        if ($isFreePlan) {
+            return redirect()->route('vendor.dashboard')->with('success', 'Your account has been registered with the Free Trial plan!');
+        }
         
         return redirect()->route('payment.razorpay');
     }

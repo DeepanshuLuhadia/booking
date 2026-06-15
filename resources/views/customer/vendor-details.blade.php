@@ -91,6 +91,23 @@
             </div>
         </section>
 
+        @if($isSubscriptionExpired)
+        <div class="max-w-7xl mx-auto px-6 mb-12 relative z-10">
+            <div class="glass-card p-8 bg-red-500/10 border-red-500/20 backdrop-blur-3xl rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 shadow-2xl relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent"></div>
+                <div class="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30">
+                    <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="flex-grow text-center md:text-left relative z-10">
+                    <h3 class="text-2xl font-black text-white italic tracking-tighter uppercase mb-1">Online Booking Suspended</h3>
+                    <p class="text-white/60 font-medium text-sm">This business's subscription has expired. Online booking features are temporarily disabled.</p>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- APPOINTMENT SELECTION MATRIX -->
         <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 relative z-10 pb-40">
 
@@ -111,9 +128,9 @@
                     @forelse($vendor->employees as $employee)
                         <button
                             @click="fetchSlots({{ $employee->id }}, {{ $employee->service_fee_override ?? $vendor->service_fee }})"
-                            :disabled="!{{ $employee->is_available ? 'true' : 'false' }}"
+                            :disabled="!{{ $employee->is_available ? 'true' : 'false' }} || isSubscriptionExpired"
                             class="w-full p-6 flex items-center gap-6 text-left transition-all duration-500 rounded-[2.5rem] border-2 group relative overflow-hidden glass-card shadow-xl shadow-black/20 backdrop-blur-3xl"
-                            :class="selectedEmployee === {{ $employee->id }} ? 'bg-white/5 theme-glow-border scale-[1.02] opacity-100 z-10' : (!{{ $employee->is_available ? 'true' : 'false' }} ? 'bg-white/5 border-transparent opacity-20 grayscale pointer-events-none' : 'bg-white/5 border-transparent opacity-50 hover:opacity-80 hover:border-white/20')">
+                            :class="isSubscriptionExpired ? 'bg-white/5 border-transparent opacity-20 grayscale pointer-events-none' : (selectedEmployee === {{ $employee->id }} ? 'bg-white/5 theme-glow-border scale-[1.02] opacity-100 z-10' : (!{{ $employee->is_available ? 'true' : 'false' }} ? 'bg-white/5 border-transparent opacity-20 grayscale pointer-events-none' : 'bg-white/5 border-transparent opacity-50 hover:opacity-80 hover:border-white/20'))">
 
                             <div
                                 class="w-20 h-20 rounded-[1.5rem] bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 group-hover:scale-105 transition-transform shadow-inner">
@@ -189,19 +206,23 @@
                                     x-text="isTokenEnabled ? 'Choose Token & Wait Time' : 'Choose Time'"></h3>
                             </div>
                             <div class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"
-                                x-show="!isOffline">
+                                x-show="!isOffline && !isSubscriptionExpired">
                                 <span class="open-pulse bg-emerald-500"></span>
                                 Online Now
                             </div>
                             <div class="px-4 py-2 bg-slate-500/10 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-500/20 flex items-center gap-2"
-                                x-show="isOffline" style="display: none;">
+                                x-show="isOffline && !isSubscriptionExpired" style="display: none;">
                                 Closed
+                            </div>
+                            <div class="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-red-500/20 flex items-center gap-2"
+                                x-show="isSubscriptionExpired" style="display: none;">
+                                Suspended
                             </div>
                         </div>
 
                         <div class="p-4 pt-0">
                             <!-- Loading Interface -->
-                            <div x-show="loading" class="py-32 flex flex-col items-center justify-center gap-6">
+                            <div x-show="loading && !isSubscriptionExpired" class="py-32 flex flex-col items-center justify-center gap-6">
                                 <div
                                     class="w-10 h-10 border-4 border-white/10 border-t-orange-500 rounded-full animate-spin">
                                 </div>
@@ -210,7 +231,7 @@
                             </div>
 
                             <!-- Interactive Selection Logic -->
-                            <div x-show="!loading && selectedEmployee" class="animate-reveal">
+                            <div x-show="!loading && selectedEmployee && !isSubscriptionExpired" class="animate-reveal">
 
                                 <!-- Token Flow -->
                                 <template x-if="isTokenEnabled && !isOffline">
@@ -254,10 +275,10 @@
                                 </template>
 
                                 <!-- Slot Flow -->
-                                <template x-if="!isTokenEnabled && !isOffline">
+                                <div x-show="!isTokenEnabled && !isOffline" style="display: none;">
                                     <div class="space-y-4">
                                         <div class="grid grid-cols-2 gap-3">
-                                            <template x-for="slot in slots" :key="slot.start">
+                                            <template x-for="slot in uniqueSlots" :key="slot.start">
                                                 <button @click="initiateBooking(slot)"
                                                     :disabled="!slot.available"
                                                     class="p-4 md:p-6 rounded-2xl border-2 text-center transition-all duration-300 relative overflow-hidden group shadow-sm bg-white/5"
@@ -282,12 +303,12 @@
                                                 </button>
                                             </template>
                                         </div>
-                                        <div x-show="slots.length === 0" class="py-20 text-center opacity-10 italic">
+                                        <div x-show="uniqueSlots.length === 0" class="py-20 text-center opacity-10 italic">
                                             <span class="text-4xl font-black uppercase tracking-widest text-white">No
                                                 Active Slots</span>
                                         </div>
                                     </div>
-                                </template>
+                                </div>
 
                                 <!-- Offline State -->
                                 <template x-if="isOffline">
@@ -329,10 +350,21 @@
                                 </template>
                             </div>
 
-                            <div x-show="!selectedEmployee" class="py-32 text-center opacity-30 animate-fade-in">
+                            <div x-show="!selectedEmployee && !isSubscriptionExpired" class="py-32 text-center opacity-30 animate-fade-in">
                                 <span class="text-6xl block mb-6 grayscale">⏳</span>
                                 <p class="text-[9px] font-black uppercase tracking-[0.4em] text-white italic">Initiate
                                     Selection Above</p>
+                            </div>
+
+                            <!-- Subscription Expired State -->
+                            <div x-show="isSubscriptionExpired" class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                                <div class="w-20 h-20 bg-red-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-500/50">
+                                    <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <h4 class="text-2xl font-black text-red-500 italic tracking-tighter uppercase mb-2">Booking Suspended</h4>
+                                <p class="text-white/40 text-[9px] font-black uppercase tracking-widest">Online booking is disabled for this business.</p>
                             </div>
                         </div>
 
@@ -489,6 +521,7 @@
                 bookingModal: false,
                 isOffline: {{ $isOffline ? 'true' : 'false' }},
                 isPaused: {{ (isset($isPaused) && $isPaused) ? 'true' : 'false' }},
+                isSubscriptionExpired: {{ $isSubscriptionExpired ? 'true' : 'false' }},
 
                 successModal: false,
                 successMsg: '',
@@ -504,6 +537,15 @@
                 avgTimePerToken: {{ $vendor->avg_consultation_time ?: 15 }},
                 queueIndex: {{ $queueIndex ?? 0 }},
                 runningToken: {{ $runningToken ?? 0 }},
+
+                get uniqueSlots() {
+                    const seen = new Set();
+                    return this.slots.filter(slot => {
+                        if (seen.has(slot.start)) return false;
+                        seen.add(slot.start);
+                        return true;
+                    });
+                },
 
                 canBookToken() {
                     if (this.allowBookingUntilClosing) return true;
@@ -524,7 +566,9 @@
                     return waitMin < remainingMin;
                 },
                 async fetchSlots(id, fee) {
+                    if (this.isSubscriptionExpired) return;
                     this.loading = true;
+                    this.slots = []; // Clear immediately to prevent Alpine x-for duplication on re-mount
                     this.selectedEmployee = id;
                     this.selectedServiceFee = fee;
                     try {
@@ -553,6 +597,7 @@
                         }
                     } catch (e) {
                         console.error('SYSTEM SYNC ERROR', e);
+                        this.slots = [];
                     }
                     this.loading = false;
                 },

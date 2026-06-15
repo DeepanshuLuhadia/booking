@@ -51,7 +51,7 @@ class ProfileController extends Controller
     public function plans()
     {
         $vendor = auth()->user()->vendor;
-        $plans = \App\Models\SubscriptionPlan::where('is_active', true)->get();
+        $plans = \App\Models\SubscriptionPlan::where('is_active', true)->where('price', '>', 0)->get();
         return view('vendor.subscription.plans', compact('vendor', 'plans'));
     }
 

@@ -24,7 +24,6 @@
 
     <!-- Styles + Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
     @livewireStyles
 
     <style>

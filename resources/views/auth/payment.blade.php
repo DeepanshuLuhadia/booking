@@ -123,7 +123,7 @@
                         "prefill": {
                             "name": "{{ $vendor->owner_name }}",
                             "email": "{{ auth()->user()->email }}",
-                            "contact": "{{ $vendor->mobile }}"
+                            "contact": "{{ $vendor->contact_number }}"
                         },
                         "theme": {
                             "color": "#0f172a"

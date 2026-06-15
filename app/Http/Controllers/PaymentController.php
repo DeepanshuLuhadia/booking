@@ -126,10 +126,18 @@ class PaymentController extends Controller
         $plan = \App\Models\SubscriptionPlan::find($planId);
 
         if ($request->has('razorpay_payment_id') && $plan) {
+            // Carry over remaining days only when upgrading FROM the Free Trial plan.
+            // Paid plan purchases/upgrades always start fresh from now().
+            $currentPlan = $vendor->subscriptionPlan;
+            $isFromFreeTrial = $currentPlan && $currentPlan->price == 0
+                && $vendor->subscription_expires_at && $vendor->subscription_expires_at->isFuture();
+
+            $baseDate = $isFromFreeTrial ? $vendor->subscription_expires_at : Carbon::now();
+
             $vendor->update([
                 'subscription_plan_id'    => $plan->id,
                 'status'                  => 'active',
-                'subscription_expires_at' => Carbon::now()->addMonth(),
+                'subscription_expires_at' => $baseDate->copy()->addYear(),
             ]);
             return redirect()->route('vendor.plans')->with('success', "Successfully upgraded to {$plan->name} plan!");
         }
@@ -159,9 +167,19 @@ class PaymentController extends Controller
                 'payment_id' => $request->razorpay_payment_id
             ]);
 
+            $plan = $vendor->subscriptionPlan;
+
+            if ($plan && $plan->price > 0) {
+                // Paid plan — always 1 year from now (fresh start)
+                $newExpiry = Carbon::now()->addYear();
+            } else {
+                // Free Trial — always 1 month from now
+                $newExpiry = Carbon::now()->addMonth();
+            }
+
             $vendor->update([
                 'status' => 'active',
-                'subscription_expires_at' => Carbon::now()->addMonth(),
+                'subscription_expires_at' => $newExpiry,
             ]);
 
             return redirect()->route('vendor.dashboard')->with('success', 'Payment successful! Your account is now active.');

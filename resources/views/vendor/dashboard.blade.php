@@ -70,6 +70,50 @@
             </div>
         </div>
 
+        {{-- Subscription Status Banner --}}
+        @php
+            $expiresAt  = $vendor->subscription_expires_at;
+            $daysLeft   = $expiresAt ? (int) now()->diffInDays($expiresAt, false) : null;
+            if ($expiresAt === null) {
+                $bannerBg   = 'bg-emerald-500/10 border-emerald-500/20';
+                $dotColor   = 'bg-emerald-500';
+                $textColor  = 'text-emerald-400';
+                $expiryText = 'Lifetime — No Expiry';
+                $subText    = '';
+            } elseif ($daysLeft < 0) {
+                $bannerBg   = 'bg-red-500/10 border-red-500/20';
+                $dotColor   = 'bg-red-500';
+                $textColor  = 'text-red-400';
+                $expiryText = 'Subscription Expired';
+                $subText    = 'Expired on ' . $expiresAt->format('d M Y') . ' — Upgrade to restore listings.';
+            } elseif ($daysLeft <= 7) {
+                $bannerBg   = 'bg-amber-500/10 border-amber-500/20';
+                $dotColor   = 'bg-amber-400 animate-pulse';
+                $textColor  = 'text-amber-400';
+                $expiryText = 'Expiring in ' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's');
+                $subText    = 'Plan ends on ' . $expiresAt->format('d M Y') . ' — Upgrade now to avoid interruption.';
+            } else {
+                $bannerBg   = 'bg-emerald-500/10 border-emerald-500/20';
+                $dotColor   = 'bg-emerald-500';
+                $textColor  = 'text-emerald-400';
+                $expiryText = 'Active until ' . $expiresAt->format('d M Y');
+                $subText    = $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's') . ' remaining on ' . $vendor->subscriptionPlan->name . ' plan.';
+            }
+        @endphp
+        <div class="flex items-center gap-5 px-6 py-4 rounded-2xl border {{ $bannerBg }} mb-8">
+            <span class="w-3 h-3 rounded-full shrink-0 {{ $dotColor }}"></span>
+            <div class="flex-grow min-w-0">
+                <span class="text-[8px] font-black uppercase tracking-widest text-white/40 block mb-0.5">SUBSCRIPTION STATUS — {{ strtoupper($vendor->subscriptionPlan->name) }}</span>
+                <span class="text-sm font-black italic {{ $textColor }}">{{ $expiryText }}</span>
+                @if($subText)
+                    <span class="text-white/30 text-[10px] font-medium ml-2">{{ $subText }}</span>
+                @endif
+            </div>
+            <a href="{{ route('vendor.plans') }}" class="shrink-0 px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-all">
+                Upgrade
+            </a>
+        </div>
+
         <div class="space-y-10">
             <!-- Full Width Recent Bookings -->
             <div class="glass-card overflow-hidden">

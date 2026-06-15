@@ -122,6 +122,20 @@ class Vendor extends Model
                !empty($this->global_closing_time);
     }
 
+    public function isSubscriptionActive()
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        if ($this->subscription_expires_at && $this->subscription_expires_at->isPast()) {
+            return false;
+        }
+
+        return true;
+    }
+
+
     public function isEffectivelyOpen()
     {
         if (!$this->is_open || $this->status !== 'active') {

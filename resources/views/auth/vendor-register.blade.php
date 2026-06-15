@@ -162,8 +162,13 @@
                                 <div class="plan-card-content h-full p-8 bg-white/5 border border-white/10 rounded-[2.5rem] transition-all duration-300 text-white group-hover:translate-y-[-4px] group-hover:shadow-xl antialiased focus-within:ring-4 focus-within:ring-theme-primary/10 hover:bg-white/10">
                                     <h4 class="text-xl font-black mb-2 italic">{{ $plan->name }}</h4>
                                     <div class="flex items-baseline gap-1 mb-6">
-                                        <span class="text-4xl font-black tracking-tighter italic">₹{{ number_format($plan->price) }}</span>
-                                        <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-white/40">/ CYCLE</span>
+                                        @if($plan->price == 0)
+                                            <span class="text-4xl font-black tracking-tighter italic">FREE</span>
+                                            <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-white/40">/ 1 MONTH TRIAL</span>
+                                        @else
+                                            <span class="text-4xl font-black tracking-tighter italic">₹{{ number_format($plan->price) }}</span>
+                                            <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-white/40">/ YEAR</span>
+                                        @endif
                                     </div>
 
                                     <div class="space-y-4 mb-4">

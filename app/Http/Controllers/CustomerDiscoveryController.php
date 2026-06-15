@@ -37,6 +37,10 @@ public function index(Request $request)
 
     $query = Vendor::query()
         ->where('status', 'active')
+        ->where(function ($q) {
+            $q->whereNull('subscription_expires_at')
+              ->orWhere('subscription_expires_at', '>=', now());
+        })
         ->where('is_profile_complete', true)
         ->where('is_open', true)
         ->whereNotNull('global_opening_time')
@@ -385,6 +389,7 @@ public function index(Request $request)
     public function show(Vendor $vendor, SlotGenerationService $slotService)
     {
         $vendor->load(['employees', 'category']);
+        $isSubscriptionExpired = !$vendor->isSubscriptionActive();
 
         $nowDt = \Carbon\Carbon::now();
         foreach ($vendor->employees as $emp) {
@@ -451,11 +456,21 @@ public function index(Request $request)
                 ->min('token_number') ?? 0;
         }
 
-        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt', 'queueIndex', 'runningToken', 'isPaused'));
+        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt', 'queueIndex', 'runningToken', 'isPaused', 'isSubscriptionExpired'));
     }
 
     public function getSlots(Vendor $vendor, Employee $employee, SlotGenerationService $slotService)
     {
+        if (!$vendor->isSubscriptionActive()) {
+            return response()->json([
+                'offline' => true,
+                'error' => 'Subscription expired. Booking is disabled.',
+                'slots' => [],
+                'queue_index' => 0,
+                'running_token' => 0
+            ]);
+        }
+
         try {
             $now = \Carbon\Carbon::now();
             [$shiftDate, $empStart, $empEnd] = $this->resolveShift($now, $employee->working_start_time, $employee->working_end_time);

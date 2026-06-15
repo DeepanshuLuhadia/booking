@@ -15,8 +15,8 @@ class EnsureSubscriptionActive
         if ($user && $user->isVendor()) {
             $vendor = $user->vendor;
             
-            if (!$vendor || $vendor->status !== 'active') {
-                if (!$request->is('payment*')) {
+            if (!$vendor || !$vendor->isSubscriptionActive()) {
+                if (!$request->is('payment*') && !$request->is('vendor/plans*')) {
                     return redirect()->route('payment.razorpay');
                 }
             }

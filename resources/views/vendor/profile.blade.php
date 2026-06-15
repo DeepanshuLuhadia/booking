@@ -206,11 +206,51 @@
                         <p class="text-[9px] font-black text-slate-300 uppercase italic tracking-[0.2em] mb-8">ACTIVE
                             OPERATIONAL SUB-LOGIC</p>
 
-                        <div class="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-900/20 mb-8">
+                        <div class="p-8 bg-slate-900 rounded-[2rem] text-white shadow-xl shadow-slate-900/20 mb-4">
                             <div class="text-[8px] text-white/40 uppercase font-black italic tracking-widest mb-1">
                                 CURRENT RANK</div>
-                            <div class="text-3xl font-black italic tracking-tighter">{{ $vendor->subscriptionPlan->name
-                                }}</div>
+                            <div class="text-3xl font-black italic tracking-tighter">{{ $vendor->subscriptionPlan->name }}</div>
+                        </div>
+
+                        {{-- Subscription Expiry Block --}}
+                        @php
+                            $expiresAt = $vendor->subscription_expires_at;
+                            $daysLeft  = $expiresAt ? (int) now()->diffInDays($expiresAt, false) : null;
+                            if ($expiresAt === null) {
+                                $expiryLabel  = 'Lifetime / No Expiry';
+                                $expiryColor  = 'text-emerald-400';
+                                $bgColor      = 'bg-emerald-500/10 border-emerald-500/20';
+                                $dotColor     = 'bg-emerald-500';
+                            } elseif ($daysLeft < 0) {
+                                $expiryLabel  = 'Expired on ' . $expiresAt->format('d M Y');
+                                $expiryColor  = 'text-red-400';
+                                $bgColor      = 'bg-red-500/10 border-red-500/20';
+                                $dotColor     = 'bg-red-500';
+                            } elseif ($daysLeft <= 7) {
+                                $expiryLabel  = 'Expires in ' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's') . ' (' . $expiresAt->format('d M Y') . ')';
+                                $expiryColor  = 'text-amber-400';
+                                $bgColor      = 'bg-amber-500/10 border-amber-500/20';
+                                $dotColor     = 'bg-amber-400 animate-pulse';
+                            } else {
+                                $expiryLabel  = $expiresAt->format('d M Y');
+                                $expiryColor  = 'text-emerald-400';
+                                $bgColor      = 'bg-emerald-500/10 border-emerald-500/20';
+                                $dotColor     = 'bg-emerald-500';
+                            }
+                        @endphp
+                        <div class="flex items-center gap-4 px-5 py-4 rounded-2xl border {{ $bgColor }} mb-6">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $dotColor }}"></span>
+                            <div>
+                                <div class="text-[8px] font-black uppercase tracking-widest text-white/40 mb-0.5">
+                                    PLAN EXPIRY
+                                </div>
+                                <div class="text-sm font-black italic {{ $expiryColor }}">
+                                    {{ $expiryLabel }}
+                                    @if($daysLeft !== null && $daysLeft >= 0)
+                                        <span class="text-white/30 font-medium text-[10px] ml-1">({{ $daysLeft }} day{{ $daysLeft === 1 ? '' : 's' }} left)</span>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
 
                         <ul class="space-y-4 mb-10">
