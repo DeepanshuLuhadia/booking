@@ -119,7 +119,7 @@
             <div class="glass-card overflow-hidden">
                 <div class="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="space-y-1">
-                        <h3 class="text-xl font-black text-slate-950 uppercase tracking-wide">Registry Feed</h3>
+                        <h3 class="text-xl font-black text-slate-100 uppercase tracking-wide">Registry Feed</h3>
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real-time transaction stream</p>
                     </div>
                     <a href="{{ route('vendor.bookings.index') }}" class="btn-outline px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest self-start sm:self-auto">Full Logs</a>

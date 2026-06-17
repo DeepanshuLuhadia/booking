@@ -57,6 +57,8 @@
             backdrop-filter: blur(22px);
             padding: 8px;
             gap: 0;
+            position: relative;
+            z-index: 90;
         }
 
         @media(max-width: 600px) {
@@ -140,6 +142,83 @@
         .bv-search-caret {
             flex-shrink: 0;
             opacity: .4;
+            transition: transform 0.3s ease;
+        }
+
+        .custom-dropdown-wrap.open .bv-search-caret {
+            transform: translateY(-50%) rotate(180deg) !important;
+        }
+
+        .custom-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            width: max-content;
+            min-width: 100%;
+            background: rgba(13, 19, 51, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+        }
+
+        .custom-dropdown-wrap.open .custom-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .custom-dropdown-item {
+            padding: 10px 16px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .custom-dropdown-item:hover {
+            background: rgba(255, 109, 0, 0.15);
+            color: #fff;
+            transform: translateX(4px);
+        }
+
+        .custom-dropdown-item.selected {
+            background: linear-gradient(135deg, rgba(255, 109, 0, 0.2), rgba(255, 171, 64, 0.2));
+            border-left: 3px solid #ff6d00;
+            color: #ffab40;
+            border-radius: 8px;
+        }
+
+        .custom-dropdown-trigger {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .custom-dropdown-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 28px;
         }
 
         .bv-search-btn {
@@ -1225,24 +1304,38 @@
                             </div>
 
                             {{-- Specialty --}}
-                            <div class="bv-search-field" style="position: relative; overflow: visible;">
+                            <div class="bv-search-field custom-dropdown-wrap" id="specialty-dropdown-wrap" style="position: relative; overflow: visible; z-index: 50; cursor: pointer;">
                                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
                                     viewBox="0 0 24 24" style="flex-shrink: 0;">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                                <select class="bv-search-input" name="specialty" style="background: transparent; border: none; color: #fff; outline: none; cursor: pointer; padding-right: 28px; -webkit-appearance: none; -moz-appearance: none; appearance: none; width: 100%; font-size: 15px; font-weight: 600;">
-                                    <option value="" style="background: #0d1333; color: #fff;">All Categories</option>
-                                    @foreach($allThemes as $key => $t)
-                                        <option value="{{ $key }}" {{ request('specialty') == $key ? 'selected' : '' }} style="background: #0d1333; color: #fff;">
-                                            {{ $t['emoji'] ?? '✨' }} {{ $t['label'] ?? ucfirst($key) }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <div class="custom-dropdown-trigger" id="specialty-trigger">
+                                    <span class="custom-dropdown-label" id="specialty-label">
+                                        @php
+                                            $selectedLabel = 'All Categories';
+                                            $selectedSpecialty = request('specialty');
+                                            if ($selectedSpecialty && isset($allThemes[$selectedSpecialty])) {
+                                                $selectedLabel = ($allThemes[$selectedSpecialty]['emoji'] ?? '✨') . ' ' . ($allThemes[$selectedSpecialty]['label'] ?? ucfirst($selectedSpecialty));
+                                            }
+                                        @endphp
+                                        {{ $selectedLabel }}
+                                    </span>
+                                </div>
                                 <svg class="bv-search-caret" width="14" height="14" fill="none" stroke="white"
                                     stroke-width="2" viewBox="0 0 24 24" style="pointer-events: none; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); opacity: 0.4;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
+
+                                <div class="custom-dropdown-menu">
+                                    <div class="custom-dropdown-item {{ !request('specialty') ? 'selected' : '' }}" data-value="">All Categories</div>
+                                    @foreach($allThemes as $key => $t)
+                                        <div class="custom-dropdown-item {{ request('specialty') == $key ? 'selected' : '' }}" data-value="{{ $key }}">
+                                            {{ $t['emoji'] ?? '✨' }} {{ $t['label'] ?? ucfirst($key) }}
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <input type="hidden" name="specialty" id="specialty-input" value="{{ request('specialty') }}">
                             </div>
 
                             {{-- Location --}}
@@ -1612,6 +1705,45 @@
                 entries.forEach(en => { if (en.isIntersecting) { animate(en.target); observer.unobserve(en.target); } });
             }, { threshold: 0.1 });
             counters.forEach(c => observer.observe(c));
+
+            // Custom Dropdown Logic
+            const dropdownWrap = document.getElementById('specialty-dropdown-wrap');
+            const dropdownLabel = document.getElementById('specialty-label');
+            const dropdownInput = document.getElementById('specialty-input');
+            const dropdownItems = document.querySelectorAll('.custom-dropdown-item');
+
+            if(dropdownWrap) {
+                dropdownWrap.addEventListener('click', function(e) {
+                    if (e.target.closest('.custom-dropdown-item')) return;
+                    e.stopPropagation();
+                    dropdownWrap.classList.toggle('open');
+                });
+
+                dropdownItems.forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // Update input
+                        const val = this.getAttribute('data-value');
+                        dropdownInput.value = val;
+                        
+                        // Update label
+                        dropdownLabel.innerHTML = this.innerHTML.trim();
+                        
+                        // Update selected class
+                        dropdownItems.forEach(i => i.classList.remove('selected'));
+                        this.classList.add('selected');
+                        
+                        // Close dropdown
+                        dropdownWrap.classList.remove('open');
+                    });
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!dropdownWrap.contains(e.target)) {
+                        dropdownWrap.classList.remove('open');
+                    }
+                });
+            }
         });
     </script>
 
