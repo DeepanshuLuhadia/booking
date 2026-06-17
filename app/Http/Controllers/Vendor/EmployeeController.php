@@ -67,7 +67,7 @@ class EmployeeController extends Controller
             }
         }
 
-        $data = $request->except('photo');
+        $data = $request->except(['photo', 'email', 'password', '_token']);
         $data['vendor_id'] = $vendor->id;
 
         if ($request->hasFile('photo')) {

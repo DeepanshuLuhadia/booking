@@ -45,8 +45,8 @@
                             <span class="text-[9px] font-black {{ $vendor->isEffectivelyOpen() ? 'text-emerald-400' : 'text-slate-400' }} uppercase">{{ $vendor->isEffectivelyOpen() ? 'Live' : 'Off' }}</span>
                             <form action="{{ route('vendor.status.toggle') }}" method="POST" class="m-0 flex">
                             @csrf
-                            <button type="submit" class="w-12 h-6 {{ $vendor->is_open ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
-                                <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->is_open ? 'left-7' : 'left-1' }}"></div>
+                            <button type="submit" class="w-12 h-6 {{$vendor->isEffectivelyOpen()  ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
+                                <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->isEffectivelyOpen() ? 'left-7' : 'left-1' }}"></div>
                             </button>
                             </form>
                     </div>
@@ -119,8 +119,8 @@
                              <span class="text-[9px] font-black {{ $vendor->isEffectivelyOpen() ? 'text-emerald-400' : 'text-slate-400' }} uppercase">{{ $vendor->isEffectivelyOpen() ? 'Live' : 'Off' }}</span>
                              <form action="{{ route('vendor.status.toggle') }}" method="POST" class="m-0 flex">
                                 @csrf
-                                <button type="submit" class="w-12 h-6 {{ $vendor->is_open ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
-                                    <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->is_open ? 'left-7' : 'left-1' }}"></div>
+                                <button type="submit" class="w-12 h-6 {{ $vendor->isEffectivelyOpen() ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
+                                    <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->isEffectivelyOpen() ? 'left-7' : 'left-1' }}"></div>
                                 </button>
                              </form>
                         </div>

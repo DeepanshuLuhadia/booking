@@ -8,79 +8,61 @@ use App\Models\Booking;
 use App\Services\SlotGenerationService;
 use App\Services\ThemeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 class CustomerDiscoveryController extends Controller
 {
 public function index(Request $request)
 {
-    $search        = trim($request->search ?? '');
-    $specialty     = trim($request->specialty ?? '');
-    $location      = trim($request->location ?? '');
-    $sort          = $request->sort;
-    $filterType    = $request->type;
-    $filterOpen    = $request->filter === 'open_now';
-    $now           = now();
-    $currentTime   = $now->format('H:i:s');
-    $allThemes     = Cache::remember('all_themes', 3600, fn() => ThemeService::getAllThemes());
+    $search     = trim($request->search ?? '');
+    $specialty  = trim($request->specialty ?? '');
+    $location   = trim($request->location ?? '');
+    $sort       = $request->sort;
+    $filterType = $request->type;
+    $now        = now(); // Single source of truth for time execution
 
-    /*
-    |--------------------------------------------------------------------------
-    | Base Query
-    |--------------------------------------------------------------------------
-    |
-    | Rules:
-    | - Vendor must be active (Status Approved)
-    | - Profile must be complete (Minimum Data Required)
-    |
-    */
+    $isSearch = filled($search) || filled($specialty) || filled($location);
+
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    // Reusable employee database constraint
+    $activeEmployeeConstraint = function ($q) {
+        $q->where('is_active', true)
+            ->where('service_fee_override', '>', 0)
+            ->whereNotNull('working_start_time')
+            ->whereNotNull('working_end_time');
+    };
 
     $query = Vendor::query()
         ->where('status', 'active')
-        ->where(function ($q) {
-            $q->whereNull('subscription_expires_at')
-              ->orWhere('subscription_expires_at', '>=', now());
-        })
         ->where('is_profile_complete', true)
         ->where('is_open', true)
         ->whereNotNull('global_opening_time')
         ->whereNotNull('global_closing_time')
+        ->where(function ($q) use ($now) {
+            $q->whereNull('subscription_expires_at')
+                ->orWhere('subscription_expires_at', '>=', $now);
+        })
         ->with([
             'category',
-            'employees' => function ($q) {
-                $q->where('is_active', true)
-                    ->whereNotNull('service_fee_override')
-                    ->where('service_fee_override', '>', 0)
-                    ->whereNotNull('working_start_time')
-                    ->whereNotNull('working_end_time');
-            }
+            'employees' => $activeEmployeeConstraint,
         ])
-        ->withMin(['employees as starting_fee' => function ($q) {
-            $q->where('is_active', true)
-                ->where('service_fee_override', '>', 0)
-                ->whereNotNull('working_start_time')
-                ->whereNotNull('working_end_time');
-        }], 'service_fee_override')
-
-        /*
-        |--------------------------------------------------------------------------
-        | Vendor MUST have at least one valid employee
-        |--------------------------------------------------------------------------
-        */
-        ->whereHas('employees', function ($q) {
-            $q->where('is_active', true)
-                ->whereNotNull('service_fee_override')
-                ->where('service_fee_override', '>', 0)
-                ->whereNotNull('working_start_time')
-                ->whereNotNull('working_end_time');
-        });
+        ->withMin(
+            ['employees as starting_fee' => $activeEmployeeConstraint],
+            'service_fee_override'
+        )
+        ->whereHas('employees', $activeEmployeeConstraint);
 
     /*
     |--------------------------------------------------------------------------
-    | Category Filter (Sidebar/Pills)
+    | Category Filter
     |--------------------------------------------------------------------------
-    |*/
-
+    */
     if ($filterType && array_key_exists($filterType, $allThemes)) {
         $query->whereHas('category', function ($q) use ($filterType) {
             $q->where('slug', $filterType);
@@ -89,26 +71,25 @@ public function index(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | Search Filter (Matrix Search)
+    | Search Filters
     |--------------------------------------------------------------------------
     */
-
-    if ($search || $specialty || $location) {
+    if ($isSearch) {
         $query->where(function ($q) use ($search, $specialty, $location) {
             if ($search) {
-                $q->where(function($q2) use ($search) {
-                    $q2->where('business_name', 'LIKE', "%{$search}%")
-                       ->orWhere('owner_name', 'LIKE', "%{$search}%")
-                       ->orWhere('address', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('business_name', 'LIKE', "%{$search}%")
+                        ->orWhere('owner_name', 'LIKE', "%{$search}%")
+                        ->orWhere('address', 'LIKE', "%{$search}%");
                 });
             }
 
             if ($specialty) {
-                $q->where(function($q2) use ($specialty) {
-                    $q2->where('vendor_type', 'LIKE', "%{$specialty}%")
-                       ->orWhereHas('category', function($q3) use ($specialty) {
-                           $q3->where('name', 'LIKE', "%{$specialty}%");
-                       });
+                $q->where(function ($sub) use ($specialty) {
+                    $sub->where('vendor_type', 'LIKE', "%{$specialty}%")
+                        ->orWhereHas('category', function ($cat) use ($specialty) {
+                            $cat->where('name', 'LIKE', "%{$specialty}%");
+                        });
                 });
             }
 
@@ -120,344 +101,252 @@ public function index(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | Open Now Filter (Mandatory)
-    |--------------------------------------------------------------------------
-    |
-    | Vendor global timing logic
-    | Supports cross-midnight timing
-    |
-    */
-
-    $query->where(function ($q) use ($currentTime) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Normal Shift
-        | Example: 09:00 -> 22:00
-        |--------------------------------------------------------------------------
-        */
-        $q->where(function ($q2) use ($currentTime) {
-
-            $q2->whereColumn(
-                    'global_opening_time',
-                    '<',
-                    'global_closing_time'
-                )
-                ->where('global_opening_time', '<=', $currentTime)
-                ->where('global_closing_time', '>=', $currentTime);
-
-        })
-
-        /*
-        |--------------------------------------------------------------------------
-        | Cross Midnight Shift
-        | Example: 20:00 -> 03:00
-        |--------------------------------------------------------------------------
-        */
-        ->orWhere(function ($q2) use ($currentTime) {
-
-            $q2->whereColumn(
-                    'global_opening_time',
-                    '>=',
-                    'global_closing_time'
-                )
-                ->where(function ($q3) use ($currentTime) {
-
-                    $q3->where('global_opening_time', '<=', $currentTime)
-                        ->orWhere(
-                            'global_closing_time',
-                            '>=',
-                            $currentTime
-                        );
-
-                });
-
-        });
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
     | Sorting
     |--------------------------------------------------------------------------
     */
-
     if ($sort === 'newest') {
-
         $query->latest();
-
     } elseif ($sort === 'rating') {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Replace with actual rating column if exists
-        |--------------------------------------------------------------------------
-        */
         $query->orderByDesc('rating');
-
     } else {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Open vendors first
-        |--------------------------------------------------------------------------
-        */
-
-        $query->orderByRaw(
-            "
-            (
-                (
-                    global_opening_time < global_closing_time
-                    AND ? BETWEEN global_opening_time AND global_closing_time
-                )
-                OR
-                (
-                    global_opening_time >= global_closing_time
-                    AND (
-                        ? >= global_opening_time
-                        OR
-                        ? <= global_closing_time
-                    )
-                )
-            ) DESC
-            ",
-            [$currentTime, $currentTime, $currentTime]
-        )
-        ->latest();
+        $query->latest();
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Pagination
-    |--------------------------------------------------------------------------
-    */
 
     $vendors = $query->paginate(24);
 
     /*
     |--------------------------------------------------------------------------
-    | Final Vendor Processing
+    | Calculate Real-Time Open Status
     |--------------------------------------------------------------------------
     */
-
     $vendors->getCollection()->transform(function ($vendor) use ($now) {
+        $vendor->is_currently_open = false;
 
-        /*
-        |--------------------------------------------------------------------------
-        | Valid Employees (Already filtered in eager load)
-        |--------------------------------------------------------------------------
-        */
-
-        $validEmployees = $vendor->employees;
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Safety Check
-        |--------------------------------------------------------------------------
-        */
-
-        if ($validEmployees->isEmpty()) {
-            $vendor->is_currently_open = false;
+        if ($vendor->employees->isEmpty()) {
             return $vendor;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Starting Fee (Already pre-calculated in DB via withMin)
-        |--------------------------------------------------------------------------
-        */
+        // Resolve vendor shift (supports overnight shifts smoothly)
+        [$shiftDate, $vOpen, $vClose] = $this->resolveShift(
+            $now,
+            $vendor->global_opening_time,
+            $vendor->global_closing_time
+        );
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | Vendor Global Timings
-        |--------------------------------------------------------------------------
-        */
-
-        /*
-        |--------------------------------------------------------------------------
-        | Robust Date-Based Shift Processing
-        |--------------------------------------------------------------------------
-        */
-
-        [$shiftDate, $vOpen, $vClose] = $this->resolveShift($now, $vendor->global_opening_time, $vendor->global_closing_time);
-
-        $isVendorTimeOpen = $now->between($vOpen, $vClose);
-
-        /*
-        |--------------------------------------------------------------------------
-        | Vendor timing closed
-        |--------------------------------------------------------------------------
-        */
-
-        if (!$isVendorTimeOpen) {
-
-            $vendor->is_currently_open = false;
-
+        // Vendor storefront itself is currently closed right now
+        if (!$now->between($vOpen, $vClose)) {
             return $vendor;
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Employee Availability Check
-        |--------------------------------------------------------------------------
-        */
+        foreach ($vendor->employees as $employee) {
+            // Anchor base times explicitly to the generated vendor shift start day
+            $empStartDt = $vOpen->copy()->setTimeFromTimeString($employee->working_start_time);
+            $empEndDt   = $vOpen->copy()->setTimeFromTimeString($employee->working_end_time);
 
-        $hasAvailableEmployee = false;
-
-        foreach ($validEmployees as $employee) {
-            
-            $empStartDt = \Carbon\Carbon::parse("$shiftDate " . $employee->working_start_time);
-            $empEndDt   = \Carbon\Carbon::parse("$shiftDate " . $employee->working_end_time);
-
-            if ($empEndDt->lt($empStartDt)) {
+            /*
+            |--------------------------------------------------------------------------
+            | Employee Cross-Midnight Lookahead (With Defensive lte Guard)
+            |--------------------------------------------------------------------------
+            */
+            if ($empEndDt->lte($empStartDt)) {
                 $empEndDt->addDay();
             }
 
             /*
             |--------------------------------------------------------------------------
-            | Restrict Employee Time Within Vendor Time
+            | Next-Day Symmetrical Alignment (Symmetrical Parallel Approach)
             |--------------------------------------------------------------------------
             */
-
-            if ($empStartDt->lt($vOpen)) {
-                $empStartDt = $vOpen->copy();
+            if ($vClose->isNextDay($vOpen) && $empStartDt->lt($vOpen)) {
+                $empStartDt->addDay();
+                $empEndDt->addDay();
             }
 
-            if ($empEndDt->gt($vClose)) {
-                $empEndDt = $vClose->copy();
+            // Cap employee working bounds strictly inside global vendor operation frames
+            $empStartDt = $empStartDt->max($vOpen);
+            $empEndDt   = $empEndDt->min($vClose);
+
+            // Cancel check if formatting results in zero overlap scenario
+            if ($empStartDt->gt($empEndDt)) {
+                continue;
             }
 
             /*
             |--------------------------------------------------------------------------
-            | Appointment Mode
+            | Strict Boundary Live System Match Check
             |--------------------------------------------------------------------------
-            |
-            | Vendor appears open 2 hours before shift
-            |
             */
-
-            if ($vendor->appointment_mode === 'appointment') {
-
-                $effectiveStart = $empStartDt
-                    ->copy()
-                    ->subHours(2);
-
-            } else {
-
-                $effectiveStart = $empStartDt;
-
-            }
-
-            $effectiveEnd = $empEndDt;
-
-            $isEmployeeAvailable = $now->between($effectiveStart, $effectiveEnd);
-
-            if ($isEmployeeAvailable) {
-
-                $hasAvailableEmployee = true;
+            if ($now->gte($empStartDt) && $now->lt($empEndDt)) {
+                $vendor->is_currently_open = true;
                 break;
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Final Open Status
-        |--------------------------------------------------------------------------
-        */
-
-        $vendor->is_currently_open = $hasAvailableEmployee;
-
         return $vendor;
     });
 
-    $vendors->setCollection(
-        $vendors->getCollection()
-            ->where('is_currently_open', true)
-            ->values()
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | Default Listing
+    |--------------------------------------------------------------------------
+    */
+    if (!$isSearch) {
+        $vendors->setCollection(
+            $vendors->getCollection()
+                ->where('is_currently_open', true)
+                ->values()
+        );
+    }
 
-    $allThemes = Cache::remember('all_themes', 3600, fn() => ThemeService::getAllThemes());
-
-    return view(
-        'customer.vendors',
-        compact('vendors', 'allThemes')
-    );
+    return view('customer.vendors', compact('vendors', 'allThemes'));
 }
 
     public function show(Vendor $vendor, SlotGenerationService $slotService)
-    {
-        $vendor->load(['employees', 'category']);
-        $isSubscriptionExpired = !$vendor->isSubscriptionActive();
+{
+    $vendor->load(['employees', 'category']);
 
-        $nowDt = \Carbon\Carbon::now();
-        foreach ($vendor->employees as $emp) {
-            if (!$emp->is_active) {
-                $emp->is_available = false;
-                continue;
-            }
+    $isSubscriptionExpired = !$vendor->isSubscriptionActive();
 
-            [$shiftDate, $empStart, $empEnd] = $this->resolveShift($nowDt, $emp->working_start_time, $emp->working_end_time);
+    $now = Carbon::now();
+    $today = $now->toDateString();
 
-            // Bound by Vendor's Global Times if set
-            [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
+    /*
+    |--------------------------------------------------------------------------
+    | Resolve Employee Availability
+    |--------------------------------------------------------------------------
+    */
+    foreach ($vendor->employees as $emp) {
+        $emp->is_available = false;
 
-            if ($vendor->appointment_mode === 'appointment') {
-                $effectiveStartDt = $empStart->copy()->subHours(2);
-                $emp->is_available = !($nowDt->lt($effectiveStartDt) || $nowDt->gt($empEnd));
-            } else {
-                $emp->is_available = !($nowDt->lt($empStart) || $nowDt->gt($empEnd));
-            }
+        if (
+            !$emp->is_active ||
+            !$emp->working_start_time ||
+            !$emp->working_end_time
+        ) {
+            continue;
         }
 
-        $selectedEmployee = $vendor->employees()->where('is_active', true)->first();
-        $slots = [];
-        $isOffline = false;
-        $opensAt = '';
+        [$shiftDate, $empStart, $empEnd] = $this->resolveShift(
+            $now,
+            $emp->working_start_time,
+            $emp->working_end_time
+        );
 
-        if ($selectedEmployee) {
-            $now = \Carbon\Carbon::now();
-            [$shiftDate, $empStart, $empEnd] = $this->resolveShift($now, $selectedEmployee->working_start_time, $selectedEmployee->working_end_time);
+        [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow(
+            $shiftDate,
+            $empStart,
+            $empEnd,
+            $vendor
+        );
 
-            // Global Vendor Constraints
-            [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
-
-            if ($vendor->appointment_mode === 'appointment') {
-                $windowOpensAt = $empStart->copy()->subHours(2);
-                $isOffline = $now->lt($windowOpensAt) || $now->gt($empEnd);
-            } else {
-                $isOffline = $now->lt($empStart) || $now->gt($empEnd);
-            }
-            $opensAt = (clone $empStart)->format('h:i A');
-
-            $isPaused = $selectedEmployee->is_paused;
-
-            if (!$isOffline && !$isPaused) {
-                $slots = $slotService->generateSlots($selectedEmployee, $shiftDate, $vendor);
-            }
+        // Ignore invalid or zero-length windows
+        if ($empStart->gte($empEnd)) {
+            continue;
         }
 
-        // Resolve theme for this vendor's role
-        $theme = Cache::remember('all_themes', 3600, fn() => ThemeService::getAllThemes())[$vendor->category?->slug] ?? ThemeService::getTheme('consultant');
-
-        $queueIndex = 0;
-        $runningToken = 0;
-
-        if ($selectedEmployee) {
-            $queueIndex = Booking::where('employee_id', $selectedEmployee->id)
-                ->where('booking_date', now()->toDateString())
-                ->whereNotNull('token_number')
-                ->max('token_number') ?? 0;
-                
-            $runningToken = Booking::where('employee_id', $selectedEmployee->id)
-                ->where('booking_date', now()->toDateString())
-                ->where('status', 'confirmed')
-                ->min('token_number') ?? 0;
-        }
-
-        return view('customer.vendor-details', compact('vendor', 'selectedEmployee', 'slots', 'theme', 'isOffline', 'opensAt', 'queueIndex', 'runningToken', 'isPaused', 'isSubscriptionExpired'));
+        $emp->is_available = $now->gte($empStart) && $now->lt($empEnd);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Selected Employee (Defensive filtering to prevent 500 null crashes)
+    |--------------------------------------------------------------------------
+    */
+    $selectedEmployee = $vendor->employees->first(function ($emp) {
+        return $emp->is_active 
+            && !is_null($emp->working_start_time) 
+            && !is_null($emp->working_end_time);
+    });
+
+    $slots = [];
+    $isOffline = true;
+    $opensAt = '';
+    $isPaused = false;
+    $queueIndex = 0;
+    $runningToken = 0;
+
+    if ($selectedEmployee) {
+        [$shiftDate, $empStart, $empEnd] = $this->resolveShift(
+            $now,
+            $selectedEmployee->working_start_time,
+            $selectedEmployee->working_end_time
+        );
+
+        [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow(
+            $shiftDate,
+            $empStart,
+            $empEnd,
+            $vendor
+        );
+
+        // Populate a fallback timestamp format before checking length bounds
+        $opensAt = $empStart->format('h:i A');
+        $isPaused = (bool) $selectedEmployee->is_paused;
+
+        if ($empStart->lt($empEnd)) {
+            $isOffline = !($now->gte($empStart) && $now->lt($empEnd));
+
+            /*
+            |--------------------------------------------------------------------------
+            | Generate Slots
+            |--------------------------------------------------------------------------
+            */
+            if (!$isOffline && !$isPaused) {
+                $slots = $slotService->generateSlots(
+                    $selectedEmployee,
+                    $shiftDate,
+                    $vendor
+                );
+            }
+        } else {
+            // Force offline state if employee hours are compressed out of bounds
+            $isOffline = true;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Queue Statistics
+        |--------------------------------------------------------------------------
+        */
+        $bookingStats = Booking::where('employee_id', $selectedEmployee->id)
+            ->where('booking_date', $today)
+            ->selectRaw("
+                MAX(token_number) as queue_index,
+                MIN(CASE WHEN status = 'confirmed' THEN token_number END) as running_token
+            ")
+            ->first();
+
+        $queueIndex = $bookingStats->queue_index ?? 0;
+        $runningToken = $bookingStats->running_token ?? 0;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Theme Selection Matrix
+    |--------------------------------------------------------------------------
+    */
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    $theme = $allThemes[$vendor->category?->slug]
+        ?? ThemeService::getTheme('consultant');
+
+    return view('customer.vendor-details', compact(
+        'vendor',
+        'selectedEmployee',
+        'slots',
+        'theme',
+        'isOffline',
+        'opensAt',
+        'queueIndex',
+        'runningToken',
+        'isPaused',
+        'isSubscriptionExpired'
+    ));
+}
 
     public function getSlots(Vendor $vendor, Employee $employee, SlotGenerationService $slotService)
     {

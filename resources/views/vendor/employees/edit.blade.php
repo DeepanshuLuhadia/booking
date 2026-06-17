@@ -87,17 +87,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="space-y-4">
-                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Premium Fee (₹)</label>
-                                <input type="number" name="premium_fee" value="{{ $employee->premium_fee }}" step="0.01" class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all" placeholder="OPTIONAL PREMIUM">
-                            </div>
-                            <div class="space-y-4">
-                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Premium Bookings (N Upcoming)</label>
-                                <input type="number" name="premium_bookings_count" value="{{ $employee->premium_bookings_count }}" min="0" required class="w-full h-16 bg-slate-50 border-none rounded-2xl px-6 font-black italic text-slate-900 focus:ring-4 focus:ring-blue-50 transition-all">
-                                <p class="text-[8px] font-black text-slate-200 uppercase tracking-widest ml-4 mt-1 italic">NEXT N SLOTS CHARGED PREMIUM</p>
-                            </div>
-                        </div>
+
 
                         <div class="space-y-4">
                             <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Operational Status</label>

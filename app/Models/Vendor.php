@@ -40,17 +40,42 @@ class Vendor extends Model
             $vendor->is_profile_complete = $vendor->isProfileComplete();
         });
 
+        // Award referral bonus ONLY when referred vendor purchases a PAID plan.
+        // Uses a state-based check rather than wasChanged() to avoid missing edge
+        // cases (demo-mode activation, double-submit, admin activation, etc.).
+        // The `referral_reward_paid` guard above prevents duplicate payouts.
         static::updated(function ($vendor) {
-            // Reward referrer ONLY ONCE when vendor becomes active and has a referrer who hasn't been rewarded yet
-            if ($vendor->wasChanged('status') && $vendor->status === 'active' && $vendor->referred_by_id && !$vendor->referral_reward_paid) {
-                $referrer = $vendor->referrer;
-                if ($referrer) {
-                    $referrer->increment('referral_balance', 150);
-                    // Mark as paid so they don't get rewards on every status toggle (suspend/activate)
-                    $vendor->updateQuietly(['referral_reward_paid' => true]);
-                }
+            if (!$vendor->referred_by_id || $vendor->referral_reward_paid) {
+                return;
             }
+
+            if ($vendor->status !== 'active') {
+                return;
+            }
+
+            $plan = $vendor->subscriptionPlan;
+            $isPaidPlan = $plan && $plan->price > 0;
+
+            if (!$isPaidPlan) {
+                return;
+            }
+
+            static::awardReferralBonus($vendor);
         });
+    }
+
+    /**
+     * Award ₹150 referral bonus to the referrer and mark the reward as paid.
+     * Triggered only when the referred vendor purchases a paid subscription plan.
+     */
+    private static function awardReferralBonus(Vendor $vendor): void
+    {
+        $referrer = $vendor->referrer;
+        if ($referrer) {
+            $referrer->increment('referral_balance', 150);
+            // Mark as paid so they don't get rewards on every status toggle (suspend/activate)
+            $vendor->updateQuietly(['referral_reward_paid' => true]);
+        }
     }
 
     public function referrer()
@@ -143,13 +168,12 @@ class Vendor extends Model
         }
 
         if (!$this->global_opening_time || !$this->global_closing_time) {
-            return true;
+            return false;
         }
 
         $now = now()->format('H:i:s');
         $open = $this->global_opening_time;
         $close = $this->global_closing_time;
-
         if ($open < $close) {
             return ($now >= $open && $now <= $close);
         } else {

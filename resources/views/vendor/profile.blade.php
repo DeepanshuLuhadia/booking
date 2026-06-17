@@ -80,7 +80,7 @@
                                 </div>
                             </div>
 
-                            <div class="space-y-4 relative">
+                            {{-- <div class="space-y-4 relative">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Contact Number</label>
                                 <input type="text" name="contact_number" value="{{ $vendor->contact_number }}" required
@@ -91,7 +91,7 @@
                                         class="w-5 h-5 bg-slate-100 border-none rounded text-blue-600 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer">
                                     <span class="text-[9px] font-black text-slate-500 uppercase italic tracking-widest cursor-pointer" onclick="this.previousElementSibling.click()">Display to customers</span>
                                 </div>
-                            </div>
+                            </div>--}}
                         </div>
 
                         <div class="space-y-4">

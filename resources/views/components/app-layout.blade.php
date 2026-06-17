@@ -281,6 +281,20 @@
             this.message = msg; this.type = type; this.show = true;
             if(this.timer) clearTimeout(this.timer);
             this.timer = setTimeout(() => this.show = false, 4000);
+        },
+        init() {
+            @if(session('success'))
+                setTimeout(() => this.triggerToast('{{ addslashes(session('success')) }}', 'success'), 100);
+            @endif
+            @if(session('error'))
+                setTimeout(() => this.triggerToast('{{ addslashes(session('error')) }}', 'error'), 100);
+            @endif
+            @if($errors->any())
+                @php
+                    $allErrors = implode(' | ', $errors->all());
+                @endphp
+                setTimeout(() => this.triggerToast('{{ addslashes($allErrors) }}', 'error'), 100);
+            @endif
         }
     }"
     @toast.window="triggerToast($event.detail.message, $event.detail.type)"
