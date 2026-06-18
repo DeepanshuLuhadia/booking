@@ -53,7 +53,7 @@ class Vendor extends Model
                 return;
             }
 
-            $plan = $vendor->subscriptionPlan;
+            $plan = \App\Models\SubscriptionPlan::find($vendor->subscription_plan_id);
             $isPaidPlan = $plan && $plan->price > 0;
 
             if (!$isPaidPlan) {

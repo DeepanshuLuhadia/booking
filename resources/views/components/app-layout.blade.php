@@ -414,15 +414,17 @@
     <!-- Toast Notifications -->
     <div x-data="{
         show: false, message: '', type: 'success', timer: null,
-        triggerToast(msg, type = 'success') {
+        triggerToast(msg, type = 'success', playSound = false) {
             this.message = msg; this.type = type; this.show = true;
             
-            let sound = document.getElementById('notification-sound');
-            if (sound) {
-                sound.currentTime = 0;
-                let playPromise = sound.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => console.log('Audio playback prevented by browser:', error));
+            if (playSound) {
+                let sound = document.getElementById('notification-sound');
+                if (sound) {
+                    sound.currentTime = 0;
+                    let playPromise = sound.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(error => console.log('Audio playback prevented by browser:', error));
+                    }
                 }
             }
 
@@ -444,7 +446,7 @@
             @endif
         }
     }"
-    @toast.window="triggerToast($event.detail.message, $event.detail.type)"
+    @toast.window="triggerToast($event.detail.message, $event.detail.type, $event.detail.sound)"
     class="fixed bottom-12 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
         <div x-show="show"
              x-transition:enter="transition ease-out duration-500"
@@ -546,7 +548,7 @@
                 // On foreground message
                 messaging.onMessage((payload) => {
                     console.log('Message received. ', payload);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: payload.notification.title + ': ' + payload.notification.body, type: 'info' } }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: payload.notification.title + ': ' + payload.notification.body, type: 'info', sound: true } }));
                 });
             }
 
