@@ -22,6 +22,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- Firebase SDK (Version 8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
+
     <!-- Styles + Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -48,7 +53,136 @@
         }
     </style>
 </head>
-<body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
+<body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">    @if(!request()->cookie('location_granted'))
+    <!-- Step 1: Mandatory Location Consent Modal (custom only — no browser geolocation prompt) -->
+    <div x-data="{
+             showLocationModal: true,
+             loading: false,
+             init() {
+                 if (localStorage.getItem('location_granted')) {
+                     this.showLocationModal = false;
+                     document.cookie = 'location_granted=true; path=/; max-age=31536000; SameSite=Lax';
+                 }
+             },
+             requestLocation() {
+                 this.loading = true;
+                 document.cookie = 'location_granted=true; path=/; max-age=31536000; SameSite=Lax';
+                 localStorage.setItem('location_granted', 'true');
+                 window.location.reload();
+             }
+         }"
+         x-show="showLocationModal"
+         x-cloak
+         style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; background: rgba(10, 15, 44, 0.98) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;"
+         class="px-4"
+    >
+        <div style="background-color: #0a0f2c !important; position: relative !important; z-index: 2147483647 !important;" class="max-w-md w-full border border-white/10 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl"></div>
+
+            <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 relative z-10">
+                <svg class="w-10 h-10 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </div>
+            
+            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10">Location Access Required</h2>
+            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed">
+                To provide you with the best experience and locate services near you, we strictly require access to your location. You cannot proceed without sharing it.
+            </p>
+
+            <button 
+                @click="requestLocation()" 
+                :disabled="loading"
+                class="w-full h-14 rounded-xl theme-gradient-bg text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed relative z-10"
+            >
+                <span x-show="!loading">Grant Location Access</span>
+                <span x-show="loading" class="flex items-center gap-2">
+                    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Confirming...
+                </span>
+            </button>
+        </div>
+    </div>
+    @endif
+
+    <!-- Step 2: Notification Consent Modal (custom — browser prompt only fires AFTER user clicks Enable) -->
+    <div x-data="{
+             showNotifModal: false,
+             loading: false,
+             init() {
+                 // Only show if: location already granted + notifications not yet permitted + not dismissed
+                 const locationOk = !!localStorage.getItem('location_granted');
+                 const notifAlready = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+                 const dismissed = !!localStorage.getItem('notif_consent_dismissed');
+                 if (locationOk && !notifAlready && !dismissed) {
+                     // Small delay so the page content loads first
+                     setTimeout(() => { this.showNotifModal = true; }, 800);
+                 }
+             },
+             enableNotifications() {
+                 this.loading = true;
+                 // This is user-initiated (click), so the browser prompt fires naturally
+                 if (typeof window.__requestNotificationPermission === 'function') {
+                     window.__requestNotificationPermission();
+                 }
+                 localStorage.setItem('notif_consent_dismissed', 'true');
+                 this.showNotifModal = false;
+             },
+             dismissNotifications() {
+                 localStorage.setItem('notif_consent_dismissed', 'true');
+                 this.showNotifModal = false;
+             }
+         }"
+         x-show="showNotifModal"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; background: rgba(10, 15, 44, 0.95) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;"
+         class="px-4"
+    >
+        <div style="background-color: #0a0f2c !important; position: relative !important; z-index: 2147483647 !important;" class="max-w-md w-full border border-white/10 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+            <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 relative z-10">
+                <svg class="w-10 h-10 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            
+            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10">Enable Notifications</h2>
+            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed">
+                Stay updated with real-time booking confirmations, appointment reminders, and important messages from your service providers.
+            </p>
+
+            <button 
+                @click="enableNotifications()" 
+                :disabled="loading"
+                class="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed relative z-10 mb-3"
+            >
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                Enable Notifications
+            </button>
+
+            <button 
+                @click="dismissNotifications()" 
+                class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all hover:bg-white/10 hover:text-white/60 active:scale-95 relative z-10"
+            >
+                Maybe Later
+            </button>
+        </div>
+    </div>
 
     <div x-data="{ scrolled: false, mobileMenu: false }" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
         <!-- Navigation (Section 4) -->
@@ -274,11 +408,24 @@
         @endif
     </div>
 
+    <!-- Notification Sound -->
+    <audio id="notification-sound" src="{{ asset('audio/notification.wav') }}" preload="auto"></audio>
+
     <!-- Toast Notifications -->
     <div x-data="{
         show: false, message: '', type: 'success', timer: null,
         triggerToast(msg, type = 'success') {
             this.message = msg; this.type = type; this.show = true;
+            
+            let sound = document.getElementById('notification-sound');
+            if (sound) {
+                sound.currentTime = 0;
+                let playPromise = sound.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => console.log('Audio playback prevented by browser:', error));
+                }
+            }
+
             if(this.timer) clearTimeout(this.timer);
             this.timer = setTimeout(() => this.show = false, 4000);
         },
@@ -321,5 +468,117 @@
     </div>
 
     @livewireScripts
+
+    <script>
+        // Define permission handler FIRST to guarantee it is available even if FCM fails
+        window.__requestNotificationPermission = function() {
+            if (!('Notification' in window)) {
+                console.log('This browser does not support desktop notification');
+                return;
+            }
+            
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('Notification permission granted.');
+                    if (typeof window.__registerFcmTokenSilently === 'function') {
+                        window.__registerFcmTokenSilently();
+                    }
+                } else {
+                    console.log('Unable to get permission to notify.');
+                }
+            });
+        };
+
+        try {
+            // Firebase initialization
+            const firebaseConfig = {
+                apiKey: "{{ env('FIREBASE_API_KEY', 'YOUR_API_KEY') }}",
+                projectId: "ebooking-b2c07",
+                messagingSenderId: "{{ env('FIREBASE_MESSAGING_SENDER_ID', '100739474622') }}",
+                appId: "{{ env('FIREBASE_APP_ID', 'YOUR_APP_ID') }}"
+            };
+
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+
+            let messaging = null;
+            if (firebase.messaging.isSupported()) {
+                messaging = firebase.messaging();
+            } else {
+                console.warn('Firebase Messaging is not supported by this browser.');
+            }
+
+            // Register FCM token WITHOUT prompting — only if permission was already granted
+            window.__registerFcmTokenSilently = function() {
+                if (!messaging) return;
+                
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=5')
+                        .then((registration) => {
+                            messaging.useServiceWorker(registration);
+                            return messaging.getToken({ vapidKey: "{{ env('FIREBASE_VAPID_KEY', 'YOUR_VAPID_KEY') }}" });
+                        })
+                        .then((currentToken) => {
+                            if (currentToken) {
+                                console.log('FCM Token:', currentToken);
+                                fetch("{{ route('fcm.token.save') }}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    },
+                                    body: JSON.stringify({ token: currentToken })
+                                }).then(res => res.json()).then(data => {
+                                    console.log('Token saved to server.', data);
+                                }).catch((err) => {
+                                    console.log('Unable to save token to server.', err);
+                                });
+                            }
+                        })
+                        .catch((err) => {
+                            console.log('An error occurred while retrieving token. ', err);
+                        });
+                }
+            };
+
+            if (messaging) {
+                // On foreground message
+                messaging.onMessage((payload) => {
+                    console.log('Message received. ', payload);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: payload.notification.title + ': ' + payload.notification.body, type: 'info' } }));
+                });
+            }
+
+            // Listen to messages from the Service Worker (e.g. background notification audio requests)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === 'PLAY_NOTIFICATION_SOUND') {
+                        console.log('Received notification sound request from Service Worker');
+                        let sound = document.getElementById('notification-sound');
+                        if (sound) {
+                            sound.currentTime = 0;
+                            let playPromise = sound.play();
+                            if (playPromise !== undefined) {
+                                playPromise.catch(error => console.log('Audio playback prevented by browser:', error));
+                            }
+                        }
+                    }
+                });
+            }
+
+            // If permission was already granted previously, silently register the token — NO prompt
+            if ('Notification' in window && Notification.permission === 'granted') {
+                setTimeout(() => {
+                    if (typeof window.__registerFcmTokenSilently === 'function') {
+                        window.__registerFcmTokenSilently();
+                    }
+                }, 2000);
+            }
+            
+        } catch (error) {
+            console.error('Firebase initialization or messaging setup failed:', error);
+        }
+    </script>
 </body>
 </html>

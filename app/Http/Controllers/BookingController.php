@@ -89,8 +89,20 @@ class BookingController extends Controller
             // Eager load employee to prevent N+1 in NotificationService
             $booking->setRelation('employee', $employee);
 
-            // Notify Vendor (safe — handles null user internally)
+            // Notify Vendor and Employee
             $notificationService->notifyVendorNewBooking($vendor, $booking);
+
+            // Notify Customer if they provided FCM token via session
+            $fcmToken = session('fcm_token');
+            if ($fcmToken) {
+                // We create a dummy user just to pass the fcm token to the service
+                $dummyUser = new \App\Models\User(['fcm_token' => $fcmToken]);
+                $notificationService->sendWebPush(
+                    $dummyUser,
+                    "Booking Confirmed!",
+                    "Your appointment with {$employee->name} at {$vendor->business_name} is confirmed for {$slotStart}."
+                );
+            }
 
             return response()->json([
                 'success' => true,

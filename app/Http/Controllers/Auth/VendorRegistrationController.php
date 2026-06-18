@@ -47,6 +47,7 @@ class VendorRegistrationController extends Controller
             'role' => 'vendor',
             'password' => Hash::make($request->password),
             'status' => $isFreePlan ? 'active' : 'inactive',
+            'fcm_token' => session('fcm_token'),
         ]);
 
         $vendor = Vendor::create([

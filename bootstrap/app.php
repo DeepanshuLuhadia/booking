@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->trustProxies(at: '*');
 
+        // Exempt location_granted from encryption so JS-set cookies are readable server-side
+        $middleware->encryptCookies(except: ['location_granted']);
+
         $middleware->alias([
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
         ]);

@@ -24,3 +24,4 @@ Schedule::call(function () {
             }
         });
 })->everyMinute();
+Schedule::command('app:send-appointment-reminders')->everyTenMinutes();

@@ -43,7 +43,7 @@ class BookingController extends Controller
             return back()->with('error', 'Unauthorized.');
         }
 
-        Booking::create([
+        $booking = Booking::create([
             'vendor_id' => $vendor->id,
             'employee_id' => $request->employee_id,
             'customer_name' => $request->customer_name,
@@ -55,6 +55,14 @@ class BookingController extends Controller
             'status' => 'confirmed',
             'vendor_booked' => true,
         ]);
+
+        if ($employee->user && $employee->user->fcm_token) {
+            app(\App\Services\NotificationService::class)->sendWebPush(
+                $employee->user,
+                "📋 New Manual Appointment",
+                "You have a new appointment with {$request->customer_name} at {$request->slot_start}."
+            );
+        }
 
         return back()->with('success', 'Manual booking created successfully!');
     }

@@ -19,6 +19,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/resend-otp', [\App\Http\Controllers\Auth\OtpController::class, 'resend'])->name('otp.resend');
 });
 
+// For saving FCM token (accessible for guests and authenticated users via JS)
+Route::post('/fcm/token', [\App\Http\Controllers\FcmTokenController::class, 'save'])->name('fcm.token.save');
+
 // Authentication
 Route::get('/login', [SessionController::class, 'create'])->name('login');
 Route::post('/login', [SessionController::class, 'store']);
