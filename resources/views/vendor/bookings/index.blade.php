@@ -2,7 +2,7 @@
     <div class="flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
         <div>
             <h1 class="text-4xl font-black italic tracking-tight uppercase ">Appointment <span
-                    class="text-blue-600">Registry.</span></h1>
+                    class="text-blue-600">History.</span></h1>
             <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">HISTORICAL
                 TRANSACTION ARCHIVE</p>
         </div>

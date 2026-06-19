@@ -115,11 +115,11 @@
              showNotifModal: false,
              loading: false,
              init() {
-                 // Only show if: location already granted + notifications not yet permitted + not dismissed
-                 const locationOk = !!localStorage.getItem('location_granted');
-                 const notifAlready = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+                 const isSupported = (typeof Notification !== 'undefined');
+                 const notifDecided = isSupported && (Notification.permission === 'granted' || Notification.permission === 'denied');
                  const dismissed = !!localStorage.getItem('notif_consent_dismissed');
-                 if (locationOk && !notifAlready && !dismissed) {
+                 const locationOk = !!localStorage.getItem('location_granted');
+                 if (isSupported && locationOk && !notifDecided && !dismissed) {
                      // Small delay so the page content loads first
                      setTimeout(() => { this.showNotifModal = true; }, 800);
                  }

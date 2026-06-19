@@ -23,10 +23,10 @@ class VendorRegistrationController extends Controller
     {
         $request->validate([
             'vendor_type' => 'required|exists:vendor_categories,slug',
-            'business_name' => 'required|string|max:255',
-            'owner_name' => 'required|string|max:255',
+            'business_name' => 'required|string|min:5|max:255',
+            'owner_name' => 'required|string|min:5|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'mobile' => 'required|string|max:15|unique:users',
+            'mobile' => 'required|string|max:10|min:10|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
             'referral_code' => 'nullable|exists:vendors,referral_code',

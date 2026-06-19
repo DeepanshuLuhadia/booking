@@ -29,7 +29,6 @@
                             <h3 class="text-xl font-black italic uppercase italic text-white tracking-tight">
                                 Business Intelligence</h3>
                         </div>
-
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label
@@ -39,11 +38,11 @@
                                     open: false,
                                     selected: '{{ $vendor->vendor_type ?? 'doctor' }}',
                                     options: {
-                                        'doctor': { label: 'Healthcare / Medical', icon: '⚕️' },
-                                        'barber': { label: 'Beauty / Grooming', icon: '✨' },
-                                        'activity': { label: 'Fitness / Coaching', icon: '🏆' },
-                                        'training': { label: 'Learning / Skills', icon: '📘' },
-                                        'consultant': { label: 'Professional Services', icon: '🖊️' }
+                                        'doctor': { label: 'Health', icon: '⚕️' },
+                                        'barber': { label: 'Beauty', icon: '✨' },
+                                        'activity': { label: 'Sports', icon: '🏆' },
+                                        'training': { label: 'Education', icon: '📘' },
+                                        'consultant': { label: 'Consultant', icon: '🖊️' }
                                     },
                                     get selectedLabel() {
                                         return this.options[this.selected]?.label || 'Select Category';

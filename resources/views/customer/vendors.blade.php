@@ -239,7 +239,42 @@
             box-shadow: 0 6px 20px rgba(255, 109, 0, .4);
         }
 
+        .bv-reset-btn {
+            flex-shrink: 0;
+            width: auto;
+            margin-left: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-weight: 800;
+            font-size: 14px;
+            border-radius: 12px;
+            padding: 16px 24px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .3s ease;
+            letter-spacing: .04em;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .bv-reset-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.02);
+            color: #fff;
+        }
+
         @media(max-width: 600px) {
+            .bv-reset-btn {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-top: 8px !important;
+                padding: 18px !important;
+                font-size: 16px !important;
+                border-radius: 14px;
+            }
             .bv-search-wrap {
                 margin: 0 10px 40px;
                 width: calc(100% - 20px);
@@ -1356,6 +1391,9 @@
                             </div>
 
                             <button class="bv-search-btn" type="submit">Search Services</button>
+                            @if(request('search') || request('specialty') || request('location'))
+                                <a href="{{ route('home', request()->only(['type'])) }}" class="bv-reset-btn">Reset</a>
+                            @endif
                         </form>
                     </div>
 

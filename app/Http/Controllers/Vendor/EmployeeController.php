@@ -28,7 +28,7 @@ class EmployeeController extends Controller
             return redirect()->route('vendor.employees.index')->with('error', "You have reached the maximum employee limit ({$planLimit}) for your plan. Please upgrade to add more.");
         }
 
-        return view('vendor.employees.create');
+        return view('vendor.employees.create', compact('vendor'));
     }
 
     public function store(Request $request)
@@ -50,7 +50,7 @@ class EmployeeController extends Controller
             'premium_fee' => 'nullable|numeric|min:0',
             'premium_bookings_count' => 'nullable|integer|min:0',
             'email' => 'nullable|email|unique:users,email',
-            'password' => 'nullable|string|min:6',
+            'password' => 'nullable|string|min:8',
         ]);
 
         if ($vendor->global_opening_time) {
@@ -118,7 +118,7 @@ class EmployeeController extends Controller
             'premium_fee' => 'nullable|numeric|min:0',
             'premium_bookings_count' => 'nullable|integer|min:0',
             'email' => 'nullable|email|unique:users,email,' . ($employee->user_id ?? 'null'),
-            'password' => 'nullable|string|min:6',
+            'password' => 'nullable|string|min:8',
         ]);
 
         $vendor = auth()->user()->vendor;

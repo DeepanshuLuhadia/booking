@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
+            'redirect.role.auth' => \App\Http\Middleware\RedirectRoleAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

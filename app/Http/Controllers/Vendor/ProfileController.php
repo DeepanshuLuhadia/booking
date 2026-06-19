@@ -19,8 +19,16 @@ class ProfileController extends Controller
         $vendor = auth()->user()->vendor;
 
         $request->validate([
-            'business_name' => 'sometimes|required|string|max:255',
-            'contact_number' => 'sometimes|required|string|max:20',
+            'business_name' => 'sometimes|required|string|min:5|max:255',
+            'owner_name' => 'sometimes|required|string|min:5|max:255',
+            'contact_number' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:20',
+                'unique:users,mobile,' . $vendor->user_id,
+                'unique:vendors,contact_number,' . $vendor->id,
+            ],
             'show_contact_number' => 'nullable|boolean',
             'address' => 'sometimes|required|string',
             'latitude' => 'nullable|numeric',
@@ -44,6 +52,18 @@ class ProfileController extends Controller
         }
 
         $vendor->update($data);
+
+        // Sync updates to User record
+        $userUpdates = [];
+        if ($request->filled('owner_name')) {
+            $userUpdates['name'] = $request->owner_name;
+        }
+        if ($request->filled('contact_number')) {
+            $userUpdates['mobile'] = $request->contact_number;
+        }
+        if (!empty($userUpdates)) {
+            $vendor->user->update($userUpdates);
+        }
 
         return back()->with('success', 'Profile updated successfully!');
     }

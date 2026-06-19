@@ -144,7 +144,7 @@
         <!-- Main Workspace (Center Content Always Full Width) -->
         <main class="flex-1 lg:pl-72 flex flex-col w-full min-w-0">
             <div class="w-full h-full pt-32 pb-20 px-4 sm:px-6 md:px-10 lg:px-16">
-                @if(session('success'))
+                {{-- @if(session('success'))
                     <div class="bg-emerald-500 text-white p-6 rounded-[2rem] text-xs font-black uppercase tracking-widest italic mb-10 shadow-xl shadow-emerald-500/10">
                         {{ session('success') }}
                     </div>
@@ -154,6 +154,7 @@
                         {{ session('error') }}
                     </div>
                 @endif
+                --}}
                 
                 {{ $slot }}
             </div>

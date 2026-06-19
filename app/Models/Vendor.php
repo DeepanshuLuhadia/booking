@@ -65,14 +65,14 @@ class Vendor extends Model
     }
 
     /**
-     * Award ₹150 referral bonus to the referrer and mark the reward as paid.
+     * Award ₹50 referral bonus to the referrer and mark the reward as paid.
      * Triggered only when the referred vendor purchases a paid subscription plan.
      */
     private static function awardReferralBonus(Vendor $vendor): void
     {
         $referrer = $vendor->referrer;
         if ($referrer) {
-            $referrer->increment('referral_balance', 150);
+            $referrer->increment('referral_balance', 50);
             // Mark as paid so they don't get rewards on every status toggle (suspend/activate)
             $vendor->updateQuietly(['referral_reward_paid' => true]);
         }

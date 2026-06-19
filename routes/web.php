@@ -22,18 +22,19 @@ Route::middleware(['auth'])->group(function () {
 // For saving FCM token (accessible for guests and authenticated users via JS)
 Route::post('/fcm/token', [\App\Http\Controllers\FcmTokenController::class, 'save'])->name('fcm.token.save');
 
-// Authentication
-Route::get('/login', [SessionController::class, 'create'])->name('login');
-Route::post('/login', [SessionController::class, 'store']);
+// Guest Authentication & Registration
+Route::middleware(['redirect.role.auth'])->group(function () {
+    Route::get('/login', [SessionController::class, 'create'])->name('login');
+    Route::post('/login', [SessionController::class, 'store']);
+
+    Route::get('/register/vendor', [VendorRegistrationController::class, 'create'])->name('register.vendor');
+    Route::post('/register/vendor', [VendorRegistrationController::class, 'store']);
+
+    Route::get('/register', [CustomerRegistrationController::class, 'create'])->name('register');
+    Route::post('/register', [CustomerRegistrationController::class, 'store']);
+});
+
 Route::post('/logout', [SessionController::class, 'destroy'])->name('logout');
-
-// Vendor Registration
-Route::get('/register/vendor', [VendorRegistrationController::class, 'create'])->name('register.vendor');
-Route::post('/register/vendor', [VendorRegistrationController::class, 'store']);
-
-// Customer Registration
-Route::get('/register', [CustomerRegistrationController::class, 'create'])->name('register');
-Route::post('/register', [CustomerRegistrationController::class, 'store']);
 
 // Payment
 Route::middleware(['auth'])->group(function () {

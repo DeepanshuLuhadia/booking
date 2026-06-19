@@ -119,7 +119,7 @@
             <div class="glass-card overflow-hidden">
                 <div class="p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div class="space-y-1">
-                        <h3 class="text-xl font-black text-slate-100 uppercase tracking-wide">Registry Feed</h3>
+                        <h3 class="text-xl font-black text-slate-100 uppercase tracking-wide">Latest Bookings</h3>
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real-time transaction stream</p>
                     </div>
                     <a href="{{ route('vendor.bookings.index') }}" class="btn-outline px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest self-start sm:self-auto">Full Logs</a>
@@ -229,7 +229,7 @@
                                 </div>
                                 <h4 class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">Growth Incentive</h4>
                             </div>
-                            <p class="text-sm text-slate-400 mb-8 font-medium italic">Bounty: <span class="text-white font-black italic">₹150</span> per verified referral.</p>
+                            <p class="text-sm text-slate-400 mb-8 font-medium italic">Bounty: <span class="text-white font-black italic">₹50</span> per verified referral.</p>
                             
                             <div class="flex flex-col gap-4">
                                 <div class="p-5 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between group">

@@ -70,8 +70,12 @@
                                     <select name="vendor_type" required
                                         class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white appearance-none cursor-pointer transition-all focus:bg-white/10">
                                         @foreach($vendorCategories as $category)
+                                            @php
+                                                $themeConfig = \App\Services\ThemeService::getTheme($category->slug);
+                                                $displayLabel = $themeConfig['label'] ?? $category->name;
+                                            @endphp
                                             <option value="{{ $category->slug }}" class="bg-[#0f172a] text-white" {{ old('vendor_type') == $category->slug ? 'selected' : '' }}>
-                                                {{ $category->name }}
+                                                {{ $displayLabel }}
                                             </option>
                                         @endforeach
                                     </select>
