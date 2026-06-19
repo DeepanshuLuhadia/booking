@@ -218,7 +218,7 @@
 
                 <div class="flex items-center gap-6">
                     @auth
-                        <form method="POST" action="{{ route('logout') }}">
+                        <form  class="flex" method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">Logout</button>
                         </form>

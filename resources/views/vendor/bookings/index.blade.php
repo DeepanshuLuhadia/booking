@@ -7,23 +7,54 @@
                 TRANSACTION ARCHIVE</p>
         </div>
         <div class="w-full md:w-auto">
-            <form action="{{ route('vendor.bookings.index') }}" method="GET">
-                <div class="relative group">
-                    <select name="status" onchange="this.form.submit()"
-                        class="w-full md:w-64 h-14 bg-white/5 border-2 border-white/10 rounded-xl px-6 font-black italic text-white focus:ring-4 focus:ring-blue-50 focus:border-blue-600 transition-all appearance-none cursor-pointer text-[10px] uppercase tracking-widest">
-                        <option value="">Matrix: All States</option>
-                        <option value="confirmed" {{ request('status')=='confirmed' ? 'selected' : '' }}>State:
-                            Confirmed</option>
-                        <option value="completed" {{ request('status')=='completed' ? 'selected' : '' }}>State:
-                            Completed</option>
-                        <option value="cancelled" {{ request('status')=='cancelled' ? 'selected' : '' }}>State:
-                            Cancelled</option>
-                    </select>
-                    <div
-                        class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300 group-hover:text-blue-600 transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" />
-                        </svg>
+            <form id="status-form" action="{{ route('vendor.bookings.index') }}" method="GET">
+                <div class="relative" x-data="{
+                    open: false,
+                    selected: '{{ request('status', '') }}',
+                    options: {
+                        '': { label: 'Matrix: All States', icon: '🌐' },
+                        'confirmed': { label: 'State: Confirmed', icon: '✅' },
+                        'completed': { label: 'State: Completed', icon: '🏆' },
+                        'cancelled': { label: 'State: Cancelled', icon: '❌' }
+                    },
+                    get selectedLabel() {
+                        return this.options[this.selected]?.label || 'Select State';
+                    },
+                    get selectedIcon() {
+                        return this.options[this.selected]?.icon || '';
+                    }
+                }" @click.away="open = false">
+                    <input type="hidden" name="status" x-model="selected">
+                    
+                    <div @click="open = !open" 
+                         class="w-full md:w-64 h-14 px-6 rounded-xl flex items-center justify-between cursor-pointer transition-all border-2"
+                         :class="open ? 'border-blue-600 bg-white/5 ring-4 ring-blue-500/20' : 'border-white/10 bg-white/5'">
+                        <div class="flex items-center gap-3">
+                            <span x-text="selectedIcon" class="opacity-90 text-base not-italic"></span>
+                            <span x-text="selectedLabel" class="text-white text-[10px] font-black italic uppercase tracking-widest"></span>
+                        </div>
+                        <svg :class="open ? 'rotate-180 text-blue-600' : 'text-slate-300'" class="w-4 h-4 transition-transform duration-300 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                
+                    <div x-cloak x-show="open" 
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 -translate-y-2"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 -translate-y-2"
+                         class="absolute z-[100] w-full mt-2 bg-slate-900 border border-white/10 rounded-2xl p-2 shadow-2xl left-0">
+                        
+                        <template x-for="(data, key) in options" :key="key">
+                            <div @click="selected = key; open = false; $nextTick(() => document.getElementById('status-form').submit())"
+                                 class="px-4 py-3 flex items-center gap-3 rounded-lg cursor-pointer transition-all duration-200"
+                                 :class="selected === key 
+                                     ? 'bg-blue-500/10 border-l-4 border-blue-500 text-blue-500' 
+                                     : 'text-white/80 hover:bg-white/5 hover:text-white hover:translate-x-1'">
+                                <span x-text="data.icon" class="text-base not-italic"></span>
+                                <span x-text="data.label" class="font-black italic text-[10px] uppercase tracking-widest"></span>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </form>

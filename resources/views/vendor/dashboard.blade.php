@@ -263,7 +263,7 @@
             
             <div @click="resetModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-xl"></div>
             
-            <div class="relative bg-slate-900 border border-white/10 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] rounded-[2.5rem] sm:rounded-[4rem] text-white">
+            <div class="relative bg-slate-900 border border-white/10 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] rounded-[2.5rem] sm:rounded-[4rem] text-white">
                 
                 <!-- Modal Header -->
                 <div class="p-8 sm:p-10 border-b border-white/5 flex items-center justify-between shrink-0 bg-white/5/5">

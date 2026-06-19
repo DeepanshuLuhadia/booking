@@ -73,7 +73,7 @@
                                 </svg>
                             </div>
                             <span class="text-3xl font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
-                                    class="text-[9px] font-black uppercase text-white/30 ml-1">Professional
+                                    class="tracking-widest text-[10px] font-black uppercase text-white/10 ml-1">Professional
                                     Fee</span></span>
                         </div>
                     </div>

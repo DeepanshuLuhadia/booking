@@ -35,19 +35,56 @@
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Institutional
                                     Class</label>
-                                <select name="vendor_type"
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium appearance-none cursor-pointer">
-                                    <option value="doctor" {{ $vendor->vendor_type == 'doctor' ? 'selected' : ''
-                                        }}>Healthcare / Medical</option>
-                                    <option value="barber" {{ $vendor->vendor_type == 'barber' ? 'selected' : ''
-                                        }}>Beauty / Grooming</option>
-                                    <option value="activity" {{ $vendor->vendor_type == 'activity' ? 'selected' : ''
-                                        }}>Fitness / Coaching</option>
-                                    <option value="training" {{ $vendor->vendor_type == 'training' ? 'selected' : ''
-                                        }}>Learning / Skills</option>
-                                    <option value="consultant" {{ $vendor->vendor_type == 'consultant' ? 'selected' : ''
-                                        }}>Professional Services</option>
-                                </select>
+                                <div class="relative" x-data="{
+                                    open: false,
+                                    selected: '{{ $vendor->vendor_type ?? 'doctor' }}',
+                                    options: {
+                                        'doctor': { label: 'Healthcare / Medical', icon: '⚕️' },
+                                        'barber': { label: 'Beauty / Grooming', icon: '✨' },
+                                        'activity': { label: 'Fitness / Coaching', icon: '🏆' },
+                                        'training': { label: 'Learning / Skills', icon: '📘' },
+                                        'consultant': { label: 'Professional Services', icon: '🖊️' }
+                                    },
+                                    get selectedLabel() {
+                                        return this.options[this.selected]?.label || 'Select Category';
+                                    },
+                                    get selectedIcon() {
+                                        return this.options[this.selected]?.icon || '';
+                                    }
+                                }" @click.away="open = false">
+                                    <input type="hidden" name="vendor_type" x-model="selected">
+                                    
+                                    <div @click="open = !open" 
+                                         class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium flex items-center justify-between cursor-pointer transition-all"
+                                         :class="open ? 'border-blue-500/50 bg-white/5' : ''">
+                                        <div class="flex items-center gap-2">
+                                            <span x-text="selectedIcon" class="opacity-90"></span>
+                                            <span x-text="selectedLabel" class="text-white text-sm"></span>
+                                        </div>
+                                        <svg :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform duration-300 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                
+                                    <div x-cloak x-show="open" 
+                                         x-transition:enter="transition ease-out duration-300"
+                                         x-transition:enter-start="opacity-0 -translate-y-2"
+                                         x-transition:enter-end="opacity-100 translate-y-0"
+                                         x-transition:leave="transition ease-in duration-200"
+                                         x-transition:leave-start="opacity-100 translate-y-0"
+                                         x-transition:leave-end="opacity-0 -translate-y-2"
+                                         class="absolute z-[100] w-full mt-2 bg-slate-900 border border-white/10 rounded-2xl p-2 shadow-2xl left-0">
+                                        
+                                        <template x-for="(data, key) in options" :key="key">
+                                            <div @click="selected = key; open = false"
+                                                 class="px-4 py-2.5 flex items-center gap-2.5 rounded-lg cursor-pointer transition-all duration-200"
+                                                 :class="selected === key 
+                                                     ? 'bg-blue-500/10 border-l-4 border-blue-500 text-blue-500' 
+                                                     : 'text-white/80 hover:bg-white/5 hover:text-white hover:translate-x-1'">
+                                                <span x-text="data.icon" class="text-base"></span>
+                                                <span x-text="data.label" class="font-semibold text-sm whitespace-nowrap"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
                             <div class="space-y-4">
                                 <label
