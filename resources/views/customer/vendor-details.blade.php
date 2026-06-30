@@ -3,12 +3,12 @@
         class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['label'] ?? 'default')) }}">
 
         <!-- PROFILE HERO -->
-        <section class="relative z-10 pt-32 pb-16 px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
+        <section class="relative z-10 pt-28 pb-10 px-5 md:pt-32 md:pb-16 md:px-6">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-12">
                 <!-- Left: Profile Avatar -->
                 <div class="relative group shrink-0">
                     <div
-                        class="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden theme-glow-border transition-transform duration-1000 group-hover:scale-105 mx-auto">
+                        class="w-40 h-40 sm:w-56 sm:h-56 md:w-80 md:h-80 rounded-[2rem] md:rounded-[3rem] overflow-hidden theme-glow-border transition-transform duration-1000 group-hover:scale-105 mx-auto">
                         @php
                             $vType = $vendor->category?->slug ?? 'consultant';
                             if ($vendor->shop_photo) {
@@ -32,15 +32,15 @@
                 </div>
 
                 <!-- Right: Business Credentials -->
-                <div class="flex-grow text-center md:text-left animate-text-reveal">
+                <div class="flex-grow w-full min-w-0 text-center md:text-left animate-text-reveal">
                     <div
-                        class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 backdrop-blur-xl rounded-full text-white/50 text-[9px] font-black uppercase tracking-widest mb-6">
+                        class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 backdrop-blur-xl rounded-full text-white/50 text-[9px] font-black uppercase tracking-widest mb-4 md:mb-6">
                         <span class="w-2 h-2 rounded-full theme-gradient-bg animate-pulse"></span> Verified Appointment
                         Registry
                     </div>
 
                     <h1
-                        class="text-6xl md:text-[5.5rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
+                        class="text-4xl sm:text-5xl md:text-[5.5rem] font-black text-white mb-4 md:mb-6 tracking-tighter leading-[0.95] md:leading-[0.9] italic break-words">
                         {{ $vendor->business_name }}
                         @if($vendor->is_verified)
                         <span class="inline-flex items-center gap-1 align-middle text-[10px] not-italic font-black uppercase tracking-widest text-sky-300 bg-sky-500/10 border border-sky-400/20 px-2.5 py-1 rounded-full">
@@ -50,10 +50,10 @@
                         @endif
                     </h1>
 
-                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-8 mb-10">
+                    <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 md:gap-8 mb-6 md:mb-10">
                         <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($vendor->address ?? 'Professional District') }}"
                             target="_blank" rel="noopener noreferrer"
-                            class="flex items-center gap-3 group/address transition-all hover:scale-[1.02]">
+                            class="flex items-center gap-3 group/address transition-all hover:scale-[1.02] w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
                                 class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 group-hover/address:border-white/30 group-hover/address:bg-white/20 transition-all">
                                 <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,21 +65,21 @@
                                 class="text-base font-bold text-white/60 italic group-hover/address:text-white transition-colors underline underline-offset-4">{{
     $vendor->address ?? 'Professional District' }}</span>
                         </a>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
-                                class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10">
+                                class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 shrink-0">
                                 <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <span class="text-3xl font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
+                            <span class="text-2xl md:text-3xl font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
                                     class="tracking-widest text-[10px] font-black uppercase text-white/10 ml-1">Professional
                                     Fee</span></span>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                    <div class="hidden md:flex flex-wrap gap-2 justify-start">
                         <span
                             class="theme-pill theme-gradient-bg border-transparent text-white font-black uppercase tracking-widest">{{
     strtoupper($theme['label']) }} EXPERT</span>
@@ -110,18 +110,18 @@
         @endif
 
         <!-- APPOINTMENT SELECTION MATRIX -->
-        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16 relative z-10 pb-40">
+        <div class="max-w-7xl mx-auto px-5 md:px-6 grid grid-cols-1 xl:grid-cols-12 gap-10 xl:gap-16 relative z-10 pb-24 md:pb-40">
 
-            <!-- LEFT: Service Selection -->
-            <div class="lg:col-span-12 xl:col-span-7">
-                <div class="mb-12">
+            <!-- STEP 1: Service Selection -->
+            <div class="order-1 xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-1">
+                <div class="mb-8 md:mb-12">
                     <div class="flex items-center gap-3 mb-4">
                         <span class="w-10 h-1 theme-gradient-bg rounded-full"></span>
                         <span
                             class="theme-gradient-text font-black text-[10px] uppercase tracking-widest italic">Booking
                             Step 01</span>
                     </div>
-                    <h2 class="text-4xl font-black text-white tracking-tighter uppercase italic">Select {{
+                    <h2 class="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase italic">Select {{
     $theme['employee_label'] }}</h2>
                 </div>
 
@@ -130,24 +130,24 @@
                         <button
                             @click="fetchSlots({{ $employee->id }}, {{ $employee->service_fee_override ?? $vendor->service_fee }})"
                             :disabled="!{{ $employee->is_available ? 'true' : 'false' }} || isSubscriptionExpired"
-                            class="w-full p-6 flex items-center gap-6 text-left transition-all duration-500 rounded-[2.5rem] border-2 group relative overflow-hidden glass-card shadow-xl shadow-black/20 backdrop-blur-3xl"
+                            class="w-full p-4 md:p-6 flex items-center gap-4 md:gap-6 text-left transition-all duration-500 rounded-[2rem] md:rounded-[2.5rem] border-2 group relative overflow-hidden glass-card shadow-xl shadow-black/20 backdrop-blur-3xl"
                             :class="isSubscriptionExpired ? 'bg-white/5 border-transparent opacity-20 grayscale pointer-events-none' : (selectedEmployee === {{ $employee->id }} ? 'bg-white/5 theme-glow-border scale-[1.02] opacity-100 z-10' : (!{{ $employee->is_available ? 'true' : 'false' }} ? 'bg-white/5 border-transparent opacity-20 grayscale pointer-events-none' : 'bg-white/5 border-transparent opacity-50 hover:opacity-80 hover:border-white/20'))">
 
                             <div
-                                class="w-20 h-20 rounded-[1.5rem] bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 group-hover:scale-105 transition-transform shadow-inner">
+                                class="w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-2xl md:rounded-[1.5rem] bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 group-hover:scale-105 transition-transform shadow-inner">
                                 @if($employee->photo)
                                     <img src="{{ asset('storage/' . $employee->photo) }}" loading="lazy" decoding="async" class="w-full h-full object-cover">
                                 @else
-                                                    <span class="text-3xl font-black text-white italic opacity-30">{{ substr($employee->name, 0, 1) }}</span>
+                                                    <span class="text-2xl md:text-3xl font-black text-white italic opacity-30">{{ substr($employee->name, 0, 1) }}</span>
                                 @endif
                             </div>
 
-                            <div class="flex-grow">
-                                <h4 class="text-2xl font-black italic transition-colors"
+                            <div class="flex-grow min-w-0">
+                                <h4 class="text-lg md:text-2xl font-black italic transition-colors truncate"
                                     :class="selectedEmployee === {{ $employee->id }} ? 'theme-gradient-text' : 'text-white'">
                                     {{ $employee->name }}
                                 </h4>
-                                <div class="flex items-center gap-4 mt-2">
+                                <div class="flex items-center flex-wrap gap-2 md:gap-4 mt-2">
                                     <span
                                         class="text-[9px] font-black text-white/30 uppercase tracking-widest italic leading-none">{{ $employee->is_available ? 'Operational Now' : 'Unavailable' }}</span>
                                     @if($employee->service_fee_override)
@@ -158,7 +158,7 @@
                                 </div>
                             </div>
 
-                            <div class="w-12 h-12 rounded-xl border flex items-center justify-center transition-all transform shadow-sm group-hover:rotate-12"
+                            <div class="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-xl border flex items-center justify-center transition-all transform shadow-sm group-hover:rotate-12"
                                 :class="selectedEmployee === {{ $employee->id }} ? 'theme-gradient-bg text-white border-transparent rotate-12 scale-110 shadow-lg' : 'bg-white/10 border-white/10 text-white group-hover:bg-white/20'">
                                 <svg class="w-5 h-5 transition-transform" fill="none" viewBox="0 0 24 24"
                                     stroke="currentColor">
@@ -175,9 +175,12 @@
                         </div>
                     @endforelse
                 </div>
+            </div>
 
+            <!-- OVERVIEW + REVIEWS (sits after both steps on mobile, under Step 1 on desktop) -->
+            <div class="order-3 xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-2">
                 <!-- Professional Overview -->
-                <div class="mt-24 pt-24 border-t border-white/5">
+                <div class="mt-12 pt-12 md:mt-24 md:pt-24 border-t border-white/5">
                     <h3 class="text-3xl font-black text-white tracking-tighter uppercase italic mb-8">Establishment
                         Overview</h3>
                     <div class="glass-card shadow-xl shadow-black/20 bg-white/5 backdrop-blur-3xl border border-white/10 p-10 text-lg font-medium text-white/60 leading-relaxed italic"
@@ -393,8 +396,8 @@
                 </div>
             </div>
 
-            <!-- RIGHT: Time Allocation Section -->
-            <div class="lg:col-span-12 xl:col-span-5 relative">
+            <!-- STEP 2: Time Allocation Section -->
+            <div class="order-2 xl:order-none xl:col-span-5 xl:col-start-8 xl:row-start-1 xl:row-span-2 relative">
                 <div class="sticky top-32">
                     <div
                         class="glass-card shadow-2xl shadow-black/20 bg-white/10 backdrop-blur-3xl border-white/10 p-2 overflow-hidden rounded-[3rem]">

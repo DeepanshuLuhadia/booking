@@ -1478,7 +1478,7 @@
 
                 {{-- ── Stats ── --}}
                 @php
-                    $totalClients = \App\Models\Booking::distinct('customer_id')->count('customer_id');
+                    $totalClients = \App\Models\Booking::distinct('customer_phone')->count('customer_phone');
                     $totalCities = \App\Models\Vendor::distinct('address')->count('address');
                     $totalAppointments = \App\Models\Booking::count();
                     $avgRating = 4.9; // rating system not yet implemented
