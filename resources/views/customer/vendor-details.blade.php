@@ -14,20 +14,15 @@
                             if ($vendor->shop_photo) {
                                 $img = asset('storage/' . $vendor->shop_photo);
                             } elseif (in_array($vType, ['health', 'doctor'])) {
-                                $img =
-                                    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=600&auto=format&fit=crop';
+                                $img = asset('images/placeholders/health.svg');
                             } elseif (in_array($vType, ['beauty', 'barber'])) {
-                                $img =
-                                    'https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=600&auto=format&fit=crop';
+                                $img = asset('images/placeholders/beauty.svg');
                             } elseif (in_array($vType, ['sports', 'activity'])) {
-                                $img =
-                                    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop';
+                                $img = asset('images/placeholders/sports.svg');
                             } elseif ($vType === 'training') {
-                                $img =
-                                    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop';
+                                $img = asset('images/placeholders/training.svg');
                             } else {
-                                $img =
-                                    'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=600&auto=format&fit=crop';
+                                $img = asset('images/placeholders/default.svg');
                             }
                         @endphp
                         <img src="{{ $img }}"
@@ -47,6 +42,12 @@
                     <h1
                         class="text-6xl md:text-[5.5rem] font-black text-white mb-6 tracking-tighter leading-[0.9] italic">
                         {{ $vendor->business_name }}
+                        @if($vendor->is_verified)
+                        <span class="inline-flex items-center gap-1 align-middle text-[10px] not-italic font-black uppercase tracking-widest text-sky-300 bg-sky-500/10 border border-sky-400/20 px-2.5 py-1 rounded-full">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
+                            Verified
+                        </span>
+                        @endif
                     </h1>
 
                     <div class="flex flex-wrap items-center justify-center md:justify-start gap-8 mb-10">
@@ -135,7 +136,7 @@
                             <div
                                 class="w-20 h-20 rounded-[1.5rem] bg-white/10 flex items-center justify-center overflow-hidden border border-white/10 group-hover:scale-105 transition-transform shadow-inner">
                                 @if($employee->photo)
-                                    <img src="{{ asset('storage/' . $employee->photo) }}" class="w-full h-full object-cover">
+                                    <img src="{{ asset('storage/' . $employee->photo) }}" loading="lazy" decoding="async" class="w-full h-full object-cover">
                                 @else
                                                     <span class="text-3xl font-black text-white italic opacity-30">{{ substr($employee->name, 0, 1) }}</span>
                                 @endif
@@ -189,6 +190,206 @@
                                             world-class environment.
                         @endif
                     </div>
+                </div>
+
+                <!-- REVIEWS & RATINGS -->
+                <div x-data="reviewSystem()" class="mt-24 pt-24 border-t border-white/5">
+                    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="w-10 h-1 theme-gradient-bg rounded-full"></span>
+                                <span class="theme-gradient-text font-black text-[10px] uppercase tracking-widest italic">Client Sentiment</span>
+                            </div>
+                            <h3 class="text-3xl font-black text-white tracking-tighter uppercase italic">Reviews &amp; Ratings</h3>
+                        </div>
+                        <button @click="openModal()"
+                            class="theme-btn h-14 px-8 rounded-2xl text-sm font-black italic uppercase tracking-widest flex items-center justify-center gap-2 group shrink-0">
+                            <svg class="w-5 h-5 transition-transform group-hover:rotate-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                            Write a Review
+                        </button>
+                    </div>
+
+                    <!-- Aggregate Rating Summary -->
+                    <div class="glass-card shadow-xl shadow-black/20 bg-white/5 backdrop-blur-3xl border border-white/10 p-8 sm:p-10 mb-8 rounded-[2.5rem] flex flex-col sm:flex-row items-center gap-10">
+                        <div class="text-center shrink-0">
+                            <div class="text-7xl font-black theme-gradient-text italic tracking-tighter leading-none" x-text="averageRating > 0 ? averageRating.toFixed(1) : '—'"></div>
+                            <div class="flex items-center justify-center gap-1 mt-3">
+                                <template x-for="star in 5" :key="star">
+                                    <svg class="w-4 h-4 transition-colors" :class="star <= Math.round(averageRating) ? 'text-amber-400' : 'text-white/15'" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                </template>
+                            </div>
+                            <p class="text-[9px] font-black text-white/40 uppercase tracking-widest mt-3 italic"><span x-text="reviewsCount"></span> Review<span x-show="reviewsCount !== 1">s</span></p>
+                        </div>
+                        <div class="hidden sm:block w-px self-stretch bg-white/10"></div>
+                        <div class="flex-grow w-full">
+                            <template x-if="reviewsCount > 0">
+                                <div class="space-y-2">
+                                    <template x-for="n in [5,4,3,2,1]" :key="n">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-[10px] font-black text-white/40 w-3" x-text="n"></span>
+                                            <svg class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                            <div class="flex-grow h-2 rounded-full bg-white/5 overflow-hidden">
+                                                <div class="h-full theme-gradient-bg rounded-full transition-all duration-700" :style="`width: ${ratingPercent(n)}%`"></div>
+                                            </div>
+                                            <span class="text-[10px] font-black text-white/30 w-6 text-right" x-text="ratingCount(n)"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="reviewsCount === 0">
+                                <p class="text-white/40 italic font-medium text-sm">No reviews yet — be the first to share your experience with this establishment.</p>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Individual Reviews -->
+                    <div class="space-y-4">
+                        <template x-for="(review, idx) in reviews" :key="idx">
+                            <div class="glass-card bg-white/5 backdrop-blur-3xl border border-white/10 p-6 rounded-[2rem] animate-reveal">
+                                <div class="flex items-start justify-between gap-4 mb-3">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-lg font-black italic shrink-0 shadow-lg" x-text="review.name ? review.name.charAt(0).toUpperCase() : '?'"></div>
+                                        <div>
+                                            <div class="flex items-center gap-1.5">
+                                                <h4 class="text-base font-black text-white italic leading-tight" x-text="review.name"></h4>
+                                                <span x-show="review.verified" title="Verified Google account" class="inline-flex items-center shrink-0">
+                                                    <svg class="w-4 h-4 text-sky-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center gap-1 mt-1">
+                                                <template x-for="star in 5" :key="star">
+                                                    <svg class="w-3.5 h-3.5" :class="star <= review.rating ? 'text-amber-400' : 'text-white/15'" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="text-[9px] font-black text-white/30 uppercase tracking-widest italic shrink-0" x-text="review.created_human"></span>
+                                </div>
+                                <p x-show="review.comment" class="text-white/60 text-sm font-medium italic leading-relaxed pl-16" x-text="review.comment"></p>
+                                <div x-show="review.images && review.images.length" class="flex flex-wrap gap-2 mt-3 pl-16">
+                                    <template x-for="(img, i) in review.images" :key="i">
+                                        <a :href="img" target="_blank" rel="noopener" class="block">
+                                            <img :src="img" loading="lazy" class="w-16 h-16 object-cover rounded-xl border border-white/10 hover:scale-105 transition-transform">
+                                        </a>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="reviews.length === 0" class="py-16 text-center border-2 border-dashed border-white/5 rounded-[2.5rem] opacity-40 italic">
+                            <p class="font-black uppercase tracking-widest text-white text-sm">No Reviews Yet</p>
+                        </div>
+                    </div>
+
+                    <!-- REVIEW MODAL (teleported to body so it sits above the sticky Step 2 column) -->
+                    <template x-teleport="body">
+                    <div x-show="showModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-6" x-cloak x-transition>
+                        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl" @click="showModal = false"></div>
+                        <div class="relative bg-[#0a0f2c] text-white rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 w-full max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar shadow-[0_100px_200px_-50px_rgba(0,0,0,0.8)] border border-white/10"
+                            x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-90 translate-y-8" x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+                            <div class="text-center mb-8">
+                                <span class="inline-block px-4 py-1 theme-gradient-bg text-white border theme-border rounded-full text-[9px] font-black uppercase tracking-widest italic mb-5">Share Your Experience</span>
+                                <h2 class="text-3xl font-black italic tracking-tighter uppercase mb-2">Rate {{ $vendor->business_name }}</h2>
+                                <p class="text-white/40 font-medium text-sm">Your honest feedback helps others choose with confidence.</p>
+                            </div>
+
+                            <!-- Star Picker (rendered statically so each button's click binds reliably) -->
+                            <div class="flex items-center justify-center gap-2 mb-8">
+                                @for($s = 1; $s <= 5; $s++)
+                                    <button type="button" @click="rating = {{ $s }}" @mouseenter="hoverRating = {{ $s }}" @mouseleave="hoverRating = 0"
+                                        class="transition-transform duration-200 hover:scale-125 focus:outline-none">
+                                        <svg class="w-10 h-10 transition-colors duration-150" :class="{{ $s }} <= (hoverRating || rating) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-white/15'" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                    </button>
+                                @endfor
+                            </div>
+
+                            <div class="space-y-5 text-left mb-8">
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Your Name <span class="text-white/30 normal-case">(optional)</span></label>
+                                    <input type="text" x-model="name" maxlength="60" :readonly="!!googleUser"
+                                        class="premium-input w-full h-14 px-5 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border read-only:opacity-60 read-only:cursor-not-allowed"
+                                        placeholder="e.g. Aarav Sharma">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Phone <span class="text-white/30 normal-case">(optional)</span></label>
+                                    <input type="tel" x-model="phone" maxlength="10" :readonly="!!googleUser" @input="phone = phone.replace(/[^0-9]/g, '')"
+                                        class="premium-input w-full h-14 px-5 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border read-only:opacity-60 read-only:cursor-not-allowed"
+                                        placeholder="10 digit number">
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Review <span class="text-white/30 normal-case">(optional)</span></label>
+                                    <textarea x-model="comment" maxlength="1000" rows="4"
+                                        class="premium-input w-full px-5 py-4 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border resize-none"
+                                        placeholder="Tell us about your visit..."></textarea>
+                                </div>
+
+                                <!-- Mandatory photo evidence for low (under 2-star) ratings -->
+                                <div x-show="requiresImages" x-cloak x-transition class="space-y-2 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                        <label class="text-xs font-black uppercase tracking-[0.2em] text-amber-400 block">Photo Proof <span class="text-amber-400/70">(required)</span></label>
+                                    </div>
+                                    <p class="text-amber-100/60 text-[11px] font-medium italic">A rating under 2 stars must include at least one supporting photo.</p>
+                                    <label class="flex items-center justify-center gap-2 h-14 rounded-xl border-2 border-dashed border-amber-500/30 text-amber-300/80 text-xs font-black uppercase tracking-widest cursor-pointer hover:bg-amber-500/10 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        <span x-text="images.length ? images.length + ' photo' + (images.length > 1 ? 's' : '') + ' selected' : 'Tap to add photos'"></span>
+                                        <input type="file" accept="image/*" multiple class="hidden" @change="handleFiles($event)">
+                                    </label>
+                                    <div x-show="previews.length" class="flex flex-wrap gap-2 pt-1">
+                                        <template x-for="(src, i) in previews" :key="i">
+                                            <div class="relative group">
+                                                <img :src="src" class="w-16 h-16 object-cover rounded-xl border border-white/10">
+                                                <button type="button" @click="removeImage(i)" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rose-500 text-white text-xs font-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">&times;</button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p x-show="error" x-text="error" class="text-rose-400 text-xs font-black uppercase tracking-widest italic text-center mb-4" style="display:none;"></p>
+
+                            <button @click="submit()" :disabled="submitting"
+                                class="theme-btn w-full h-16 text-lg rounded-2xl group shadow-lg disabled:opacity-50 disabled:pointer-events-none">
+                                <span x-show="!submitting">Post Review</span>
+                                <span x-show="submitting" style="display:none;">Posting...</span>
+                            </button>
+
+                            @if(config('services.google.client_id'))
+                                <!-- Optional: auto-fill name & verify identity with Google -->
+                                <div class="mt-6">
+                                    <div class="flex items-center gap-4 mb-4">
+                                        <span class="flex-grow h-px bg-white/10"></span>
+                                        <span class="text-[9px] font-black uppercase tracking-widest text-white/30">or</span>
+                                        <span class="flex-grow h-px bg-white/10"></span>
+                                    </div>
+
+                                    <!-- Signed-out: render the Google button -->
+                                    <div x-show="!googleUser">
+                                        <div x-ref="googleBtn" class="flex justify-center min-h-[44px]"></div>
+                                        <p class="text-center text-white/30 text-[11px] font-medium italic mt-3">Sign in with Google to auto-fill your details and post as a verified reviewer.</p>
+                                    </div>
+
+                                    <!-- Signed-in chip -->
+                                    <div x-show="googleUser" x-cloak class="flex items-center gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 p-3">
+                                        <img :src="googleUser?.picture" x-show="googleUser?.picture" referrerpolicy="no-referrer" class="w-10 h-10 rounded-full border border-white/10 shrink-0" alt="">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="font-black text-white truncate" x-text="googleUser?.name"></span>
+                                                <svg class="w-4 h-4 text-sky-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clip-rule="evenodd"/></svg>
+                                            </div>
+                                            <span class="text-[10px] font-black uppercase tracking-widest text-sky-400 truncate block" x-text="googleUser?.email"></span>
+                                        </div>
+                                        <button type="button" @click="signOutGoogle()" class="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white shrink-0">Use a name instead</button>
+                                    </div>
+                                </div>
+                            @endif
+
+                            <button @click="showModal = false"
+                                class="mt-6 w-full text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">Cancel</button>
+                        </div>
+                    </div>
+                    </template>
                 </div>
             </div>
 
@@ -644,9 +845,11 @@
                 if (data.success) {
                     this.successMsg = data.message;
                     this.successModal = true;
-                    if (this.isTokenEnabled) {
-                        await this.fetchSlots(this.selectedEmployee, this.selectedServiceFee);
-                    }
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('trigger-notification-prompt'));
+                    }, 500);
+                    // Refresh slots so the just-booked slot reflects as taken
+                    await this.fetchSlots(this.selectedEmployee, this.selectedServiceFee);
                 } else {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.error || 'ALLOCATION FAILED', type: 'error' } }));
                 }
@@ -655,9 +858,222 @@
                 window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'SYSTEM ERROR', type: 'error' } }));
             }
             this.loading = false;
-        }
+        },
+                async refreshQueueStatus() {
+                    if (this.isSubscriptionExpired) return;
+                    try {
+                        const res = await fetch(`/vendors/{{ $vendor->slug }}/queue-status?employee_id=${this.selectedEmployee}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.runningToken = data.now_serving;
+                            this.queueIndex = data.queue_index;
+                            
+                            if (!data.is_open || data.bookings_paused) {
+                                this.isPaused = data.bookings_paused;
+                                this.isOffline = !data.is_open;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Queue refresh failed', e);
+                    }
+                },
+
+                init() {
+                    if (this.isTokenEnabled) {
+                        setInterval(() => {
+                            if (!this.bookingModal) {
+                                this.refreshQueueStatus();
+                            }
+                        }, 10000); // 10 seconds
+                    }
+                }
             }
         }
 
     </script>
+
+    <script>
+        function reviewSystem() {
+            return {
+                showModal: false,
+                submitting: false,
+                error: '',
+                rating: 0,
+                hoverRating: 0,
+                name: '',
+                phone: '',
+                comment: '',
+                images: [],
+                previews: [],
+                reviews: @js($reviews),
+                averageRating: {{ $averageRating }},
+                reviewsCount: {{ $reviewsCount }},
+
+                // Optional Google identity
+                googleClientId: @js(config('services.google.client_id')),
+                googleUser: null,
+                googleCredential: null,
+                googleRendered: false,
+
+                // Ratings under 2 stars must include photo proof.
+                get requiresImages() {
+                    return this.rating > 0 && this.rating < 2;
+                },
+
+                openModal() {
+                    this.error = '';
+                    this.showModal = true;
+                    if (this.googleClientId) {
+                        this.$nextTick(() => this.initGoogleButton());
+                    }
+                },
+
+                initGoogleButton() {
+                    if (this.googleRendered || !this.googleClientId) return;
+                    const render = () => {
+                        if (!window.google?.accounts?.id || !this.$refs.googleBtn) return false;
+                        window.google.accounts.id.initialize({
+                            client_id: this.googleClientId,
+                            callback: (resp) => this.handleGoogleCredential(resp),
+                        });
+                        window.google.accounts.id.renderButton(this.$refs.googleBtn, {
+                            theme: 'filled_blue', size: 'large', shape: 'pill', text: 'continue_with', width: 280,
+                        });
+                        this.googleRendered = true;
+                        return true;
+                    };
+                    if (render()) return;
+                    // GIS script may still be loading — retry briefly.
+                    let tries = 0;
+                    const iv = setInterval(() => {
+                        if (render() || ++tries > 40) clearInterval(iv);
+                    }, 150);
+                },
+
+                handleGoogleCredential(resp) {
+                    const payload = this.decodeJwt(resp.credential);
+                    if (!payload) {
+                        this.error = 'Could not read your Google account. Please try again.';
+                        return;
+                    }
+                    this.googleCredential = resp.credential;
+                    this.googleUser = {
+                        name: payload.name || payload.email,
+                        email: payload.email,
+                        picture: payload.picture,
+                    };
+                    // Auto-fill the (now read-only) name field from the verified account.
+                    this.name = this.googleUser.name;
+                    this.error = '';
+                },
+
+                signOutGoogle() {
+                    this.googleUser = null;
+                    this.googleCredential = null;
+                    this.name = '';
+                    if (window.google?.accounts?.id) {
+                        window.google.accounts.id.disableAutoSelect();
+                    }
+                },
+
+                decodeJwt(token) {
+                    try {
+                        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                        const json = decodeURIComponent(atob(base64).split('').map(
+                            c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                        ).join(''));
+                        return JSON.parse(json);
+                    } catch (e) {
+                        return null;
+                    }
+                },
+
+                handleFiles(e) {
+                    for (const file of Array.from(e.target.files)) {
+                        if (this.images.length >= 5) break;
+                        if (!file.type.startsWith('image/')) continue;
+                        this.images.push(file);
+                        this.previews.push(URL.createObjectURL(file));
+                    }
+                    e.target.value = '';
+                },
+
+                removeImage(i) {
+                    URL.revokeObjectURL(this.previews[i]);
+                    this.images.splice(i, 1);
+                    this.previews.splice(i, 1);
+                },
+
+                resetForm() {
+                    // Note: Google sign-in is intentionally kept so a returning
+                    // reviewer doesn't have to re-authenticate.
+                    this.rating = 0;
+                    this.hoverRating = 0;
+                    this.comment = '';
+                    if (!this.googleUser) this.name = '';
+                    this.phone = '';
+                    this.previews.forEach(URL.revokeObjectURL);
+                    this.images = [];
+                    this.previews = [];
+                },
+
+                ratingCount(n) {
+                    return this.reviews.filter(r => r.rating === n).length;
+                },
+
+                ratingPercent(n) {
+                    if (this.reviewsCount === 0) return 0;
+                    return Math.round((this.ratingCount(n) / this.reviewsCount) * 100);
+                },
+
+                async submit() {
+                    this.error = '';
+                    if (this.rating < 1) { this.error = 'Please select a star rating'; return; }
+                    if (this.requiresImages && this.images.length === 0) {
+                        this.error = 'A rating under 2 stars requires at least one photo';
+                        return;
+                    }
+
+                    const form = new FormData();
+                    form.append('rating', this.rating);
+                    if (this.name.trim()) form.append('reviewer_name', this.name.trim());
+                    if (this.phone) form.append('reviewer_phone', this.phone);
+                    if (this.comment) form.append('comment', this.comment);
+                    if (this.googleCredential) form.append('google_credential', this.googleCredential);
+                    this.images.forEach(file => form.append('images[]', file));
+
+                    this.submitting = true;
+                    try {
+                        const res = await fetch('{{ route('vendor.reviews.store', $vendor->slug) }}', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: form
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            this.reviews.unshift(data.review);
+                            this.averageRating = data.average_rating;
+                            this.reviewsCount = data.reviews_count;
+                            this.showModal = false;
+                            this.resetForm();
+                            window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.message, type: 'success' } }));
+                        } else {
+                            this.error = (data.errors ? Object.values(data.errors)[0][0] : null) || data.message || 'Could not post review';
+                        }
+                    } catch (e) {
+                        console.error('REVIEW SUBMIT ERROR', e);
+                        this.error = 'Something went wrong. Please try again.';
+                    }
+                    this.submitting = false;
+                }
+            }
+        }
+    </script>
+
+    @if(config('services.google.client_id'))
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+    @endif
 </x-app-layout>

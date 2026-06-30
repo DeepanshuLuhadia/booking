@@ -7,6 +7,18 @@
             </div>
         </div>
 
+        <div class="flex flex-wrap gap-2">
+            @foreach(['all','pending','active','suspended','rejected'] as $s)
+                <a href="{{ route('admin.vendors.index', ['status' => $s]) }}"
+                   class="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all {{ ($status ?? 'all') === $s ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/20' }}">
+                    {{ $s }}
+                    @if($s === 'pending' && ($pendingCount ?? 0) > 0)
+                        <span class="ml-1 bg-red-500 text-white text-[9px] rounded-full px-1.5 py-0.5">{{ $pendingCount }}</span>
+                    @endif
+                </a>
+            @endforeach
+        </div>
+
         <div class="glass-card overflow-hidden">
             <div class="table-responsive-wrapper">
                 <table class="w-full text-left border-collapse">
@@ -33,23 +45,51 @@
                                     </span>
                                 </td>
                                 <td class="p-4">
-                                    <span class="inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest {{ $vendor->status == 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }}">
+                                    @php
+                                        $statusColor = match($vendor->status) {
+                                            'active'    => 'bg-emerald-50 text-emerald-600',
+                                            'pending'   => 'bg-amber-50 text-amber-600',
+                                            'suspended' => 'bg-orange-50 text-orange-600',
+                                            'rejected'  => 'bg-rose-50 text-rose-600',
+                                            default     => 'bg-white/10 text-slate-300',
+                                        };
+                                    @endphp
+                                    <span class="inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest {{ $statusColor }}">
                                         {{ $vendor->status }}
                                     </span>
+                                    @if($vendor->is_verified)
+                                        <span class="inline-flex ml-1 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600">✓ Verified</span>
+                                    @endif
                                 </td>
                                 <td class="p-4 text-right">
                                     <div class="flex justify-end items-center gap-2">
                                         <a href="{{ route('admin.vendors.show', $vendor) }}" class="btn-primary py-2 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg">
                                             View
                                         </a>
-                                        <form action="{{ route('admin.vendors.update', $vendor) }}" method="POST" class="m-0">
-                                            @csrf
-                                            @method('PUT')
-                                            <input type="hidden" name="status" value="{{ $vendor->status == 'active' ? 'inactive' : 'active' }}">
-                                            <button type="submit" class="btn-outline py-2 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg">
-                                                {{ $vendor->status == 'active' ? 'Suspend' : 'Activate' }}
-                                            </button>
-                                        </form>
+                                        @if(in_array($vendor->status, ['pending', 'suspended', 'rejected']))
+                                            <form action="{{ route('admin.vendors.approve', $vendor) }}" method="POST" class="m-0">
+                                                @csrf
+                                                <button type="submit" class="py-2 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">
+                                                    Approve
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if($vendor->status === 'active')
+                                            <form action="{{ route('admin.vendors.suspend', $vendor) }}" method="POST" class="m-0">
+                                                @csrf
+                                                <button type="submit" class="btn-outline py-2 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                                                    Suspend
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if($vendor->status === 'pending')
+                                            <form action="{{ route('admin.vendors.reject', $vendor) }}" method="POST" class="m-0">
+                                                @csrf
+                                                <button type="submit" class="py-2 px-3 text-[10px] font-black uppercase tracking-widest rounded-lg border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors">
+                                                    Reject
+                                                </button>
+                                            </form>
+                                        @endif
                                         <form action="{{ route('admin.vendors.destroy', $vendor) }}" method="POST" onsubmit="return confirm('Are you sure?')" class="m-0">
                                             @csrf
                                             @method('DELETE')

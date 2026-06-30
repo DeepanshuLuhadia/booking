@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs>
+  <rect width="600" height="400" fill="url(#g)"/>
+  <path d="M230 185 l70 -30 l70 30 l-70 30 z" fill="rgba(255,255,255,0.92)"/>
+  <path d="M260 205 v34 q40 26 80 0 v-34" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="8"/>
+  <text x="300" y="320" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="800" letter-spacing="3" fill="rgba(255,255,255,0.85)" text-anchor="middle">TRAINING</text>
+</svg>

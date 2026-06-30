@@ -22,13 +22,25 @@ class OtpController extends Controller
         ]);
 
         $user = auth()->user();
+
+        // Look at the latest unverified OTP for this user, regardless of the
+        // submitted value, so we can count failed attempts against it.
         $otpRecord = Otp::where('identifier', $user->mobile)
-            ->where('otp', $request->otp)
             ->where('verified', false)
-            ->where('expires_at', '>', Carbon::now())
+            ->latest()
             ->first();
 
         if (!$otpRecord) {
+            return back()->withErrors(['otp' => 'No OTP found. Please request a new one.']);
+        }
+
+        // Block brute-forcing of the 6-digit code.
+        if ($otpRecord->attempts >= 5) {
+            return back()->withErrors(['otp' => 'Too many incorrect attempts. Please request a new OTP.']);
+        }
+
+        if ($otpRecord->otp !== $request->otp || $otpRecord->expires_at->isPast()) {
+            $otpRecord->increment('attempts');
             return back()->withErrors(['otp' => 'Invalid or expired OTP.']);
         }
 

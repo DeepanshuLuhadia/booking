@@ -36,7 +36,7 @@ class BookingController extends Controller
             'slot_end' => 'required|date_format:H:i',
         ]);
 
-        $employee = Employee::find($request->employee_id);
+        $employee = Employee::findOrFail($request->employee_id);
 
         // Ensure employee belongs to vendor
         if ($employee->vendor_id !== $vendor->id) {
@@ -76,6 +76,7 @@ class BookingController extends Controller
         }
 
         $booking->update(['status' => 'completed']);
+        $this->advanceNowServing($booking);
 
         return back()->with('success', 'Booking marked as completed.');
     }
@@ -91,5 +92,47 @@ class BookingController extends Controller
         $booking->delete();
 
         return back()->with('success', 'Booking deleted successfully.');
+    }
+
+    public function nextToken(Request $request)
+    {
+        $vendor = auth()->user()->vendor;
+        $request->validate(['employee_id' => 'required|exists:employees,id']);
+
+        $employee = Employee::findOrFail($request->employee_id);
+        if ($employee->vendor_id !== $vendor->id) {
+            abort(403);
+        }
+
+        $employee->increment('now_serving_token');
+        return back()->with('success', "{$employee->name} now serving #" . $employee->fresh()->now_serving_token);
+    }
+
+    public function skipToken(Booking $booking)
+    {
+        $vendor = auth()->user()->vendor;
+        if ($booking->vendor_id !== $vendor->id) {
+            abort(403);
+        }
+
+        $booking->update(['status' => 'skipped']);
+        $this->advanceNowServing($booking);
+        return back()->with('success', 'Token #' . $booking->token_number . ' skipped.');
+    }
+
+    /**
+     * Advance the employee's now_serving_token to the token just handled
+     * (completed or skipped). No-op for time-slot bookings (null token).
+     */
+    private function advanceNowServing(Booking $booking): void
+    {
+        if (!$booking->token_number) {
+            return;
+        }
+
+        $employee = $booking->employee;
+        if ($employee && $booking->token_number > $employee->now_serving_token) {
+            $employee->update(['now_serving_token' => $booking->token_number]);
+        }
     }
 }

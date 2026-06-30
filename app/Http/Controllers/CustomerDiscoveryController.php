@@ -41,7 +41,6 @@ public function index(Request $request)
     $query = Vendor::query()
         ->where('status', 'active')
         ->where('is_profile_complete', true)
-        ->where('is_open', true)
         ->whereNotNull('global_opening_time')
         ->whereNotNull('global_closing_time')
         ->where(function ($q) use ($now) {
@@ -74,8 +73,9 @@ public function index(Request $request)
     | Search Filters
     |--------------------------------------------------------------------------
     */
-    if ($isSearch) {
-        $query->where(function ($q) use ($search, $specialty, $location) {
+    if ($isSearch || filled($request->state)) {
+        $state = trim($request->state ?? '');
+        $query->where(function ($q) use ($search, $specialty, $location, $state) {
             if ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('business_name', 'LIKE', "%{$search}%")
@@ -95,6 +95,8 @@ public function index(Request $request)
 
             if ($location) {
                 $q->where('address', 'LIKE', "%{$location}%");
+            } elseif ($state) {
+                $q->where('address', 'LIKE', "%{$state}%");
             }
         });
     }
@@ -106,10 +108,9 @@ public function index(Request $request)
     */
     if ($sort === 'newest') {
         $query->latest();
-    } elseif ($sort === 'rating') {
-        $query->orderByDesc('rating');
     } else {
-        $query->latest();
+        // Order: open vendors first, then by newest
+        $query->orderByDesc('is_open')->latest();
     }
 
     $vendors = $query->paginate(24);
@@ -120,7 +121,10 @@ public function index(Request $request)
     |--------------------------------------------------------------------------
     */
     $vendors->getCollection()->transform(function ($vendor) use ($now) {
-        $vendor->is_currently_open = false;
+        // NOTE: use a dedicated key (not `is_currently_open`, which is a model
+        // accessor that only reflects shop hours and would shadow this value).
+        // is_bookable_now = shop open AND >=1 active employee working right now.
+        $vendor->is_bookable_now = false;
 
         if ($vendor->employees->isEmpty()) {
             return $vendor;
@@ -139,6 +143,11 @@ public function index(Request $request)
         }
 
         foreach ($vendor->employees as $employee) {
+            // A paused employee is not accepting bookings — skip them.
+            if ($employee->is_paused) {
+                continue;
+            }
+
             // Anchor base times explicitly to the generated vendor shift start day
             $empStartDt = $vOpen->copy()->setTimeFromTimeString($employee->working_start_time);
             $empEndDt   = $vOpen->copy()->setTimeFromTimeString($employee->working_end_time);
@@ -177,7 +186,7 @@ public function index(Request $request)
             |--------------------------------------------------------------------------
             */
             if ($now->gte($empStartDt) && $now->lt($empEndDt)) {
-                $vendor->is_currently_open = true;
+                $vendor->is_bookable_now = true;
                 break;
             }
         }
@@ -187,13 +196,18 @@ public function index(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | Default Listing
+    | Hide Closed Shops
     |--------------------------------------------------------------------------
+    | Closed shops are only revealed when a customer explicitly searches by
+    | name. In every other case — default listing, specialty/location/category
+    | filters — only shops bookable right now are shown.
     */
-    if (!$isSearch) {
+    $revealClosed = filled($search);
+
+    if (!$revealClosed) {
         $vendors->setCollection(
             $vendors->getCollection()
-                ->where('is_currently_open', true)
+                ->where('is_bookable_now', true)
                 ->values()
         );
     }
@@ -249,14 +263,37 @@ public function index(Request $request)
 
     /*
     |--------------------------------------------------------------------------
-    | Selected Employee (Defensive filtering to prevent 500 null crashes)
+    | Reorder Specialists By Live Bookability
     |--------------------------------------------------------------------------
+    | Specialists who can take a booking right now (available + not paused)
+    | float to the top; available-but-paused next; everyone unavailable sinks
+    | to the bottom. This makes the on-load ordering match real availability
+    | and stays stable across page refreshes.
     */
-    $selectedEmployee = $vendor->employees->first(function ($emp) {
-        return $emp->is_active 
-            && !is_null($emp->working_start_time) 
+    $bookableRank = fn ($emp) => ($emp->is_available ? 2 : 0) + ($emp->is_paused ? 0 : 1);
+
+    $vendor->setRelation(
+        'employees',
+        $vendor->employees->sortByDesc($bookableRank)->values()
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Selected Employee (prefer a specialist who is bookable right now)
+    |--------------------------------------------------------------------------
+    | Default to the first specialist who can actually take a booking now so
+    | Step 2 doesn't open on an "out of appointment" employee. Fall back to any
+    | available, then any active one (defensive — prevents 500 null crashes).
+    */
+    $isActiveSpecialist = function ($emp) {
+        return $emp->is_active
+            && !is_null($emp->working_start_time)
             && !is_null($emp->working_end_time);
-    });
+    };
+
+    $selectedEmployee = $vendor->employees->first(fn ($emp) => $emp->is_available && !$emp->is_paused)
+        ?? $vendor->employees->first(fn ($emp) => $emp->is_available)
+        ?? $vendor->employees->first($isActiveSpecialist);
 
     $slots = [];
     $isOffline = true;
@@ -308,16 +345,13 @@ public function index(Request $request)
         | Queue Statistics
         |--------------------------------------------------------------------------
         */
-        $bookingStats = Booking::where('employee_id', $selectedEmployee->id)
+        $queueIndex = Booking::where('employee_id', $selectedEmployee->id)
             ->where('booking_date', $today)
-            ->selectRaw("
-                MAX(token_number) as queue_index,
-                MIN(CASE WHEN status = 'confirmed' THEN token_number END) as running_token
-            ")
-            ->first();
+            ->whereNotNull('token_number')
+            ->max('token_number') ?? 0;
 
-        $queueIndex = $bookingStats->queue_index ?? 0;
-        $runningToken = $bookingStats->running_token ?? 0;
+        // "Now serving" is the employee's live counter, advanced as they serve.
+        $runningToken = $selectedEmployee->now_serving_token ?? 0;
     }
 
     /*
@@ -334,6 +368,30 @@ public function index(Request $request)
     $theme = $allThemes[$vendor->category?->slug]
         ?? ThemeService::getTheme('consultant');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reviews & Ratings
+    |--------------------------------------------------------------------------
+    | Reported reviews stay publicly visible (a report only flags them for
+    | admin moderation); they vanish only when an admin deletes them.
+    */
+    $reviews = $vendor->reviews()
+        ->latest()
+        ->take(50)
+        ->get()
+        ->map(fn ($r) => [
+            'name'          => $r->reviewer_name,
+            'rating'        => $r->rating,
+            'comment'       => $r->comment,
+            'verified'      => $r->is_verified,
+            'images'        => collect($r->images ?? [])->map(fn ($p) => asset('storage/' . $p))->all(),
+            'created_human' => $r->created_at->diffForHumans(),
+        ])
+        ->values();
+
+    $reviewsCount  = $vendor->reviews()->count();
+    $averageRating = round((float) $vendor->reviews()->avg('rating'), 1);
+
     return view('customer.vendor-details', compact(
         'vendor',
         'selectedEmployee',
@@ -344,9 +402,41 @@ public function index(Request $request)
         'queueIndex',
         'runningToken',
         'isPaused',
-        'isSubscriptionExpired'
+        'isSubscriptionExpired',
+        'reviews',
+        'reviewsCount',
+        'averageRating'
     ));
 }
+
+    public function queueStatus(Vendor $vendor, Request $request)
+    {
+        // Queue is per-employee. Resolve the employee from the request, falling
+        // back to the vendor's first active employee.
+        $employee = null;
+        if ($request->filled('employee_id')) {
+            $employee = Employee::where('vendor_id', $vendor->id)
+                ->where('id', $request->employee_id)
+                ->first();
+        }
+        $employee ??= $vendor->employees()->where('is_active', true)->first();
+
+        $nowServing = $employee->now_serving_token ?? 0;
+
+        $queueIndex = $employee
+            ? (Booking::where('employee_id', $employee->id)
+                ->where('booking_date', now()->toDateString())
+                ->whereNotNull('token_number')
+                ->max('token_number') ?? 0)
+            : 0;
+
+        return response()->json([
+            'now_serving' => $nowServing,
+            'queue_index' => $queueIndex,
+            'is_open' => $vendor->is_open,
+            'bookings_paused' => $vendor->bookings_paused,
+        ]);
+    }
 
     public function getSlots(Vendor $vendor, Employee $employee, SlotGenerationService $slotService)
     {
@@ -368,7 +458,8 @@ public function index(Request $request)
         [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
 
         // Visibility / Window Logic
-        if ($vendor->appointment_mode === 'appointment') {
+        if ($vendor->appointment_mode === 'time_slot') {
+            // Time-slot mode: let customers see slots from 2 hours before opening.
             $windowOpensAt = $empStart->copy()->subHours(2);
             $isOffline = $now->lt($windowOpensAt) || $now->gt($empEnd);
         } else {
@@ -392,22 +483,19 @@ public function index(Request $request)
 
         $slots = $slotService->generateSlots($employee, $shiftDate, $vendor);
 
-        // Token System Metadata
+        // Token System Metadata (per-employee queue)
         $queueIndex = Booking::where('employee_id', $employee->id)
             ->where('booking_date', now()->toDateString())
             ->whereNotNull('token_number')
             ->max('token_number');
-            
-        $runningToken = Booking::where('employee_id', $employee->id)
-            ->where('booking_date', now()->toDateString())
-            ->where('status', 'confirmed')
-            ->min('token_number');
+
+        $runningToken = $employee->now_serving_token ?? 0;
 
             return response()->json([
                 'offline' => false,
                 'slots'   => $slots,
                 'queue_index' => $queueIndex ?? 0,
-                'running_token' => $runningToken ?? 0
+                'running_token' => $runningToken
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('CustomerDiscoveryController@getSlots error: ' . $e->getMessage());

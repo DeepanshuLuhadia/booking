@@ -177,12 +177,20 @@ class PaymentController extends Controller
                 $newExpiry = Carbon::now()->addMonth();
             }
 
-            $vendor->update([
-                'status' => 'active',
-                'subscription_expires_at' => $newExpiry,
-            ]);
+            // A brand-new vendor stays 'pending' until an admin approves them;
+            // payment only establishes their subscription window. Existing
+            // (already-approved) vendors renewing stay active.
+            $updates = ['subscription_expires_at' => $newExpiry];
+            if ($vendor->status !== 'pending') {
+                $updates['status'] = 'active';
+            }
+            $vendor->update($updates);
 
-            return redirect()->route('vendor.dashboard')->with('success', 'Payment successful! Your account is now active.');
+            $msg = $vendor->status === 'pending'
+                ? 'Payment successful! Your account is now awaiting admin approval before going live.'
+                : 'Payment successful! Your account is now active.';
+
+            return redirect()->route('vendor.dashboard')->with('success', $msg);
         }
 
         \Log::warning('Razorpay Callback hit without payment_id.', $request->all());

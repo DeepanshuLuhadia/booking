@@ -26,6 +26,7 @@ class User extends Authenticatable
         'avatar',
         'password',
         'fcm_token',
+        'mobile_verified_at',
     ];
 
     /**

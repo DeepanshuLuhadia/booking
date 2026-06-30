@@ -8,13 +8,16 @@ class Employee extends Model
 {
     protected $fillable = [
         'vendor_id', 'user_id', 'name', 'photo', 'working_start_time',
-        'working_end_time', 'slot_duration', 'service_fee_override', 
-        'premium_fee', 'premium_bookings_count', 'is_active', 'is_paused'
+        'working_end_time', 'slot_duration', 'service_fee_override',
+        'premium_fee', 'premium_bookings_count', 'is_active', 'is_paused',
+        'now_serving_token', 'max_daily_tokens'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'is_paused' => 'boolean',
+        'now_serving_token' => 'integer',
+        'max_daily_tokens' => 'integer',
     ];
 
     public function vendor()

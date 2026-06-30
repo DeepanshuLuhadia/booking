@@ -46,6 +46,47 @@
                 .bottom-space {
                     margin-bottom: 20px !important;
                 }
+
+                /* Custom dropdown — matches the customer listing page UI */
+                .reg-dropdown-menu {
+                    position: absolute;
+                    top: calc(100% + 10px);
+                    left: 0;
+                    width: 100%;
+                    max-height: 320px;
+                    overflow-y: auto;
+                    background: rgba(13, 19, 51, 0.98);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 16px;
+                    padding: 8px;
+                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+                    z-index: 100;
+                }
+                .reg-dropdown-item {
+                    padding: 12px 16px;
+                    color: rgba(255, 255, 255, 0.8);
+                    font-size: 14px;
+                    font-weight: 600;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    transition: background 0.2s, transform 0.2s, color 0.2s;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    white-space: nowrap;
+                }
+                .reg-dropdown-item:hover {
+                    background: rgba(255, 109, 0, 0.15);
+                    color: #fff;
+                    transform: translateX(4px);
+                }
+                .reg-dropdown-item.selected {
+                    background: linear-gradient(135deg, rgba(255, 109, 0, 0.2), rgba(255, 171, 64, 0.2));
+                    border-left: 3px solid #ff6d00;
+                    color: #ffab40;
+                }
             </style>
 
             <form method="POST" action="/register/vendor" class="space-y-16 animate-reveal delay-100">
@@ -66,24 +107,40 @@
                             <!-- Category -->
                             <div class="space-y-2 group">
                                 <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-6">Business Category</label>
-                                <div class="relative">
-                                    <select name="vendor_type" required
-                                        class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white appearance-none cursor-pointer transition-all focus:bg-white/10">
-                                        @foreach($vendorCategories as $category)
-                                            @php
-                                                $themeConfig = \App\Services\ThemeService::getTheme($category->slug);
-                                                $displayLabel = $themeConfig['label'] ?? $category->name;
-                                            @endphp
-                                            <option value="{{ $category->slug }}" class="bg-[#0f172a] text-white" {{ old('vendor_type') == $category->slug ? 'selected' : '' }}>
-                                                {{ $displayLabel }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <div class="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none">
-                                        <svg class="w-5 h-5 text-white/30 group-focus-within:text-theme-primary transition-colors"
+                                <div class="relative"
+                                    x-data="{
+                                        open: false,
+                                        selected: @js(old('vendor_type')),
+                                        selectedLabel: '',
+                                        options: [
+                                            @foreach($vendorCategories as $category)
+                                                @php $themeConfig = \App\Services\ThemeService::getTheme($category->slug); @endphp
+                                                { value: @js($category->slug), label: @js(($themeConfig['emoji'] ?? '✨') . ' ' . ($themeConfig['label'] ?? $category->name)) },
+                                            @endforeach
+                                        ],
+                                        init() {
+                                            let match = this.options.find(o => o.value === this.selected);
+                                            if (!match) match = this.options[0];
+                                            if (match) { this.selected = match.value; this.selectedLabel = match.label; }
+                                        },
+                                        choose(opt) { this.selected = opt.value; this.selectedLabel = opt.label; this.open = false; }
+                                    }"
+                                    @click.outside="open = false">
+                                    <input type="hidden" name="vendor_type" :value="selected" required>
+                                    <button type="button" @click="open = !open"
+                                        class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white cursor-pointer flex items-center justify-between gap-3 transition-all hover:bg-white/10"
+                                        :class="open ? 'bg-white/10 ring-4 ring-theme-primary/10' : ''">
+                                        <span class="truncate" x-text="selectedLabel"></span>
+                                        <svg class="w-5 h-5 text-white/30 transition-transform shrink-0" :class="open ? 'rotate-180 text-theme-primary' : ''"
                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" />
                                         </svg>
+                                    </button>
+                                    <div x-show="open" x-cloak x-transition.origin.top class="reg-dropdown-menu">
+                                        <template x-for="opt in options" :key="opt.value">
+                                            <div class="reg-dropdown-item" :class="selected === opt.value ? 'selected' : ''"
+                                                @click="choose(opt)" x-text="opt.label"></div>
+                                        </template>
                                     </div>
                                 </div>
                             </div>

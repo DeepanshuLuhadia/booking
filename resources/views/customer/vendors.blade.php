@@ -1373,21 +1373,41 @@
                                 <input type="hidden" name="specialty" id="specialty-input" value="{{ request('specialty') }}">
                             </div>
 
-                            {{-- Location --}}
-                            <div class="bv-search-field" style="border-right:none;">
+                            {{-- Near Me (location) --}}
+                            <div class="bv-search-field" style="border-right:none; cursor:pointer;" title="Find experts near you"
+                                x-data="{
+                                    locating: false,
+                                    useGPS() {
+                                        if (!('geolocation' in navigator)) {
+                                            window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'GPS not supported by this browser.', type: 'error' } }));
+                                            return;
+                                        }
+                                        this.locating = true;
+                                        navigator.geolocation.getCurrentPosition((position) => {
+                                            document.cookie = `user_lat=${position.coords.latitude}; path=/; max-age=31536000; SameSite=Lax`;
+                                            document.cookie = `user_lng=${position.coords.longitude}; path=/; max-age=31536000; SameSite=Lax`;
+                                            document.cookie = `user_state=; path=/; max-age=31536000; SameSite=Lax`;
+                                            document.cookie = `user_city=; path=/; max-age=31536000; SameSite=Lax`;
+                                            document.cookie = `location_granted=true; path=/; max-age=31536000; SameSite=Lax`;
+                                            $el.closest('form').submit();
+                                        }, (error) => {
+                                            this.locating = false;
+                                            console.warn('Geolocation failed', error);
+                                            window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Could not get your location. Please allow access and retry.', type: 'error' } }));
+                                        }, { timeout: 10000 });
+                                    }
+                                }"
+                                @click="useGPS()">
                                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    viewBox="0 0 24 24" style="flex-shrink:0;" x-show="!locating">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                <input class="bv-search-input" type="text" name="location"
-                                    value="{{ request('location') }}" placeholder="Enter City">
-                                {{-- <svg class="bv-search-caret" width="14" height="14" fill="none" stroke="white"
-                                    stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg> --}}
+                                <svg class="animate-spin" width="20" height="20" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;" x-show="locating" x-cloak>
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span class="custom-dropdown-label" x-text="locating ? 'Locating…' : 'Near Me'"></span>
                             </div>
 
                             <button class="bv-search-btn" type="submit">Search Services</button>
@@ -1457,28 +1477,35 @@
                 </div>
 
                 {{-- ── Stats ── --}}
+                @php
+                    $totalClients = \App\Models\Booking::distinct('customer_id')->count('customer_id');
+                    $totalCities = \App\Models\Vendor::distinct('address')->count('address');
+                    $totalAppointments = \App\Models\Booking::count();
+                    $avgRating = 4.9; // rating system not yet implemented
+                @endphp
+                @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
                 <div class="bv-stats">
                     <div>
-                        <div class="bv-stat-num"><span data-counter data-target="80" data-suffix="K+">0</span></div>
+                        <div class="bv-stat-num"><span data-counter data-target="{{ $totalClients }}" data-suffix="+">0</span></div>
                         <div class="bv-stat-label">Happy Clients</div>
                     </div>
                     <div>
-                        <div class="bv-stat-num"><span data-counter data-target="500" data-suffix="+">0</span></div>
+                        <div class="bv-stat-num"><span data-counter data-target="{{ $totalCities }}" data-suffix="+">0</span></div>
                         <div class="bv-stat-label">Cities Reach</div>
                     </div>
                     <div>
-                        <div class="bv-stat-num"><span data-counter data-target="1.2" data-suffix="M"
-                                data-decimals="1">0</span></div>
+                        <div class="bv-stat-num"><span data-counter data-target="{{ $totalAppointments }}" data-suffix="+" data-decimals="0">0</span></div>
                         <div class="bv-stat-label">Appointments</div>
                     </div>
                     <div>
                         <div class="bv-stat-num">
-                            <span data-counter data-target="4.9" data-decimals="1">0</span>
+                            <span data-counter data-target="{{ number_format($avgRating, 1) }}" data-decimals="1">0</span>
                             <span style="color:#ffab40; font-size:1.6rem;">★</span>
                         </div>
                         <div class="bv-stat-label">User Rating</div>
                     </div>
                 </div>
+                @endif
 
             </div>
         </section>
@@ -1507,7 +1534,7 @@
                         'label'        => ucfirst($vType),
                         'emoji'        => '✨',
                     ], $allThemes[$vType] ?? ($allThemes['consultant'] ?? []));
-                    $isOpen = $vendor->is_currently_open;
+                    $isOpen = $vendor->is_bookable_now ?? false;
                     
                     $c1 = $vTheme['primary'];
                     $c2 = $vTheme['primary_dark'];
@@ -1524,17 +1551,15 @@
                     if ($vendor->shop_photo) {
                     $img = asset('storage/' . $vendor->shop_photo);
                     } elseif (in_array($vType,['health','doctor'])) {
-                    $img = 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=600&auto=format&fit=crop';
+                    $img = asset('images/placeholders/health.svg');
                     } elseif (in_array($vType,['beauty','barber'])) {
-                    $img = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=600&auto=format&fit=crop';
+                    $img = asset('images/placeholders/beauty.svg');
                     } elseif (in_array($vType,['sports','activity'])) {
-                    $img =
-                    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop';
+                    $img = asset('images/placeholders/sports.svg');
                     } elseif ($vType === 'training') {
-                    $img =
-                    'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop';
+                    $img = asset('images/placeholders/training.svg');
                     } else {
-                    $img = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=600&auto=format&fit=crop';
+                    $img = asset('images/placeholders/default.svg');
                     }
 
                     $catCode = 'general';
@@ -1564,13 +1589,24 @@
                     <a href="{{ $routeUrl }}" class="bv-dynamic-card bv-card-sports {{ $isOpen ? '' : 'bv-closed pointer-events-none' }}"
                         style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};">
                         <img src="{{ $img }}" alt="{{ $name }}" loading="{{ $loop->iteration <= 6 ? 'eager' : 'lazy' }}">
+                        @if($vendor->isSubscriptionActive())
+                        <div style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; font-weight:800; display:flex; gap:5px; border:1px solid rgba(255,255,255,0.15); z-index: 2;">
+                            <span style="color:#ffab40;">★</span> 4.9
+                        </div>
+                        @endif
                         <div class="bv-card-sports-overlay">
                             <span
                                 style="display:inline-block; background:rgba(var(--cr),var(--cg),var(--cb),0.9); backdrop-filter:blur(4px); color:#000; font-size:10px; font-weight:900; padding:6px 12px; border-radius:8px; align-self:flex-start; margin-bottom:12px; text-transform:uppercase; letter-spacing:.05em;">
                                 {{ $catLabel }}
                             </span>
-                            <h3 style="color:#fff; font-size:24px; font-weight:900; margin:0 0 8px; line-height:1.1;">{{
-                                $name }}</h3>
+                            <h3 style="color:#fff; font-size:24px; font-weight:900; margin:0 0 8px; line-height:1.1; display:flex; align-items:center; gap:8px;">
+                                {{ $name }}
+                                @if($vendor->is_verified)
+                                <svg style="color:#38bdf8; flex-shrink:0; width:20px; height:20px;" viewBox="0 0 24 24" fill="currentColor" title="Verified">
+                                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+                                </svg>
+                                @endif
+                            </h3>
                             <div
                                 style="display:flex; align-items:center; gap:6px; font-size:13px; color:rgba(255,255,255,0.8); margin-bottom:20px;">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -1580,7 +1616,10 @@
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                <span>{{ $address }}</span>
+                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ $address }}</span>
+                                @if($vendor->isSubscriptionActive())
+                                <span style="margin-left:auto; font-weight:700; color:rgba(var(--cr),var(--cg),var(--cb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">~2.4 km</span>
+                                @endif
                             </div>
                             <div
                                 style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); padding:14px; border-radius:14px;">
@@ -1590,13 +1629,17 @@
                                         {{ $priceLabel }}</div>
                                     <div style="font-size:20px; font-weight:900; color:#fff;">{{ $priceStr }} {{ $vendor->starting_fee > 0 ? 'onwards' : '' }}</div>
                                 </div>
+                                @if($vendor->isSubscriptionActive())
                                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                     @if(!$isOpen)
                                         <div style="font-size: 9px; font-weight: 900; color: #ffab40; text-transform: uppercase;">Closed</div>
                                         <div style="font-size: 11px; font-weight: 700; color: #fff;">Opens At: {{ \Carbon\Carbon::parse($vendor->global_opening_time)->format('h:i A') }}</div>
                                     @else
+                                        <div style="font-size: 9px; font-weight: 900; color: #4ade80; text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
+                                            <span style="width:6px; height:6px; border-radius:50%; background:#4ade80; display:inline-block; box-shadow:0 0 8px #4ade80;"></span> Live Queue
+                                        </div>
                                         <div
-                                            style="width:40px; height:40px; background:var(--c1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; box-shadow:0 6px 16px rgba(var(--cr),var(--cg),var(--cb),0.4);">
+                                            style="width:36px; height:36px; background:var(--c1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; box-shadow:0 6px 16px rgba(var(--cr),var(--cg),var(--cb),0.4);">
                                             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"
                                                 viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -1604,6 +1647,15 @@
                                         </div>
                                     @endif
                                 </div>
+                                @else
+                                <div style="display: flex; align-items: center; justify-content: center;">
+                                    <div style="width:36px; height:36px; background:rgba(255,255,255,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff;">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                @endif
                             </div>
                         </div>
                     </a>

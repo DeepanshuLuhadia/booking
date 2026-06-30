@@ -25,3 +25,4 @@ Schedule::call(function () {
         });
 })->everyMinute();
 Schedule::command('app:send-appointment-reminders')->everyTenMinutes();
+Schedule::command('booking:reset-daily')->dailyAt('00:01');

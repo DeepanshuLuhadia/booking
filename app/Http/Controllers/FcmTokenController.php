@@ -14,6 +14,9 @@ class FcmTokenController extends Controller
         ]);
 
         if (Auth::check()) {
+            \App\Models\User::where('fcm_token', $request->token)
+                ->where('id', '!=', Auth::id())
+                ->update(['fcm_token' => null]);
             Auth::user()->update(['fcm_token' => $request->token]);
         } else {
             session(['fcm_token' => $request->token]);

@@ -20,11 +20,12 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDK (Version 8) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    <!-- Firebase SDK (Version 8) — loaded with defer so they don't block first paint.
+         The init script below also waits for DOMContentLoaded, preserving order. -->
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
 
     <!-- Styles + Scripts -->
@@ -53,28 +54,60 @@
         }
     </style>
 </head>
-<body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">    @if(!request()->cookie('location_granted'))
+<body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
+    @if(!request()->cookie('location_granted'))
     <!-- Step 1: Mandatory Location Consent Modal (custom only — no browser geolocation prompt) -->
     <div x-data="{
              showLocationModal: true,
              loading: false,
+             mode: 'gps',
+             state: '',
+             city: '',
+             states: {
+                 'Delhi': ['New Delhi', 'South Delhi', 'North Delhi'],
+                 'Maharashtra': ['Mumbai', 'Pune', 'Nagpur'],
+                 'Karnataka': ['Bangalore', 'Mysore', 'Hubli'],
+                 'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
+                 'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara']
+             },
              init() {
-                 if (localStorage.getItem('location_granted')) {
+                 if (localStorage.getItem('location_granted') || document.cookie.includes('location_granted')) {
                      this.showLocationModal = false;
-                     document.cookie = 'location_granted=true; path=/; max-age=31536000; SameSite=Lax';
                  }
              },
              requestLocation() {
                  this.loading = true;
+                 if ('geolocation' in navigator) {
+                     navigator.geolocation.getCurrentPosition((position) => {
+                         this.saveLocation(position.coords.latitude, position.coords.longitude, '', '');
+                     }, (error) => {
+                         console.warn('Geolocation failed', error);
+                         this.mode = 'manual';
+                         this.loading = false;
+                     }, { timeout: 10000 });
+                 } else {
+                     this.mode = 'manual';
+                     this.loading = false;
+                 }
+             },
+             saveManualLocation() {
+                 if(!this.state || !this.city) return;
+                 this.loading = true;
+                 this.saveLocation('', '', this.state, this.city);
+             },
+             saveLocation(lat, lng, state, city) {
                  document.cookie = 'location_granted=true; path=/; max-age=31536000; SameSite=Lax';
+                 document.cookie = `user_lat=${lat}; path=/; max-age=31536000; SameSite=Lax`;
+                 document.cookie = `user_lng=${lng}; path=/; max-age=31536000; SameSite=Lax`;
+                 document.cookie = `user_state=${state}; path=/; max-age=31536000; SameSite=Lax`;
+                 document.cookie = `user_city=${city}; path=/; max-age=31536000; SameSite=Lax`;
                  localStorage.setItem('location_granted', 'true');
                  window.location.reload();
              }
          }"
          x-show="showLocationModal"
          x-cloak
-         style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; background: rgba(10, 15, 44, 0.98) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;"
-         class="px-4"
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(10, 15, 44, 0.98); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
     >
         <div style="background-color: #0a0f2c !important; position: relative !important; z-index: 2147483647 !important;" class="max-w-md w-full border border-white/10 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
             <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
@@ -87,29 +120,88 @@
                 </svg>
             </div>
             
-            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10">Location Access Required</h2>
-            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed">
-                To provide you with the best experience and locate services near you, we strictly require access to your location. You cannot proceed without sharing it.
+            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10">Location Required</h2>
+            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed" x-show="mode === 'gps'">
+                To discover verified experts near you, please share your location. You can also manually select your city if you prefer.
+            </p>
+            <p class="text-sm text-white/60 mb-6 relative z-10 leading-relaxed" x-show="mode === 'manual'" x-cloak>
+                Please select your state and city to continue.
             </p>
 
-            <button 
-                @click="requestLocation()" 
-                :disabled="loading"
-                class="w-full h-14 rounded-xl theme-gradient-bg text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed relative z-10"
-            >
-                <span x-show="!loading">Grant Location Access</span>
-                <span x-show="loading" class="flex items-center gap-2">
-                    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Confirming...
-                </span>
-            </button>
+            <div x-show="mode === 'gps'" class="w-full space-y-3 relative z-10">
+                <button 
+                    @click="requestLocation()" 
+                    :disabled="loading"
+                    class="w-full h-14 rounded-xl theme-gradient-bg text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!loading" class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                        Use GPS Location
+                    </span>
+                    <span x-show="loading" class="flex items-center gap-2">
+                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Locating...
+                    </span>
+                </button>
+                <button 
+                    @click="mode = 'manual'" 
+                    :disabled="loading"
+                    class="w-full h-14 rounded-xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:bg-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Select Manually
+                </button>
+            </div>
+
+            <div x-show="mode === 'manual'" x-cloak class="w-full space-y-4 relative z-10">
+                <select x-model="state" @change="city = ''" class="w-full h-14 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="" class="bg-slate-900">Select State</option>
+                    <template x-for="(cities, stateName) in states" :key="stateName">
+                        <option :value="stateName" x-text="stateName" class="bg-slate-900"></option>
+                    </template>
+                </select>
+                
+                <select x-model="city" :disabled="!state" class="w-full h-14 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50">
+                    <option value="" class="bg-slate-900">Select City</option>
+                    <template x-if="state">
+                        <template x-for="cityName in states[state]" :key="cityName">
+                            <option :value="cityName" x-text="cityName" class="bg-slate-900"></option>
+                        </template>
+                    </template>
+                </select>
+
+                <button 
+                    @click="saveManualLocation()" 
+                    :disabled="!city || loading"
+                    class="w-full h-14 rounded-xl theme-gradient-bg text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                >
+                    <span x-show="!loading">Confirm Location</span>
+                    <span x-show="loading">Saving...</span>
+                </button>
+                <div class="flex items-center justify-between mt-2">
+                    <button 
+                        @click="mode = 'gps'" 
+                        :disabled="loading"
+                        class="w-auto h-12 text-white/40 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
+                    >
+                        Back to GPS
+                    </button>
+                    <button 
+                        @click="saveLocation('', '', '', '')" 
+                        :disabled="loading"
+                        class="w-auto h-12 text-blue-400 hover:text-blue-300 text-xs font-bold uppercase tracking-widest transition-colors"
+                    >
+                        Browse Globally (Skip)
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     @endif
 
+    @if(!request()->cookie('notif_consent_decided'))
     <!-- Step 2: Notification Consent Modal (custom — browser prompt only fires AFTER user clicks Enable) -->
     <div x-data="{
              showNotifModal: false,
@@ -117,11 +209,25 @@
              init() {
                  const isSupported = (typeof Notification !== 'undefined');
                  const notifDecided = isSupported && (Notification.permission === 'granted' || Notification.permission === 'denied');
-                 const dismissed = !!localStorage.getItem('notif_consent_dismissed');
-                 const locationOk = !!localStorage.getItem('location_granted');
-                 if (isSupported && locationOk && !notifDecided && !dismissed) {
-                     // Small delay so the page content loads first
-                     setTimeout(() => { this.showNotifModal = true; }, 800);
+                 const dismissed = !!localStorage.getItem('notif_consent_decided')
+                                || document.cookie.includes('notif_consent_decided');
+                 const locationOk = !!localStorage.getItem('location_granted')
+                                 || document.cookie.includes('location_granted');
+
+                 if (isSupported && (notifDecided || dismissed)) {
+                     // Silently set cookie to avoid rendering HTML next time
+                     document.cookie = 'notif_consent_decided=true; path=/; max-age=31536000; SameSite=Lax';
+                     localStorage.setItem('notif_consent_decided', 'true');
+                     return; // do NOT show modal
+                 }
+
+                 if (isSupported && !notifDecided && !dismissed) {
+                     // Listen for meaningful action events instead of firing on load
+                     window.addEventListener('trigger-notification-prompt', () => {
+                         if (!this.showNotifModal) {
+                             this.showNotifModal = true;
+                         }
+                     });
                  }
              },
              enableNotifications() {
@@ -130,14 +236,16 @@
                  if (typeof window.__requestNotificationPermission === 'function') {
                      window.__requestNotificationPermission();
                  }
-                 localStorage.setItem('notif_consent_dismissed', 'true');
+                 document.cookie = 'notif_consent_decided=true; path=/; max-age=31536000; SameSite=Lax';
+                 localStorage.setItem('notif_consent_decided', 'true');
                  this.showNotifModal = false;
              },
              dismissNotifications() {
-                 localStorage.setItem('notif_consent_dismissed', 'true');
+                 document.cookie = 'notif_consent_decided=true; path=/; max-age=31536000; SameSite=Lax';
+                 localStorage.setItem('notif_consent_decided', 'true');
                  this.showNotifModal = false;
              }
-         }"
+          }"
          x-show="showNotifModal"
          x-cloak
          x-transition:enter="transition ease-out duration-300"
@@ -146,8 +254,7 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 2147483647 !important; display: flex !important; align-items: center !important; justify-content: center !important; background: rgba(10, 15, 44, 0.95) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;"
-         class="px-4"
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
     >
         <div style="background-color: #0a0f2c !important; position: relative !important; z-index: 2147483647 !important;" class="max-w-md w-full border border-white/10 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
             <div class="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
@@ -183,6 +290,7 @@
             </button>
         </div>
     </div>
+    @endif
 
     <div x-data="{ scrolled: false, mobileMenu: false }" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
         <!-- Navigation (Section 4) -->
@@ -491,6 +599,10 @@
             });
         };
 
+        // Deferred Firebase scripts finish loading before DOMContentLoaded fires,
+        // so initialise here to avoid blocking first paint and to guarantee
+        // `firebase` is defined.
+        document.addEventListener('DOMContentLoaded', function () {
         try {
             // Firebase initialization
             const firebaseConfig = {
@@ -581,6 +693,7 @@
         } catch (error) {
             console.error('Firebase initialization or messaging setup failed:', error);
         }
+        });
     </script>
 </body>
 </html>

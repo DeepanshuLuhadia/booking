@@ -18,96 +18,167 @@ class BookingController extends Controller
             $request->validate([
                 'vendor_id' => 'required|exists:vendors,id',
                 'employee_id' => 'required|exists:employees,id',
-                'slot_start' => 'required',
-                'slot_end' => 'required',
+                // Slot times only matter for time-slot mode; token-mode slot times
+                // are computed server-side, so they are validated conditionally below.
+                'slot_start' => 'nullable',
+                'slot_end' => 'nullable',
                 'booking_type' => 'required|in:normal,premium',
                 'customer_name' => 'required|string|max:50',
                 'customer_phone' => 'required|digits:10',
                 'payment_id' => 'nullable|string'
             ]);
 
-            $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
-            if (!$vendor->isSubscriptionActive()) {
-                return response()->json([
-                    'success' => false,
-                    'error'   => 'Booking is not allowed as the business subscription has expired or is inactive.',
-                ], 403);
+            // 1. Phone Throttling (3 bookings per day)
+            $phoneKey = 'booking-phone:' . $request->customer_phone;
+            if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($phoneKey, 3)) {
+                return response()->json(['success' => false, 'error' => 'Booking limit reached for this phone number today.'], 429);
             }
+
+            // 2. Cross-Vendor Daily Limit (Max 3 active tokens)
+            $activeBookingsToday = Booking::where('customer_phone', $request->customer_phone)
+                ->where('booking_date', Carbon::today()->toDateString())
+                ->whereIn('status', ['confirmed', 'pending'])
+                ->count();
+            
+            if ($activeBookingsToday >= 3) {
+                return response()->json(['success' => false, 'error' => 'You have reached the maximum number of active bookings for today.'], 429);
+            }
+
+            // 3. One Active Token Per Vendor (Duplicate Check)
+            $duplicate = Booking::where('vendor_id', $request->vendor_id)
+                ->where('booking_date', Carbon::today()->toDateString())
+                ->whereIn('status', ['confirmed', 'pending'])
+                ->where(function ($q) use ($request) {
+                    $q->where('customer_phone', $request->customer_phone);
+                    if (auth()->check()) {
+                        $q->orWhere('customer_id', auth()->id());
+                    }
+                })->exists();
+
+            if ($duplicate) {
+                return response()->json(['success' => false, 'error' => 'You already have an active booking with this vendor today.'], 422);
+            }
+
+            $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
+
+            // Time-slot bookings carry a real customer-chosen slot; enforce its
+            // format. Token bookings ignore the submitted slot entirely.
+            if ($vendor->appointment_mode !== 'token') {
+                $request->validate([
+                    'slot_start' => 'required|date_format:H:i',
+                    'slot_end'   => 'required|date_format:H:i|after:slot_start',
+                ]);
+            }
+
+            // 4. Vendor Status Validation
+            if ($vendor->status !== 'active' || !$vendor->is_open) {
+                return response()->json(['success' => false, 'error' => 'This vendor is not currently accepting bookings.'], 403);
+            }
+            if ($vendor->bookings_paused) {
+                return response()->json(['success' => false, 'error' => 'Bookings are currently paused by the vendor.'], 403);
+            }
+            if (!$vendor->isSubscriptionActive()) {
+                return response()->json(['success' => false, 'error' => 'Booking is not allowed as the business subscription has expired or is inactive.'], 403);
+            }
+
             $employee = Employee::findOrFail($request->employee_id);
 
-            // Pricing Logic: Use employee override if set, otherwise vendor default
             $baseServiceFee = $employee->service_fee_override ?? $vendor->service_fee;
-
-            // Priority/Premium Booking Fee from Employee setting
             $premiumFee = $request->booking_type === 'premium' ? ($employee->premium_fee ?? 0) : 0;
-
             $tokenAmount = ($vendor->appointment_mode === 'token') ? $vendor->token_amount : 0;
-
-            // Final amount customer pays online (Token + Premium Fee)
             $totalToPay = $tokenAmount + $premiumFee;
 
-            // Token Generation & Time Slot Logic
-            $tokenNumber = null;
-            $slotStart = $request->slot_start;
-            $slotEnd = $request->slot_end;
+            $bookingDate = Carbon::today()->toDateString();
+            $avgTime = $vendor->avg_consultation_time ?: 15;
 
-            if ($vendor->appointment_mode === 'token') {
-                // Tokens are employee-specific as per user request
-                $lastToken = Booking::where('employee_id', $employee->id)
-                    ->where('booking_date', Carbon::today()->toDateString())
-                    ->whereNotNull('token_number')
-                    ->max('token_number');
-                $tokenNumber = ($lastToken ?? 0) + 1;
-                
-                // Use current time with seconds to minimize unique constraint collisions
-                $slotStart = Carbon::now()->format('H:i:s');
-                $slotEnd = Carbon::now()->addMinutes(10)->format('H:i:s');
-            }
+            // Time-slot mode persists the customer's chosen slot. Token-mode slot
+            // times are derived from the token number inside the transaction (each
+            // token gets a distinct estimated time — this also keeps the
+            // (employee, date, slot_start_time) unique index collision-free).
+            $requestedStart = $request->slot_start;
+            $requestedEnd   = $request->slot_end;
 
-            // Create booking
-            $booking = Booking::create([
-                'vendor_id'            => $vendor->id,
-                'employee_id'          => $employee->id,
-                'customer_id'          => null,
-                'customer_name'        => $request->customer_name,
-                'customer_phone'       => $request->customer_phone,
-                'booking_date'         => Carbon::today()->toDateString(),
-                'slot_start_time'      => $slotStart,
-                'slot_end_time'        => $slotEnd,
-                'booking_type'         => $request->booking_type,
-                'token_required'       => ($vendor->appointment_mode === 'token'),
-                'token_number'         => $tokenNumber,
-                'token_amount'         => $tokenAmount,
-                'emergency_fee'        => $premiumFee,
-                'online_paid_amount'   => $totalToPay,
-                'status'               => 'confirmed',
-                'vendor_booked'        => false,
-                'razorpay_payment_id'  => $request->payment_id,
-                'notes'                => "Service Fee: ₹{$baseServiceFee}"
-            ]);
+            // 5 & 6. Transaction & Token Cap
+            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee) {
+                $tokenNumber = null;
 
-            // Eager load employee to prevent N+1 in NotificationService
+                if ($vendor->appointment_mode === 'token') {
+                    // Token queue is per-employee. Lock the employee's rows for today
+                    // so two concurrent requests cannot read the same MAX.
+                    $lastToken = Booking::where('employee_id', $employee->id)
+                        ->where('booking_date', $bookingDate)
+                        ->whereNotNull('token_number')
+                        ->lockForUpdate()
+                        ->max('token_number') ?? 0;
+
+                    // Optional daily cap set by the employee (null = unlimited).
+                    if ($employee->max_daily_tokens && $lastToken >= $employee->max_daily_tokens) {
+                        throw new \Exception('No more tokens available for this employee today.', 403);
+                    }
+
+                    $tokenNumber = $lastToken + 1;
+
+                    // Estimated start = now + (position in queue) * avg service time.
+                    $estStart  = Carbon::now()->addMinutes(($tokenNumber - 1) * $avgTime);
+                    $slotStart = $estStart->format('H:i:s');
+                    $slotEnd   = $estStart->copy()->addMinutes($avgTime)->format('H:i:s');
+                } else {
+                    $slotStart = $requestedStart;
+                    $slotEnd   = $requestedEnd;
+                }
+
+                return Booking::create([
+                    'vendor_id'            => $vendor->id,
+                    'employee_id'          => $employee->id,
+                    'customer_id'          => auth()->id(),
+                    'customer_name'        => $request->customer_name,
+                    'customer_phone'       => $request->customer_phone,
+                    'booking_date'         => $bookingDate,
+                    'slot_start_time'      => $slotStart,
+                    'slot_end_time'        => $slotEnd,
+                    'booking_type'         => $request->booking_type,
+                    'token_required'       => ($vendor->appointment_mode === 'token'),
+                    'token_number'         => $tokenNumber,
+                    'token_amount'         => $tokenAmount,
+                    'emergency_fee'        => $premiumFee,
+                    'online_paid_amount'   => $totalToPay,
+                    'status'               => 'confirmed',
+                    'vendor_booked'        => false,
+                    'razorpay_payment_id'  => $request->payment_id,
+                    'notes'                => "Service Fee: ₹{$baseServiceFee}"
+                ]);
+            });
+
+            \Illuminate\Support\Facades\RateLimiter::hit($phoneKey, 86400);
+
             $booking->setRelation('employee', $employee);
-
-            // Notify Vendor and Employee
             $notificationService->notifyVendorNewBooking($vendor, $booking);
 
-            // Notify Customer if they provided FCM token via session
             $fcmToken = session('fcm_token');
             if ($fcmToken) {
-                // We create a dummy user just to pass the fcm token to the service
                 $dummyUser = new \App\Models\User(['fcm_token' => $fcmToken]);
                 $notificationService->sendWebPush(
                     $dummyUser,
                     "Booking Confirmed!",
-                    "Your appointment with {$employee->name} at {$vendor->business_name} is confirmed for {$slotStart}."
+                    "Your appointment with {$employee->name} at {$vendor->business_name} is confirmed."
                 );
             }
+
+            $nowServing = $employee->now_serving_token ?? 0;
+            $peopleAhead = max(0, ($booking->token_number ?? 0) - $nowServing);
+            $approxWait = $peopleAhead * ($vendor->avg_consultation_time ?? 15);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Booking confirmed successfully!',
-                'booking' => $booking
+                'booking' => [
+                    'id'              => $booking->id,
+                    'token_number'    => $booking->token_number,
+                    'vendor_name'     => $vendor->business_name,
+                    'now_serving'     => $nowServing,
+                    'people_ahead'    => $peopleAhead,
+                    'approx_wait_min' => $approxWait,
+                ]
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {

@@ -14,7 +14,8 @@ class Vendor extends Model
         'subscription_plan_id', 'subscription_expires_at', 'qr_code_path', 'status', 'is_profile_complete',
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
         'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
-        'global_opening_time', 'global_closing_time', 'allow_booking_until_closing', 'show_contact_number'
+        'global_opening_time', 'global_closing_time', 'allow_booking_until_closing', 'show_contact_number',
+        'bookings_paused', 'is_verified'
     ];
 
     protected $casts = [
@@ -26,7 +27,16 @@ class Vendor extends Model
         'is_profile_complete' => 'boolean',
         'allow_booking_until_closing' => 'boolean',
         'show_contact_number' => 'boolean',
+        'bookings_paused' => 'boolean',
+        'is_verified' => 'boolean',
     ];
+
+    /**
+     * Appended computed attributes.
+     * is_currently_open is derived in real time from operating hours.
+     * It correctly handles midnight-crossing windows (e.g. 22:00 → 02:00).
+     */
+    protected $appends = ['is_currently_open'];
 
     protected static function boot()
     {
@@ -118,6 +128,24 @@ class Vendor extends Model
         return $this->hasMany(Settlement::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(VendorReview::class);
+    }
+
+    /**
+     * Average star rating across all reviews, rounded to one decimal.
+     */
+    public function getAverageRatingAttribute(): float
+    {
+        return round((float) $this->reviews()->avg('rating'), 1);
+    }
+
+    public function getReviewsCountAttribute(): int
+    {
+        return $this->reviews()->count();
+    }
+
     public function hasAvailableSlotsToday()
     {
         if (!$this->isEffectivelyOpen()) {
@@ -147,6 +175,17 @@ class Vendor extends Model
                !empty($this->global_closing_time);
     }
 
+    /**
+     * Whether the vendor has a paid/valid subscription window, regardless of
+     * approval status. Used to gate dashboard access — a 'pending' vendor with
+     * a valid window may still set up their shop while awaiting admin approval.
+     */
+    public function hasValidSubscriptionWindow(): bool
+    {
+        return $this->subscription_expires_at !== null
+            && $this->subscription_expires_at->isFuture();
+    }
+
     public function isSubscriptionActive()
     {
         if ($this->status !== 'active') {
@@ -161,22 +200,39 @@ class Vendor extends Model
     }
 
 
+    /**
+     * Computed attribute: is vendor truly open right now?
+     * Respects the vendor's manual is_open intent flag AND checks
+     * whether the current time falls within their operating window.
+     * Midnight-crossing windows (e.g. open=22:00, close=02:00) are handled correctly.
+     */
+    public function getIsCurrentlyOpenAttribute(): bool
+    {
+        return $this->isEffectivelyOpen();
+    }
+
     public function isEffectivelyOpen()
     {
+        // Vendor must have manually opened their shop
         if (!$this->is_open || $this->status !== 'active') {
             return false;
         }
 
+        // Bookings paused = temporarily stopped but still "open" for display
+        // We still show as open but booking button is disabled on frontend
         if (!$this->global_opening_time || !$this->global_closing_time) {
             return false;
         }
 
-        $now = now()->format('H:i:s');
-        $open = $this->global_opening_time;
+        $now   = now()->format('H:i:s');
+        $open  = $this->global_opening_time;
         $close = $this->global_closing_time;
+
         if ($open < $close) {
+            // Normal window: e.g. 09:00 → 18:00
             return ($now >= $open && $now <= $close);
         } else {
+            // Midnight-crossing window: e.g. 22:00 → 02:00
             return ($now >= $open || $now <= $close);
         }
     }

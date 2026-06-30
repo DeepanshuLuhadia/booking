@@ -46,10 +46,15 @@ class VendorRegistrationController extends Controller
             'mobile' => $request->mobile,
             'role' => 'vendor',
             'password' => Hash::make($request->password),
-            'status' => $isFreePlan ? 'active' : 'inactive',
+            // User stays active so they can log in and finish setup; the vendor
+            // record carries the public 'pending' approval state.
+            'status' => 'active',
             'fcm_token' => session('fcm_token'),
         ]);
 
+        // ALL vendors require admin approval before going live (pending).
+        // Free plans still get a subscription window so they can reach their
+        // dashboard; paid plans get their window after payment.
         $vendor = Vendor::create([
             'user_id' => $user->id,
             'vendor_type' => $request->vendor_type,
@@ -58,7 +63,7 @@ class VendorRegistrationController extends Controller
             'contact_number' => $request->mobile,
             'subscription_plan_id' => $plan->id,
             'referred_by_id' => $referrer ? $referrer->id : null,
-            'status' => $isFreePlan ? 'active' : 'inactive',
+            'status' => 'pending',
             'subscription_expires_at' => $isFreePlan ? now()->addMonth() : null,
         ]);
 
@@ -70,11 +75,19 @@ class VendorRegistrationController extends Controller
         // Let's create a hook or add it where activation happens.
 
         Auth::login($user);
-        
-        if ($isFreePlan) {
-            return redirect()->route('vendor.dashboard')->with('success', 'Your account has been registered with the Free Trial plan!');
-        }
-        
-        return redirect()->route('payment.razorpay');
+
+        // Mobile OTP gate: a vendor must verify their phone before reaching the
+        // panel. OTP delivery is handled by Firebase phone auth on the client;
+        // the code is also recorded server-side for verification.
+        $otp = rand(100000, 999999);
+        \App\Models\Otp::create([
+            'identifier' => $user->mobile,
+            'otp'        => $otp,
+            'type'       => 'verification',
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        return redirect()->route('otp.verify')
+            ->with('info', "Verify your mobile to finish setting up. (Simulated OTP: {$otp})");
     }
 }

@@ -75,20 +75,26 @@ class ProfileController extends Controller
         return view('vendor.subscription.plans', compact('vendor', 'plans'));
     }
 
-    public function toggleStatus()
+    public function toggleStatus(Request $request)
     {
+        $request->validate(['type' => 'required|in:open,pause,close']);
         $vendor = auth()->user()->vendor;
 
         if (!$vendor->isProfileComplete()) {
             return back()->with('error', 'Please complete your global settings before activating the shop.');
         }
 
-        $vendor->update(['is_open' => !$vendor->is_open]);
-        
-        if (request()->wantsJson()) {
-            return response()->json(['success' => true, 'is_open' => $vendor->is_open]);
+        match ($request->type) {
+            'open'  => $vendor->update(['is_open' => true,  'bookings_paused' => false]),
+            'pause' => $vendor->update(['bookings_paused' => true]),
+            'close' => $vendor->update(['is_open' => false, 'bookings_paused' => false]),
+        };
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
         }
 
-        return back()->with('success', 'Shop status updated to ' . ($vendor->is_open ? 'OPEN' : 'CLOSED'));
+        $messages = ['open' => 'Shop is now Open.', 'pause' => 'Bookings paused.', 'close' => 'Shop closed for today.'];
+        return back()->with('success', $messages[$request->type]);
     }
 }

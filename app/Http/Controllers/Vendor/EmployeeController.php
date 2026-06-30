@@ -40,6 +40,8 @@ class EmployeeController extends Controller
             return redirect()->route('vendor.employees.index')->with('error', "Limit reached.");
         }
 
+        $this->normalizeWorkingTimes($request);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'working_start_time' => 'required|date_format:H:i',
@@ -49,6 +51,7 @@ class EmployeeController extends Controller
             'service_fee_override' => 'nullable|numeric|min:0',
             'premium_fee' => 'nullable|numeric|min:0',
             'premium_bookings_count' => 'nullable|integer|min:0',
+            'max_daily_tokens' => 'nullable|integer|min:1|max:500',
             'email' => 'nullable|email|unique:users,email',
             'password' => 'nullable|string|min:8',
         ]);
@@ -107,6 +110,8 @@ class EmployeeController extends Controller
     {
         if ($employee->vendor_id !== auth()->user()->vendor->id) abort(403);
 
+        $this->normalizeWorkingTimes($request);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'working_start_time' => 'required|date_format:H:i',
@@ -117,6 +122,7 @@ class EmployeeController extends Controller
             'service_fee_override' => 'nullable|numeric|min:0',
             'premium_fee' => 'nullable|numeric|min:0',
             'premium_bookings_count' => 'nullable|integer|min:0',
+            'max_daily_tokens' => 'nullable|integer|min:1|max:500',
             'email' => 'nullable|email|unique:users,email,' . ($employee->user_id ?? 'null'),
             'password' => 'nullable|string|min:8',
         ]);
@@ -187,5 +193,25 @@ class EmployeeController extends Controller
         if ($employee->vendor_id !== auth()->user()->vendor->id) abort(403);
         $employee->delete();
         return redirect()->route('vendor.employees.index')->with('success', 'Employee removed.');
+    }
+
+    /**
+     * Time inputs may arrive as H:i or H:i:s (the form prefills from the
+     * vendor's TIME columns, which serialize with seconds). Normalize both
+     * working-time fields to H:i so validation/storage stays consistent.
+     */
+    private function normalizeWorkingTimes(Request $request): void
+    {
+        foreach (['working_start_time', 'working_end_time'] as $field) {
+            $value = $request->input($field);
+            if (!$value) {
+                continue;
+            }
+            try {
+                $request->merge([$field => \Carbon\Carbon::parse($value)->format('H:i')]);
+            } catch (\Throwable $e) {
+                // Leave as-is so validation surfaces the bad value.
+            }
+        }
     }
 }

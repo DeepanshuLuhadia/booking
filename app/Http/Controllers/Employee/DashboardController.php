@@ -45,6 +45,12 @@ class DashboardController extends Controller
 
         if ($booking && $booking->employee_id == $employee->id) {
             $booking->update(['status' => 'completed']);
+
+            // Advance the token queue to the token just served.
+            if ($booking->token_number && $booking->token_number > $employee->now_serving_token) {
+                $employee->update(['now_serving_token' => $booking->token_number]);
+            }
+
             return back()->with('success', 'Appointment marked as done.');
         }
 

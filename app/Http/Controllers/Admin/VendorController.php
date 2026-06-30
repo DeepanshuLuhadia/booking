@@ -8,10 +8,18 @@ use Illuminate\Http\Request;
 
 class VendorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $vendors = Vendor::with('user', 'subscriptionPlan')->latest()->get();
-        return view('admin.vendors.index', compact('vendors'));
+        $status = $request->query('status', 'all');
+
+        $vendors = Vendor::with('user', 'subscriptionPlan')
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
+            ->latest()
+            ->get();
+
+        $pendingCount = Vendor::where('status', 'pending')->count();
+
+        return view('admin.vendors.index', compact('vendors', 'status', 'pendingCount'));
     }
 
     public function show(Vendor $vendor)
@@ -32,5 +40,48 @@ class VendorController extends Controller
     {
         $vendor->delete();
         return back()->with('success', 'Vendor deleted');
+    }
+
+    /**
+     * Approve a pending vendor and take it live.
+     * The verified badge is granted only to paid (premium) plan holders.
+     */
+    public function approve(Vendor $vendor)
+    {
+        $isPaidPlan = $vendor->subscriptionPlan && $vendor->subscriptionPlan->price > 0;
+
+        $vendor->update([
+            'status'      => 'active',
+            'is_verified' => $isPaidPlan,
+        ]);
+        $vendor->user?->update(['status' => 'active']);
+
+        return back()->with('success', "Vendor '{$vendor->business_name}' approved.");
+    }
+
+    public function reject(Vendor $vendor)
+    {
+        $vendor->update(['status' => 'rejected', 'is_open' => false]);
+        $vendor->user?->update(['status' => 'inactive']);
+
+        return back()->with('success', "Vendor '{$vendor->business_name}' rejected.");
+    }
+
+    public function suspend(Vendor $vendor)
+    {
+        $vendor->update(['status' => 'suspended', 'is_open' => false]);
+
+        return back()->with('success', "Vendor '{$vendor->business_name}' suspended.");
+    }
+
+    public function reinstate(Vendor $vendor)
+    {
+        // Re-verify only if they hold a paid plan.
+        $isPaidPlan = $vendor->subscriptionPlan && $vendor->subscriptionPlan->price > 0;
+
+        $vendor->update(['status' => 'active', 'is_verified' => $isPaidPlan]);
+        $vendor->user?->update(['status' => 'active']);
+
+        return back()->with('success', "Vendor '{$vendor->business_name}' reinstated.");
     }
 }

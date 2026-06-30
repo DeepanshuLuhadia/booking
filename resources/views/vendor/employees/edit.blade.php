@@ -56,11 +56,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Shift Start</label>
-                                <input type="time" name="working_start_time" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" value="{{ old('working_start_time', $employee->working_start_time) }}">
+                                <input type="time" name="working_start_time" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" value="{{ old('working_start_time', $employee->working_start_time ? \Carbon\Carbon::parse($employee->working_start_time)->format('H:i') : '') }}">
                             </div>
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Shift End</label>
-                                <input type="time" name="working_end_time" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" value="{{ old('working_end_time', $employee->working_end_time) }}">
+                                <input type="time" name="working_end_time" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" value="{{ old('working_end_time', $employee->working_end_time ? \Carbon\Carbon::parse($employee->working_end_time)->format('H:i') : '') }}">
                             </div>
                         </div>
 
@@ -74,6 +74,16 @@
                                 <input type="number" name="slot_duration" value="{{ old('slot_duration', $employee->slot_duration) }}" step="15" min="15" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                             </div>
                         </div>
+
+                        @if($employee->vendor->appointment_mode === 'token')
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Daily Token Limit (Optional)</label>
+                                <input type="number" name="max_daily_tokens" value="{{ old('max_daily_tokens', $employee->max_daily_tokens) }}" min="1" max="500" class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="Leave blank for unlimited">
+                                <p class="text-[8px] font-black text-slate-200 uppercase tracking-widest ml-4 mt-1 italic">MAX TOKENS THIS EMPLOYEE TAKES PER DAY</p>
+                            </div>
+                        </div>
+                        @endif
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">

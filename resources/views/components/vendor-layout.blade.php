@@ -23,6 +23,13 @@
                 </svg>
                 <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Bookings</span>
             </a>
+            <a href="{{ route('vendor.reviews.index') }}"
+                class="flex items-center gap-4 px-6 py-4 rounded-2xl transition-all {{ request()->routeIs('vendor.reviews.*') ? 'bg-white/5 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5/50' }}">
+                <svg class="h-5 w-5 {{ request()->routeIs('vendor.reviews.*') ? 'text-white' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Reviews</span>
+            </a>
             <a href="{{ route('vendor.profile.edit') }}"
                 class="flex items-center gap-4 px-6 py-4 rounded-2xl transition-all {{ request()->routeIs('vendor.profile.*') ? 'bg-white/5 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5/50' }}">
                 <svg class="h-5 w-5 {{ request()->routeIs('vendor.profile.*') ? 'text-white' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -36,19 +43,32 @@
             @if($vendor)
             <div class="px-6 py-4 flex flex-col gap-4">
                 <!-- Shop Status Toggle -->
-                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 italic">
-                    <div class="flex items-center justify-between mb-3">
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 italic space-y-3">
+                    <div class="flex items-center justify-between">
                         <span class="text-[9px] font-black text-slate-400 uppercase">Registry Status</span>
                     </div>
-                    <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
-                            <div class="w-2.5 h-2.5 rounded-full {{ $vendor->isEffectivelyOpen() ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-slate-500' }}"></div>
-                            <span class="text-[9px] font-black {{ $vendor->isEffectivelyOpen() ? 'text-emerald-400' : 'text-slate-400' }} uppercase">{{ $vendor->isEffectivelyOpen() ? 'Live' : 'Off' }}</span>
-                            <form action="{{ route('vendor.status.toggle') }}" method="POST" class="m-0 flex">
+                    <div class="flex flex-col gap-2">
+                        <form method="POST" action="{{ route('vendor.status.toggle') }}">
                             @csrf
-                            <button type="submit" class="w-12 h-6 {{$vendor->isEffectivelyOpen()  ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
-                                <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->isEffectivelyOpen() ? 'left-7' : 'left-1' }}"></div>
+                            <input type="hidden" name="type" value="open">
+                            <button type="submit" class="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ $vendor->is_open && !$vendor->bookings_paused ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-white/10 text-white/50 hover:bg-white/20' }}">
+                                ✅ Open
                             </button>
-                            </form>
+                        </form>
+                        <form method="POST" action="{{ route('vendor.status.toggle') }}">
+                            @csrf
+                            <input type="hidden" name="type" value="pause">
+                            <button type="submit" class="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ $vendor->bookings_paused ? 'bg-amber-500 text-white shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-white/10 text-white/50 hover:bg-white/20' }}">
+                                ⏸ Pause Bookings
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ route('vendor.status.toggle') }}">
+                            @csrf
+                            <input type="hidden" name="type" value="close">
+                            <button type="submit" class="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ !$vendor->is_open ? 'bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.8)]' : 'bg-white/10 text-white/50 hover:bg-white/20' }}">
+                                ❌ Close Today
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -101,6 +121,12 @@
                         <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Bookings</span>
                     </a>
 
+                    <a href="{{ route('vendor.reviews.index') }}"
+                        class="flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 {{ request()->routeIs('vendor.reviews.*') ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30' : 'text-slate-400 hover:bg-white/5 hover:translate-x-1' }}">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                        <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Reviews</span>
+                    </a>
+
                     <a href="{{ route('vendor.profile.edit') }}"
                         class="flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 {{ request()->routeIs('vendor.profile.*') ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30' : 'text-slate-400 hover:bg-white/5 hover:translate-x-1' }}">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -110,19 +136,32 @@
 
                 <div class="flex flex-col gap-6 mt-6">
                     <!-- Shop Status Toggle -->
-                    <div class="p-5 rounded-3xl bg-white/5 border border-white/10 italic">
-                        <div class="flex items-center justify-between mb-3">
+                    <div class="p-5 rounded-3xl bg-white/5 border border-white/10 italic space-y-3">
+                        <div class="flex items-center justify-between">
                             <span class="text-[9px] font-black text-slate-400 uppercase">Registry Status</span>
                         </div>
-                        <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
-                             <div class="w-2.5 h-2.5 rounded-full {{ $vendor->isEffectivelyOpen() ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-slate-500' }}"></div>
-                             <span class="text-[9px] font-black {{ $vendor->isEffectivelyOpen() ? 'text-emerald-400' : 'text-slate-400' }} uppercase">{{ $vendor->isEffectivelyOpen() ? 'Live' : 'Off' }}</span>
-                             <form action="{{ route('vendor.status.toggle') }}" method="POST" class="m-0 flex">
+                        <div class="flex flex-col gap-2">
+                            <form method="POST" action="{{ route('vendor.status.toggle') }}">
                                 @csrf
-                                <button type="submit" class="w-12 h-6 {{ $vendor->isEffectivelyOpen() ? 'bg-emerald-500' : 'bg-slate-600' }} rounded-full relative transition-all duration-300 border border-white/20">
-                                    <div class="w-4 h-4 bg-white rounded-full absolute top-1 shadow-md transition-all duration-300 {{ $vendor->isEffectivelyOpen() ? 'left-7' : 'left-1' }}"></div>
+                                <input type="hidden" name="type" value="open">
+                                <button type="submit" class="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ $vendor->is_open && !$vendor->bookings_paused ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-white/10 text-white/50 hover:bg-white/20' }}">
+                                    ✅ Open
                                 </button>
-                             </form>
+                            </form>
+                            <form method="POST" action="{{ route('vendor.status.toggle') }}">
+                                @csrf
+                                <input type="hidden" name="type" value="pause">
+                                <button type="submit" class="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ $vendor->bookings_paused ? 'bg-amber-500 text-white shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-white/10 text-white/50 hover:bg-white/20' }}">
+                                    ⏸ Pause Bookings
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('vendor.status.toggle') }}">
+                                @csrf
+                                <input type="hidden" name="type" value="close">
+                                <button type="submit" class="w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ !$vendor->is_open ? 'bg-rose-500 text-white shadow-[0_0_8px_rgba(244,63,94,0.8)]' : 'bg-white/10 text-white/50 hover:bg-white/20' }}">
+                                    ❌ Close Today
+                                </button>
+                            </form>
                         </div>
                     </div>
 

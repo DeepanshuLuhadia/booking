@@ -33,6 +33,12 @@ return [
         'secret' => env('RAZORPAY_SECRET'),
     ],
 
+    'google' => [
+        // Web OAuth Client ID used for the optional "Sign in with Google" on reviews.
+        // Leave empty to hide the Google button entirely (reviews stay anonymous-only).
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
