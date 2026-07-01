@@ -12,11 +12,19 @@ class OtpController extends Controller
 {
     public function show()
     {
+        if (!config('otp.enabled')) {
+            return $this->skipVerification();
+        }
+
         return view('auth.verify-otp');
     }
 
     public function verify(Request $request)
     {
+        if (!config('otp.enabled')) {
+            return $this->skipVerification();
+        }
+
         $request->validate([
             'otp' => 'required|string|size:6',
         ]);
@@ -58,8 +66,12 @@ class OtpController extends Controller
 
     public function resend()
     {
+        if (!config('otp.enabled')) {
+            return $this->skipVerification();
+        }
+
         $user = auth()->user();
-        
+
         // In real app, send actual SMS/Email here
         $otp = rand(100000, 999999);
         
@@ -71,5 +83,26 @@ class OtpController extends Controller
         ]);
 
         return back()->with('success', "A new OTP has been sent to {$user->mobile} (Simulated: {$otp})");
+    }
+
+    /**
+     * OTP verification is disabled. Treat the mobile as verified and send the
+     * user on to their destination without any OTP challenge.
+     */
+    private function skipVerification()
+    {
+        $user = auth()->user();
+
+        if ($user && is_null($user->mobile_verified_at)) {
+            $user->update(['mobile_verified_at' => Carbon::now()]);
+        }
+
+        if ($user && $user->role === 'admin') {
+            return redirect('/admin/dashboard');
+        } elseif ($user && $user->role === 'vendor') {
+            return redirect('/vendor/dashboard');
+        }
+
+        return redirect('/');
     }
 }

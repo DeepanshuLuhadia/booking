@@ -76,6 +76,15 @@ class VendorRegistrationController extends Controller
 
         Auth::login($user);
 
+        // When OTP is disabled, skip the mobile verification gate entirely:
+        // mark the mobile as verified and continue straight into the panel.
+        if (!config('otp.enabled')) {
+            $user->update(['mobile_verified_at' => now()]);
+
+            return redirect('/vendor/dashboard')
+                ->with('success', 'Registration successful!');
+        }
+
         // Mobile OTP gate: a vendor must verify their phone before reaching the
         // panel. OTP delivery is handled by Firebase phone auth on the client;
         // the code is also recorded server-side for verification.

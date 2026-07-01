@@ -14,7 +14,8 @@ class EnsureSubscriptionActive
 
         if ($user && $user->isVendor()) {
             // Mobile must be verified (OTP gate) before using the vendor panel.
-            if (is_null($user->mobile_verified_at)) {
+            // Skipped entirely when OTP verification is disabled.
+            if (config('otp.enabled') && is_null($user->mobile_verified_at)) {
                 return redirect()->route('otp.verify');
             }
 
