@@ -133,6 +133,10 @@ class BookingController extends Controller
                     'customer_id'          => auth()->id(),
                     'customer_name'        => $request->customer_name,
                     'customer_phone'       => $request->customer_phone,
+                    // Persist the device token so we can ping this customer when their
+                    // token is called. Present only if they granted notifications
+                    // (typically after installing the app to the home screen).
+                    'fcm_token'            => session('fcm_token'),
                     'booking_date'         => $bookingDate,
                     'slot_start_time'      => $slotStart,
                     'slot_end_time'        => $slotEnd,

@@ -11,13 +11,16 @@ class Booking extends Model
         'customer_phone', 'booking_date', 'slot_start_time', 'slot_end_time',
         'booking_type', 'token_required', 'token_number', 'token_amount', 'emergency_fee',
         'online_paid_amount', 'status', 'payment_id', 'razorpay_order_id',
-        'razorpay_payment_id', 'vendor_booked', 'notes'
+        'razorpay_payment_id', 'vendor_booked', 'notes',
+        'fcm_token', 'next_notified_at', 'turn_notified_at',
     ];
 
     protected $casts = [
         'booking_date' => 'date',
         'token_required' => 'boolean',
         'vendor_booked' => 'boolean',
+        'next_notified_at' => 'datetime',
+        'turn_notified_at' => 'datetime',
     ];
 
     public function vendor()

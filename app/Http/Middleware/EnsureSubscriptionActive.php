@@ -21,6 +21,14 @@ class EnsureSubscriptionActive
 
             $vendor = $user->vendor;
 
+            // When OTP verification is disabled, admin approval replaces OTP as
+            // the entry gate: a vendor cannot reach the panel until an admin has
+            // approved them (status 'active'). Pending/rejected/suspended vendors
+            // are held on the approval-pending screen instead.
+            if (!config('otp.enabled') && (!$vendor || $vendor->status !== 'active')) {
+                return redirect()->route('vendor.approval.pending');
+            }
+
             // Gate on a valid subscription window, not approval status, so a
             // 'pending' vendor can still set up while awaiting admin approval.
             if (!$vendor || !$vendor->hasValidSubscriptionWindow()) {
