@@ -15,12 +15,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $pageTitle ?? config('app.name', 'BookAppointment') }} — Premium Multi-Vendor Platform</title>
+    {{-- Title is the app name only (no vendor/page name). The home-screen shortcut
+         name falls back to this title on non-installable browsers, so it must not
+         contain the vendor name. --}}
+    <title>{{ config('app.name', 'Book Appointment') }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- PWA: manifest + icons so the site can be installed to the home screen.
+         Required for iOS web push (only works once installed) and for the
+         "Add to Home Screen" prompt shown after booking. The installed app is
+         branded as the project ("Book Appointment") with our app icon,
+         regardless of which vendor page it was installed from. -->
+    <link rel="manifest" href="{{ route('manifest.site') }}">
+    <meta name="theme-color" content="#0a0f2c">
+    {{-- Multiple icon links so every path (native install, favicon, Android
+         shortcut, iOS home screen) picks up our app icon rather than a default. --}}
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/pwa/icon-192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/pwa/icon-512.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/pwa/apple-touch-icon.png') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Book Appointment') }}">
+
+    <!-- Capture the install prompt as early as possible (must run before the
+         browser fires `beforeinstallprompt`) and expose a standalone check.
+         Used by the Add-to-Home-Screen modal further down. -->
+    <script>
+        window.__deferredInstallPrompt = null;
+        window.__isStandalone = function () {
+            return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+                || window.navigator.standalone === true;
+        };
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__deferredInstallPrompt = e;
+            window.dispatchEvent(new Event('installprompt-available'));
+        });
+        window.addEventListener('appinstalled', function () {
+            window.__deferredInstallPrompt = null;
+        });
+
+        // Register the service worker on every load (independent of notifications) so the
+        // browser considers the site installable and can fire `beforeinstallprompt`.
+        // Uses the same URL the FCM code reuses later, so it dedupes to one registration.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/firebase-messaging-sw.js?v=6').catch(function () {});
+            });
+        }
+    </script>
 
     <!-- Firebase SDK (Version 8) — loaded with defer so they don't block first paint.
          The init script below also waits for DOMContentLoaded, preserving order. -->
@@ -224,7 +273,9 @@
                  if (isSupported && !notifDecided && !dismissed) {
                      // Listen for meaningful action events instead of firing on load
                      window.addEventListener('trigger-notification-prompt', () => {
-                         if (!this.showNotifModal) {
+                         // If the Add-to-Home-Screen prompt is taking over (mobile browser,
+                         // not yet installed), let it show instead — the two never stack.
+                         if (!this.showNotifModal && !window.__a2hsCanShow) {
                              this.showNotifModal = true;
                          }
                      });
@@ -284,6 +335,150 @@
 
             <button 
                 @click="dismissNotifications()" 
+                class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all hover:bg-white/10 hover:text-white/60 active:scale-95 relative z-10"
+            >
+                Maybe Later
+            </button>
+        </div>
+    </div>
+    @endif
+
+    @if(!request()->cookie('a2hs_decided'))
+    <!-- Add to Home Screen prompt — shown after a booking when the page is running in a
+         normal mobile browser (NOT already installed). Android/desktop get a native install
+         button; iOS gets manual Share-sheet steps. Suppressed in standalone mode so the
+         installed app shows the notification-consent prompt instead. -->
+    <div x-data="{
+             show: false,
+             isIOS: false,
+             isMobile: false,
+             canNativeInstall: false,
+             dismissed: false,
+             init() {
+                 const standalone = window.__isStandalone && window.__isStandalone();
+                 const ua = window.navigator.userAgent || '';
+                 this.isIOS = /iphone|ipad|ipod/i.test(ua) && !standalone;
+                 this.isMobile = /android|iphone|ipad|ipod|mobile/i.test(ua);
+                 this.canNativeInstall = !!window.__deferredInstallPrompt;
+                 this.dismissed = !!localStorage.getItem('a2hs_decided')
+                               || document.cookie.includes('a2hs_decided');
+
+                 // Take over the post-booking prompt on a mobile browser that is NOT yet
+                 // installed. This does NOT depend on `beforeinstallprompt` having fired —
+                 // on Android that event is async and often arrives after booking, and on
+                 // iOS it never fires — so we always show the prompt and fall back to manual
+                 // instructions when the one-tap native install isn't available.
+                 // (Installed app / desktop keep the notification-consent prompt instead.)
+                 const canShow = !standalone && !this.dismissed && this.isMobile;
+                 window.__a2hsCanShow = canShow;
+                 if (!canShow) return;
+
+                 // If Chrome fires beforeinstallprompt (now or later), upgrade the manual
+                 // instructions to the one-tap native install button.
+                 window.addEventListener('installprompt-available', () => {
+                     this.canNativeInstall = true;
+                 });
+
+                 window.addEventListener('trigger-notification-prompt', () => {
+                     if (!this.show && !this.dismissed) {
+                         this.show = true;
+                     }
+                 });
+             },
+             async install() {
+                 const evt = window.__deferredInstallPrompt;
+                 if (!evt) { this.dismiss(); return; }
+                 evt.prompt();
+                 try { await evt.userChoice; } catch (e) {}
+                 window.__deferredInstallPrompt = null;
+                 this.persistDismiss();
+                 this.show = false;
+             },
+             dismiss() {
+                 this.persistDismiss();
+                 this.show = false;
+             },
+             persistDismiss() {
+                 this.dismissed = true;
+                 document.cookie = 'a2hs_decided=true; path=/; max-age=31536000; SameSite=Lax';
+                 localStorage.setItem('a2hs_decided', 'true');
+             }
+          }"
+         x-show="show"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
+    >
+        <div style="background-color: #0a0f2c !important; position: relative !important; z-index: 2147483647 !important;" class="max-w-md w-full border border-white/10 rounded-3xl p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-400 flex items-center justify-center mb-6 relative z-10 shadow-lg">
+                <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-6 4v6m0 0l-2-2m2 2l2-2M4 7h16a1 1 0 011 1v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8a1 1 0 011-1z" />
+                </svg>
+            </div>
+
+            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10">Don't miss your turn!</h2>
+            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed">
+                Add this to your home screen to get a live sound alert the moment it's your turn — no need to keep this page open.
+            </p>
+
+            <!-- Android / desktop: native install -->
+            <template x-if="canNativeInstall">
+                <button
+                    @click="install()"
+                    class="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 relative z-10 mb-3"
+                >
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                    </svg>
+                    Add to Home Screen
+                </button>
+            </template>
+
+            <!-- iOS Safari: no install API, show manual steps -->
+            <template x-if="isIOS && !canNativeInstall">
+                <div class="w-full rounded-xl bg-white/5 border border-white/10 p-5 mb-3 relative z-10 text-left">
+                    <p class="text-sm text-white/80 leading-relaxed">
+                        <span class="flex items-center gap-2 mb-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black">1</span>
+                            Tap the
+                            <svg class="w-5 h-5 inline text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0-12l-3 3m3-3l3 3M6 12v6a2 2 0 002 2h8a2 2 0 002-2v-6" /></svg>
+                            <strong class="text-white">Share</strong> icon
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black">2</span>
+                            Choose <strong class="text-white">Add to Home Screen</strong>
+                        </span>
+                    </p>
+                </div>
+            </template>
+
+            <!-- Android/other browsers where the native prompt hasn't fired: manual steps -->
+            <template x-if="!canNativeInstall && !isIOS">
+                <div class="w-full rounded-xl bg-white/5 border border-white/10 p-5 mb-3 relative z-10 text-left">
+                    <p class="text-sm text-white/80 leading-relaxed">
+                        <span class="flex items-center gap-2 mb-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black">1</span>
+                            Tap the browser menu
+                            <svg class="w-5 h-5 inline text-white/70" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black">2</span>
+                            Choose <strong class="text-white">Add to Home screen</strong> / <strong class="text-white">Install app</strong>
+                        </span>
+                    </p>
+                </div>
+            </template>
+
+            <button
+                @click="dismiss()"
                 class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all hover:bg-white/10 hover:text-white/60 active:scale-95 relative z-10"
             >
                 Maybe Later
@@ -628,7 +823,7 @@
                 if (!messaging) return;
                 
                 if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=5')
+                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=6')
                         .then((registration) => {
                             messaging.useServiceWorker(registration);
                             return messaging.getToken({ vapidKey: "{{ env('FIREBASE_VAPID_KEY', 'YOUR_VAPID_KEY') }}" });

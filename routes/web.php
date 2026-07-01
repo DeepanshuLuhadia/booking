@@ -11,6 +11,9 @@ Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::clas
 Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
 Route::get('/vendors/{vendor:slug}/queue-status', [\App\Http\Controllers\CustomerDiscoveryController::class, 'queueStatus'])->name('vendor.queue-status');
 
+// PWA manifest (dynamic so icon URLs are absolute; branded as the project + our icon)
+Route::get('/manifest.webmanifest', [\App\Http\Controllers\ManifestController::class, 'site'])->name('manifest.site');
+
 // Guest-accessible booking (no login required)
 Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])
     ->middleware('throttle:3,1')
@@ -22,6 +25,11 @@ Route::post('/vendors/{vendor:slug}/reviews', [\App\Http\Controllers\ReviewContr
     ->name('vendor.reviews.store');
 
 Route::middleware(['auth'])->group(function () {
+    // Approval-pending holding screen (must sit OUTSIDE the subscription.active
+    // vendor group so a pending vendor can reach it without a redirect loop).
+    Route::get('/vendor/approval-pending', [\App\Http\Controllers\Vendor\ApprovalController::class, 'pending'])
+        ->name('vendor.approval.pending');
+
     Route::get('/verify-otp', [\App\Http\Controllers\Auth\OtpController::class, 'show'])->name('otp.verify');
     Route::post('/verify-otp', [\App\Http\Controllers\Auth\OtpController::class, 'verify'])
         ->middleware('throttle:5,1'); // 5 attempts per min

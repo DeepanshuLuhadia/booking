@@ -72,7 +72,11 @@ class FcmService
                     'title' => $title,
                     'body' => $body,
                 ],
-                'data' => array_map('strval', $data), // FCM data payload requires all values to be strings
+                // FCM data payload requires all values to be strings AND the field to be a
+                // JSON object. Casting to (object) makes an empty array serialize as {} rather
+                // than [] — otherwise FCM rejects the whole message with INVALID_ARGUMENT
+                // ("Cannot bind a list to map for field 'data'").
+                'data' => (object) array_map('strval', $data),
                 'android' => [
                     'notification' => [
                         'sound' => 'default',

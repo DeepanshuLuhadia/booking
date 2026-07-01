@@ -77,12 +77,14 @@ class VendorRegistrationController extends Controller
         Auth::login($user);
 
         // When OTP is disabled, skip the mobile verification gate entirely:
-        // mark the mobile as verified and continue straight into the panel.
+        // mark the mobile as verified. Admin approval now stands in for OTP as
+        // the entry check, so the vendor is held on the approval-pending screen
+        // until an admin approves them (status 'pending' -> 'active').
         if (!config('otp.enabled')) {
             $user->update(['mobile_verified_at' => now()]);
 
-            return redirect('/vendor/dashboard')
-                ->with('success', 'Registration successful!');
+            return redirect()->route('vendor.approval.pending')
+                ->with('success', 'Registration received! Your account is pending admin approval.');
         }
 
         // Mobile OTP gate: a vendor must verify their phone before reaching the

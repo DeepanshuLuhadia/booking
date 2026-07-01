@@ -77,6 +77,7 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'completed']);
         $this->advanceNowServing($booking);
+        app(\App\Services\NotificationService::class)->notifyTokenQueue($booking->employee);
 
         return back()->with('success', 'Booking marked as completed.');
     }
@@ -105,6 +106,7 @@ class BookingController extends Controller
         }
 
         $employee->increment('now_serving_token');
+        app(\App\Services\NotificationService::class)->notifyTokenQueue($employee);
         return back()->with('success', "{$employee->name} now serving #" . $employee->fresh()->now_serving_token);
     }
 
@@ -117,6 +119,7 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'skipped']);
         $this->advanceNowServing($booking);
+        app(\App\Services\NotificationService::class)->notifyTokenQueue($booking->employee);
         return back()->with('success', 'Token #' . $booking->token_number . ' skipped.');
     }
 

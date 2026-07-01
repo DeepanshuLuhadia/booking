@@ -51,6 +51,8 @@ class DashboardController extends Controller
                 $employee->update(['now_serving_token' => $booking->token_number]);
             }
 
+            app(\App\Services\NotificationService::class)->notifyTokenQueue($employee);
+
             return back()->with('success', 'Appointment marked as done.');
         }
 
