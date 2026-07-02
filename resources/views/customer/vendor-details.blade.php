@@ -53,7 +53,7 @@
                     <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 md:gap-8 mb-6 md:mb-10">
                         <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($vendor->address ?? 'Professional District') }}"
                             target="_blank" rel="noopener noreferrer"
-                            class="flex items-center gap-3 group/address transition-all hover:scale-[1.02] w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
+                            class="flex items-center gap-3 group/address transition-all hover:scale-[1.02] w-full md:w-auto justify-start md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
                                 class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 group-hover/address:border-white/30 group-hover/address:bg-white/20 transition-all">
                                 <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -73,7 +73,7 @@
                                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <span class="text-2xl md:text-3xl font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
+                            <span class="text-2xl md:text-3xl text-left md:text-center font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
                                     class="tracking-widest text-[10px] font-black uppercase text-white/10 ml-1">Professional
                                     Fee</span></span>
                         </div>
@@ -401,15 +401,15 @@
                 <div class="sticky top-32">
                     <div
                         class="glass-card shadow-2xl shadow-black/20 bg-white/10 backdrop-blur-3xl border-white/10 p-2 overflow-hidden rounded-[3rem]">
-                        <div class="p-8 pb-4 flex items-center justify-between">
-                            <div>
+                        <div class="p-8 pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                            <div class="order-2 md:order-1">
                                 <span
                                     class="theme-gradient-text font-black text-[10px] uppercase tracking-widest italic block mb-2">Step
                                     02</span>
                                 <h3 class="text-3xl font-black text-white tracking-tighter italic"
                                     x-text="isTokenEnabled ? 'Choose Token & Wait Time' : 'Choose Time'"></h3>
                             </div>
-                            <div class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"
+                            <div class="absolute md:static top-4 right-5 md:top-auto md:right-auto order-1 md:order-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"
                                 x-show="!isOffline && !isSubscriptionExpired">
                                 <span class="open-pulse bg-emerald-500"></span>
                                 Online Now
@@ -441,7 +441,7 @@
                                 <template x-if="isTokenEnabled && !isOffline">
                                     <div class="p-6 space-y-6">
                                         <div
-                                            class="bg-white/5 p-8 rounded-[2.5rem] text-center text-white relative overflow-hidden shadow-2xl shadow-black/20 border border-white/10">
+                                            class="bg-white/5 p-4 md:p-8 rounded-[2.5rem] text-center text-white relative overflow-hidden shadow-2xl shadow-black/20 border border-white/10">
                                             <div class="absolute inset-0 theme-gradient-bg opacity-10"></div>
                                             <div class="grid grid-cols-2 gap-4 relative z-10">
                                                 <div class="border-r border-white/10 pb-2">
@@ -468,7 +468,7 @@
                                         <button
                                             @click="initiateBooking({start: '{{ now()->format('H:i') }}', end: 'Queue', available: true})"
                                             x-show="canBookToken()"
-                                            class="theme-btn w-full h-24 text-xl rounded-3xl font-black italic">
+                                            class="theme-btn w-full h-16 md:h-24 px-4 md:px-8 text-base md:text-xl rounded-3xl flex items-center justify-center gap-2 md:gap-3 shadow-lg">
                                             SECURE MY TOKEN
                                         </button>
                                         <div x-show="!canBookToken()" class="py-6 text-center opacity-50 italic">
@@ -607,7 +607,7 @@
                     <span
                         class="inline-block px-4 py-1 theme-gradient-bg text-white border theme-border rounded-full text-[9px] font-black uppercase tracking-widest italic mb-6">Security
                         Clearance</span>
-                    <h2 class="text-4xl font-black italic tracking-tighter uppercase mb-2">{{ $theme['customer_label']
+                    <h2 class="text-3xl md:text-4xl font-black italic tracking-tighter uppercase mb-2">{{ $theme['customer_label']
                         }} Details</h2>
                     <p class="text-white/40 font-medium">Please verify your identification for this {{
     strtolower($theme['booking_label']) }}.</p>
@@ -668,13 +668,13 @@
                         <div class="flex justify-between items-center pt-6 border-t border-white/10">
                             <span class="text-xl font-black italic uppercase tracking-tighter">Due Now</span>
                             <span
-                                class="text-4xl font-black theme-gradient-text drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
+                                class="text-2xl md:text-4xl font-black theme-gradient-text drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
                                 x-text="'₹' + totalAmount"></span>
                         </div>
                     </div>
                 </div>
 
-                <button @click="confirmBooking()" class="theme-btn w-full h-24 text-xl rounded-3xl group shadow-lg">
+                <button @click="confirmBooking()" class="theme-btn w-full h-16 md:h-24 px-4 md:px-8 text-base md:text-xl rounded-3xl flex items-center justify-center gap-2 md:gap-3 shadow-lg">
                     AUTHENTICATE & BOOK
                     <svg class="w-6 h-6 transform group-hover:translate-x-2 transition-transform" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor">

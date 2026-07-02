@@ -430,6 +430,150 @@
             margin-top: 2px;
             color: rgba(var(--cr), var(--cg), var(--cb), 0.9);
         }
+        /* Desktop container visible on desktop, hidden on mobile */
+        .bv-cat-desktop-wrap {
+            display: block;
+        }
+        
+        /* Mobile container hidden on desktop, visible on mobile */
+        .bv-cat-mobile-container {
+            display: none;
+        }
+
+        @media(max-width: 600px) {
+            .bv-cat-desktop-wrap {
+                display: none !important;
+            }
+            .bv-cat-mobile-container {
+                display: block !important;
+                margin-top: 24px;
+            }
+            
+            .bv-cat-mobile-wrap {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 0 10px;
+            }
+            
+            .bv-cat-mobile-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                color: #fff;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+            
+            .bv-cat-mobile-btn:hover, .bv-cat-mobile-btn:active {
+                background: rgba(255, 255, 255, 0.18);
+                transform: scale(1.05);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+
+            .bv-cat-mobile-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                scroll-behavior: smooth;
+                scrollbar-width: none;
+                flex: 1 1 0;
+                min-width: 0;
+                padding: 10px 0;
+            }
+
+            .bv-cat-mobile-row::-webkit-scrollbar {
+                display: none;
+            }
+            
+            .bv-cat-mobile-pill {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 2px solid rgba(255, 255, 255, 0.1);
+                border-radius: 999px;
+                padding: 8px 20px 8px 8px;
+                text-decoration: none;
+                flex: 0 0 100%;
+                justify-content: center;
+                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+                scroll-snap-align: center;
+                box-sizing: border-box;
+            }
+            
+            .bv-cat-mobile-pill.active {
+                background: rgba(var(--cr), var(--cg), var(--cb), 0.15);
+                border-color: rgba(var(--cr), var(--cg), var(--cb), 0.75);
+                box-shadow: 0 0 0 3px rgba(var(--cr), var(--cg), var(--cb), 0.15), 0 8px 25px rgba(var(--cr), var(--cg), var(--cb), 0.35);
+            }
+            
+            .bv-cat-mobile-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+            }
+            
+            .bv-cat-mobile-text {
+                display: flex;
+                flex-direction: column;
+                text-align: left;
+            }
+            
+            .bv-cat-mobile-name {
+                font-size: 14px;
+                font-weight: 800;
+                color: #fff;
+                line-height: 1.1;
+            }
+            
+            .bv-cat-mobile-sub {
+                font-size: 11px;
+                line-height: 1.3;
+                margin-top: 2px;
+                font-weight: 600;
+            }
+
+            .bv-cat-mobile-dots {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 6px;
+                margin-top: 14px;
+            }
+
+            .bv-cat-mobile-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.2);
+                transition: all 0.3s ease;
+                display: inline-block;
+                cursor: pointer;
+            }
+
+            .bv-cat-mobile-dot.active {
+                width: 16px;
+                border-radius: 3px;
+            }
+        }
 
         /* ── Stats ───────────────────────────────────────────────────── */
         .bv-stats {
@@ -1418,62 +1562,138 @@
                     </div>
 
                     {{-- ── Category Pills ── --}}
-                    <div class="bv-cat-scroll-wrap">
-                        <button class="bv-cat-scroll-btn" id="cat-prev" aria-label="Previous" onclick="document.getElementById('catRow').scrollBy({left:-200,behavior:'smooth'})">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <div class="bv-cat-row" id="catRow">
-                        @php
-                        $catMeta = [
-                        'health' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Green Care'],
-                        'doctor' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Doctors & Clinics'],
-                        'beauty' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Best Stylists'],
-                        'barber' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Mens Grooming'],
-                        'sports' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
-                        'activity' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
-                        'consultant' => ['g'=>['#2979ff','#00b0ff'], 'rgb'=>'41,121,255', 'sub'=>'Pro & Prime'],
-                        'training' => ['g'=>['#7c3aed','#a78bfa'], 'rgb'=>'124,58,237', 'sub'=>'Get Stronger'],
-                        'default' => ['g'=>['#1a237e','#3949ab'], 'rgb'=>'26,35,126', 'sub'=>'All Experts'],
-                        ];
-                        // Split the "All" pill RGB
-                        $allRgb = '255,109,0';
-                        @endphp
-
-                        {{-- All Services --}}
-                        <a href="{{ request()->fullUrlWithQuery(['type'=>'']) }}"
-                            class="bv-cat-pill {{ !request('type') ? 'active' : '' }}"
-                            style="--cr:255;--cg:109;--cb:0;">
-                            <div class="bv-cat-icon" style="background:linear-gradient(135deg,#ff6d00,#ffab40);">⭐</div>
-                            <div class="bv-cat-text">
-                                <span class="bv-cat-name">All</span>
-                                <span class="bv-cat-sub" style="color:rgba(255,171,64,0.9);">Services</span>
-                            </div>
-                        </a>
-
-                        @foreach($allThemes as $key => $t)
-                        @php
+                    {{-- ── Category Pills ── --}}
+                    @php
+                    $catMeta = [
+                    'health' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Green Care'],
+                    'doctor' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Doctors & Clinics'],
+                    'beauty' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Best Stylists'],
+                    'barber' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Mens Grooming'],
+                    'sports' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
+                    'activity' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
+                    'consultant' => ['g'=>['#2979ff','#00b0ff'], 'rgb'=>'41,121,255', 'sub'=>'Pro & Prime'],
+                    'training' => ['g'=>['#7c3aed','#a78bfa'], 'rgb'=>'124,58,237', 'sub'=>'Get Stronger'],
+                    'default' => ['g'=>['#1a237e','#3949ab'], 'rgb'=>'26,35,126', 'sub'=>'All Experts'],
+                    ];
+                    
+                    $categoriesList = [];
+                    
+                    // First item: All Services
+                    $categoriesList[] = [
+                        'key' => '',
+                        'label' => 'All',
+                        'sub' => 'Services',
+                        'emoji' => '⭐',
+                        'rgb' => '255,109,0',
+                        'g' => ['#ff6d00', '#ffab40']
+                    ];
+                    
+                    // Dynamic themes
+                    foreach($allThemes as $key => $t) {
                         $cm = $catMeta[$key] ?? $catMeta['default'];
-                        $g = $cm['g'];
-                        $rgb = $cm['rgb'];
-                        // parse rgb to individual r,g,b for CSS vars
-                        [$cr,$cg,$cb] = explode(',', $rgb);
-                        $iconStyle = "background:linear-gradient(135deg,{$g[0]},{$g[1]});";
-                        @endphp
-                        <a href="{{ request()->fullUrlWithQuery(['type'=>$key]) }}"
-                            class="bv-cat-pill {{ request('type')==$key ? 'active':'' }}"
-                            style="--cr:{{ trim($cr) }};--cg:{{ trim($cg) }};--cb:{{ trim($cb) }};">
-                            <div class="bv-cat-icon" style="{{ $iconStyle }}">{{ $t['emoji'] ?? '✨' }}</div>
-                            <div class="bv-cat-text">
-                                <span class="bv-cat-name">{{ $t['label'] }}</span>
-                                <span class="bv-cat-sub">{{ $cm['sub'] }}</span>
+                        $categoriesList[] = [
+                            'key' => $key,
+                            'label' => $t['label'],
+                            'sub' => $cm['sub'],
+                            'emoji' => $t['emoji'] ?? '✨',
+                            'rgb' => $cm['rgb'],
+                            'g' => $cm['g']
+                        ];
+                    }
+                    
+                    // Find active index
+                    $activeIndex = 0;
+                    $currentType = request('type', '');
+                    foreach($categoriesList as $index => $cat) {
+                        if ($cat['key'] === $currentType) {
+                            $activeIndex = $index;
+                            break;
+                        }
+                    }
+                    
+                    $totalCats = count($categoriesList);
+                    $prevIndex = ($activeIndex - 1 + $totalCats) % $totalCats;
+                    $nextIndex = ($activeIndex + 1) % $totalCats;
+                    
+                    $prevCat = $categoriesList[$prevIndex];
+                    $nextCat = $categoriesList[$nextIndex];
+                    $activeCat = $categoriesList[$activeIndex];
+                    @endphp
+
+                    {{-- ── Desktop Category Pills ── --}}
+                    <div class="bv-cat-desktop-wrap">
+                        <div class="bv-cat-scroll-wrap">
+                            <button class="bv-cat-scroll-btn" id="cat-prev" aria-label="Previous" onclick="document.getElementById('catRow').scrollBy({left:-200,behavior:'smooth'})">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <div class="bv-cat-row" id="catRow">
+                                @foreach($categoriesList as $cat)
+                                @php
+                                [$cr,$cg,$cb] = explode(',', $cat['rgb']);
+                                $iconStyle = "background:linear-gradient(135deg,{$cat['g'][0]},{$cat['g'][1]});";
+                                $isActive = ($cat['key'] === '' && !request('type')) || (request('type') === $cat['key']);
+                                @endphp
+                                <a href="{{ request()->fullUrlWithQuery(['type'=>$cat['key']]) }}"
+                                    class="bv-cat-pill {{ $isActive ? 'active' : '' }}"
+                                    style="--cr:{{ trim($cr) }};--cg:{{ trim($cg) }};--cb:{{ trim($cb) }};">
+                                    <div class="bv-cat-icon" style="{{ $iconStyle }}">{{ $cat['emoji'] }}</div>
+                                    <div class="bv-cat-text">
+                                        <span class="bv-cat-name">{{ $cat['label'] }}</span>
+                                        <span class="bv-cat-sub" style="{{ $cat['key'] === '' ? 'color:rgba(255,171,64,0.9);' : '' }}">{{ $cat['sub'] }}</span>
+                                    </div>
+                                </a>
+                                @endforeach
+                            </div>{{-- /bv-cat-row --}}
+                            <button class="bv-cat-scroll-btn" id="cat-next" aria-label="Next" onclick="document.getElementById('catRow').scrollBy({left:200,behavior:'smooth'})">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>{{-- /bv-cat-scroll-wrap --}}
+                    </div>
+
+                    {{-- ── Mobile Category Slider ── --}}
+                    <div class="bv-cat-mobile-container">
+                        <div class="bv-cat-mobile-wrap">
+                            <button type="button" class="bv-cat-mobile-btn" aria-label="Previous" onclick="scrollMobileCategories(-1)">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+
+                            <div class="bv-cat-mobile-row" id="catRowMobile">
+                                @foreach($categoriesList as $index => $cat)
+                                @php
+                                [$cr,$cg,$cb] = explode(',', $cat['rgb']);
+                                $iconStyle = "background:linear-gradient(135deg,{$cat['g'][0]},{$cat['g'][1]});";
+                                $isActive = ($cat['key'] === '' && !request('type')) || (request('type') === $cat['key']);
+                                @endphp
+                                <a href="{{ request()->fullUrlWithQuery(['type'=>$cat['key']]) }}" 
+                                   class="bv-cat-mobile-pill {{ $isActive ? 'active' : '' }}" 
+                                   style="--cr:{{ trim($cr) }}; --cg:{{ trim($cg) }}; --cb:{{ trim($cb) }};">
+                                    <div class="bv-cat-mobile-icon" style="{{ $iconStyle }}">
+                                        {{ $cat['emoji'] }}
+                                    </div>
+                                    <div class="bv-cat-mobile-text">
+                                        <span class="bv-cat-mobile-name">{{ $cat['label'] }}</span>
+                                        <span class="bv-cat-mobile-sub" style="color: rgba({{ $cat['rgb'] }}, 0.95);">{{ $cat['sub'] }}</span>
+                                    </div>
+                                </a>
+                                @endforeach
                             </div>
-                        </a>
-                        @endforeach
-                        </div>{{-- /bv-cat-row --}}
-                        <button class="bv-cat-scroll-btn" id="cat-next" aria-label="Next" onclick="document.getElementById('catRow').scrollBy({left:200,behavior:'smooth'})">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                        </button>
-                    </div>{{-- /bv-cat-scroll-wrap --}}
+
+                            <button type="button" class="bv-cat-mobile-btn" aria-label="Next" onclick="scrollMobileCategories(1)">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="bv-cat-mobile-dots">
+                            @foreach($categoriesList as $index => $cat)
+                                <span class="bv-cat-mobile-dot {{ $index === $activeIndex ? 'active' : '' }}"
+                                   data-rgb="{{ $cat['rgb'] }}"
+                                   onclick="scrollToMobileCategory({{ $index }})"
+                                   role="button"
+                                   aria-label="Go to category {{ $cat['label'] }}"
+                                   style="{{ $index === $activeIndex ? 'background-color: rgb(' . $cat['rgb'] . '); box-shadow: 0 0 8px rgb(' . $cat['rgb'] . ');' : '' }}"></span>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
 
                 {{-- ── Stats ── --}}
@@ -1832,6 +2052,60 @@
                     if (!dropdownWrap.contains(e.target)) {
                         dropdownWrap.classList.remove('open');
                     }
+                });
+            }
+            // Mobile Category Carousel Scroll Logic
+            const rowMobile = document.getElementById('catRowMobile');
+            const dotsMobile = document.querySelectorAll('.bv-cat-mobile-dot');
+            const pillsMobile = document.querySelectorAll('.bv-cat-mobile-pill');
+            
+            if (rowMobile && dotsMobile.length && pillsMobile.length) {
+                const pillWidth = 232; // 220px width + 12px gap
+
+                window.scrollMobileCategories = function(direction) {
+                    rowMobile.scrollBy({ left: direction * pillWidth, behavior: 'smooth' });
+                };
+
+                window.scrollToMobileCategory = function(index) {
+                    if (pillsMobile[index]) {
+                        pillsMobile[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+                };
+
+                // Scroll the active category pill into view on page load
+                setTimeout(() => {
+                    const activePill = rowMobile.querySelector('.bv-cat-mobile-pill.active');
+                    if (activePill) {
+                        activePill.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    }
+                }, 100);
+
+                // Update active indicator dot as the container scrolls (finger swipe or arrows)
+                rowMobile.addEventListener('scroll', () => {
+                    let closestIndex = 0;
+                    let minDiff = Infinity;
+                    pillsMobile.forEach((pill, index) => {
+                        const pillCenter = pill.offsetLeft + pill.clientWidth / 2;
+                        const containerCenter = rowMobile.scrollLeft + rowMobile.clientWidth / 2;
+                        const diff = Math.abs(pillCenter - containerCenter);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            closestIndex = index;
+                        }
+                    });
+
+                    dotsMobile.forEach((dot, index) => {
+                        if (index === closestIndex) {
+                            dot.classList.add('active');
+                            const rgb = dot.getAttribute('data-rgb');
+                            dot.style.backgroundColor = `rgb(${rgb})`;
+                            dot.style.boxShadow = `0 0 8px rgb(${rgb})`;
+                        } else {
+                            dot.classList.remove('active');
+                            dot.style.backgroundColor = '';
+                            dot.style.boxShadow = '';
+                        }
+                    });
                 });
             }
         });

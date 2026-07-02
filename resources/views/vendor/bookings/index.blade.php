@@ -120,7 +120,7 @@
                                 @if($booking->status === 'confirmed')
                                     <form action="{{ route('vendor.skip-token', $booking) }}" method="POST" class="inline">
                                         @csrf
-                                        <button type="submit" title="Skip Token" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all border border-amber-100">
+                                        <button type="submit" title="Skip Token" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-amber-600 transition-all border border-amber-100">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                         </button>
                                     </form>
