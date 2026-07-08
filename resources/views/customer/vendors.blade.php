@@ -221,6 +221,75 @@
             padding-right: 28px;
         }
 
+        /* ── Near Me (use-my-location) ─────────────────────────────────── */
+        .bv-nearme {
+            gap: 10px;
+            border-radius: 12px;
+            background: rgba(255, 109, 0, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(255, 140, 66, 0.30);
+            transition: background .25s ease, box-shadow .25s ease;
+        }
+
+        .bv-nearme:hover {
+            background: rgba(255, 109, 0, 0.20);
+            box-shadow: inset 0 0 0 1px rgba(255, 140, 66, 0.55);
+        }
+
+        .bv-nearme:active {
+            background: rgba(255, 109, 0, 0.26);
+        }
+
+        .bv-nearme.is-locating {
+            background: rgba(255, 109, 0, 0.18);
+        }
+
+        .bv-nearme-arrow {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            margin-left: auto;
+            flex-shrink: 0;
+            border-radius: 50%;
+            color: #fff;
+            background: rgba(255, 140, 66, 0.14);
+            transition: transform .25s ease, background .25s ease;
+        }
+
+        .bv-nearme-arrow svg {
+            color: #fff;
+        }
+
+        .bv-nearme:hover .bv-nearme-arrow {
+            transform: translateX(3px);
+            background: rgba(255, 140, 66, 0.24);
+        }
+
+        .bv-nearme-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, rgba(255, 109, 0, 0.20), rgba(255, 171, 64, 0.18));
+            box-shadow: inset 0 0 0 1px rgba(255, 140, 66, 0.35);
+        }
+
+        .bv-nearme-icon svg {
+            color: #ff8c42;
+        }
+
+        .bv-nearme-label {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            letter-spacing: .01em;
+        }
+
         .bv-search-btn {
             flex-shrink: 0;
             width: auto;
@@ -451,77 +520,60 @@
             
             .bv-cat-mobile-wrap {
                 display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 12px;
-                padding: 0 10px;
+                align-items: stretch;
+                gap: 0;
+                padding: 0;
             }
-            
+
+            /* Arrows removed on mobile — categories scroll 3-up */
             .bv-cat-mobile-btn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 44px;
-                height: 44px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                color: #fff;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                flex-shrink: 0;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            }
-            
-            .bv-cat-mobile-btn:hover, .bv-cat-mobile-btn:active {
-                background: rgba(255, 255, 255, 0.18);
-                transform: scale(1.05);
-                border-color: rgba(255, 255, 255, 0.3);
+                display: none !important;
             }
 
             .bv-cat-mobile-row {
                 display: flex;
-                align-items: center;
-                gap: 12px;
+                align-items: stretch;
+                gap: 10px;
                 overflow-x: auto;
-                scroll-snap-type: x mandatory;
+                scroll-snap-type: x proximity;
                 scroll-behavior: smooth;
                 scrollbar-width: none;
                 flex: 1 1 0;
                 min-width: 0;
-                padding: 10px 0;
+                padding: 8px 2px;
             }
 
             .bv-cat-mobile-row::-webkit-scrollbar {
                 display: none;
             }
-            
+
             .bv-cat-mobile-pill {
                 display: flex;
+                flex-direction: column;
                 align-items: center;
-                gap: 12px;
+                justify-content: center;
+                gap: 8px;
                 background: rgba(255, 255, 255, 0.05);
                 border: 2px solid rgba(255, 255, 255, 0.1);
-                border-radius: 999px;
-                padding: 8px 20px 8px 8px;
+                border-radius: 18px;
+                padding: 14px 6px;
                 text-decoration: none;
-                flex: 0 0 100%;
-                justify-content: center;
+                flex: 0 0 calc((100% - 20px) / 3);
                 transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-                scroll-snap-align: center;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+                scroll-snap-align: start;
                 box-sizing: border-box;
             }
-            
+
             .bv-cat-mobile-pill.active {
                 background: rgba(var(--cr), var(--cg), var(--cb), 0.15);
                 border-color: rgba(var(--cr), var(--cg), var(--cb), 0.75);
                 box-shadow: 0 0 0 3px rgba(var(--cr), var(--cg), var(--cb), 0.15), 0 8px 25px rgba(var(--cr), var(--cg), var(--cb), 0.35);
             }
-            
+
             .bv-cat-mobile-icon {
-                width: 40px;
-                height: 40px;
+                width: 42px;
+                height: 42px;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
@@ -530,48 +582,40 @@
                 flex-shrink: 0;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
             }
-            
+
             .bv-cat-mobile-text {
                 display: flex;
                 flex-direction: column;
-                text-align: left;
+                align-items: center;
+                text-align: center;
+                width: 100%;
             }
-            
+
             .bv-cat-mobile-name {
-                font-size: 14px;
+                font-size: 12px;
                 font-weight: 800;
                 color: #fff;
-                line-height: 1.1;
+                line-height: 1.15;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
             }
-            
+
             .bv-cat-mobile-sub {
-                font-size: 11px;
-                line-height: 1.3;
-                margin-top: 2px;
+                font-size: 9px;
+                line-height: 1.25;
+                margin-top: 3px;
                 font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
             }
 
+            /* Pagination dots not needed with 3-up scroll */
             .bv-cat-mobile-dots {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 6px;
-                margin-top: 14px;
-            }
-
-            .bv-cat-mobile-dot {
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-                background-color: rgba(255, 255, 255, 0.2);
-                transition: all 0.3s ease;
-                display: inline-block;
-                cursor: pointer;
-            }
-
-            .bv-cat-mobile-dot.active {
-                width: 16px;
-                border-radius: 3px;
+                display: none !important;
             }
         }
 
@@ -592,6 +636,21 @@
                 flex-wrap: wrap;
                 margin-top: 40px;
                 padding-top: 30px;
+            }
+        }
+
+        /* Stats live in the hero on desktop; on mobile they move below the steps */
+        .bv-stats-mobile {
+            display: none;
+        }
+
+        @media(max-width: 600px) {
+            .bv-stats-desktop {
+                display: none !important;
+            }
+            .bv-stats-mobile {
+                display: flex !important;
+                margin-top: 48px;
             }
         }
 
@@ -675,10 +734,84 @@
 
         @media(max-width:600px) {
             .bv-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin-top: 26px;
             }
-             .bv-section {
-                padding: 30px 24px ;
+            .bv-section {
+                padding: 30px 16px;
+            }
+
+            /* ── Compact 3-up recommended cards (mobile only) ──
+               !important needed: the base .bv-card-sports rules are declared
+               later in the stylesheet, so they'd otherwise win the cascade. */
+            .bv-card-sports {
+                height: 178px !important;
+                border-width: 2px !important;
+                border-radius: 14px !important;
+                box-shadow: 0 4px 16px rgba(var(--cr), var(--cg), var(--cb), 0.3) !important;
+            }
+            .bv-card-sports-overlay {
+                padding: 8px !important;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.5) 45%, rgba(0, 0, 0, 0) 100%) !important;
+            }
+            .bv-rc-rating {
+                top: 6px !important;
+                right: 6px !important;
+                padding: 2px 6px !important;
+                font-size: 9px !important;
+                gap: 3px !important;
+            }
+            .bv-rc-badge {
+                font-size: 7px !important;
+                padding: 3px 6px !important;
+                margin-bottom: 6px !important;
+                border-radius: 5px !important;
+            }
+            .bv-rc-name {
+                font-size: 12px !important;
+                margin: 0 0 5px !important;
+                line-height: 1.1 !important;
+                display: -webkit-box !important;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .bv-rc-name svg {
+                display: none !important;
+            }
+            .bv-rc-loc {
+                margin-bottom: 8px !important;
+                font-size: 10px !important;
+            }
+            /* Narrow tile: drop the address, surface only the distance chip */
+            .bv-rc-loc-pin,
+            .bv-rc-addr {
+                display: none !important;
+            }
+            .bv-rc-dist {
+                margin-left: 0 !important;
+                color: #fff !important;
+                font-size: 9px !important;
+                background: rgba(0, 0, 0, 0.55);
+                padding: 3px 7px;
+                border-radius: 6px;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+            }
+            .bv-rc-pricebar {
+                padding: 7px 8px !important;
+                border-radius: 10px !important;
+            }
+            .bv-rc-price-label {
+                font-size: 7px !important;
+            }
+            .bv-rc-price {
+                font-size: 8px !important;
+            }
+            /* Live-queue / arrow column doesn't fit the narrow tile */
+            .bv-rc-status {
+                display: none !important;
             }
         }
 
@@ -1430,6 +1563,96 @@
             filter: brightness(1.1);
             transform: translateY(-2px);
         }
+
+        /* ══════════════════════════════════════════════════════════════
+           MOBILE POLISH (≤600px) — discovery page. Declared last so it wins
+           the cascade cleanly. Desktop/tablet untouched.
+           ══════════════════════════════════════════════════════════════ */
+        @media (max-width: 600px) {
+            /* Hero: tighter top gap + smaller display type */
+            .bv-hero {
+                padding: 96px 20px 8px;
+            }
+            .bv-hero h1 {
+                font-size: clamp(1.7rem, 8vw, 2.1rem) !important;
+                margin-bottom: 12px !important;
+            }
+            .bv-hero > div > p,
+            .bv-hero p[style*="1.1rem"] {
+                font-size: 0.95rem !important;
+                margin-bottom: 26px !important;
+            }
+
+            /* Section titles ("Recommended Professionals") */
+            .bv-section-title {
+                font-size: 1.5rem;
+            }
+
+            /* "Book in 3 Easy Steps" — smaller, clearer cards */
+            .bv-steps-section {
+                padding: 44px 20px 56px;
+            }
+            .bv-steps-head {
+                margin-bottom: 34px !important;
+            }
+            .bv-steps-head h2 {
+                font-size: 1.55rem !important;
+            }
+            .bv-steps-grid {
+                /* Single column on mobile: this `gap` is the VERTICAL space between
+                   stacked cards. Keep it generous so the dashed connector arrows
+                   between steps have room to draw (the ≤768 rule relies on this). */
+                gap: 54px;
+            }
+            .bv-step-card {
+                margin-top: 56px;
+                padding: 0 16px 20px;
+                border-radius: 16px;
+            }
+            .bv-step-icon-wrap {
+                width: 112px;
+                height: 112px;
+                /* Bottom margin gives the number badge (positioned bottom:-15px)
+                   clearance so it doesn't overlap the step title below it. */
+                margin: -56px auto 28px;
+            }
+            .bv-step-icon-wrap img {
+                width: 120px;
+                height: 120px;
+            }
+            .bv-step-title {
+                font-size: 12px;
+                margin-bottom: 6px;
+            }
+            .bv-step-desc {
+                font-size: 11px;
+                line-height: 1.55;
+            }
+
+            /* Grow-your-business / "Join With …" CTA */
+            .bv-cta-section {
+                padding: 56px 22px;
+            }
+            .bv-cta-badge {
+                font-size: 9px;
+                margin-bottom: 18px;
+                letter-spacing: .16em;
+            }
+            .bv-cta-title {
+                font-size: clamp(1.5rem, 6.6vw, 1.95rem);
+                line-height: 1.12;
+                margin-bottom: 16px;
+            }
+            .bv-cta-desc {
+                font-size: 13.5px;
+                margin-bottom: 24px;
+                max-width: 340px;
+            }
+            .bv-cta-btn {
+                font-size: 12px;
+                padding: 13px 24px;
+            }
+        }
     </style>
 
     <div class="bv-page">
@@ -1469,7 +1692,9 @@
                 <div class="bv-search-wrap">
                     <div class="bv-search-bar">
                         <form action="{{ route('home') }}" method="GET" class="bv-search-form">
-                            @if(request('type'))<input type="hidden" name="type" value="{{ request('type') }}">@endif
+                            {{-- Category is carried by the "All Categories" dropdown below
+                                 (name="type"), which is the single source of truth shared
+                                 with the category pills so both selectors stay in sync. --}}
 
                             {{-- Expert Name --}}
                             <div class="bv-search-field">
@@ -1493,9 +1718,9 @@
                                     <span class="custom-dropdown-label" id="specialty-label">
                                         @php
                                             $selectedLabel = 'All Categories';
-                                            $selectedSpecialty = request('specialty');
-                                            if ($selectedSpecialty && isset($allThemes[$selectedSpecialty])) {
-                                                $selectedLabel = ($allThemes[$selectedSpecialty]['emoji'] ?? '✨') . ' ' . ($allThemes[$selectedSpecialty]['label'] ?? ucfirst($selectedSpecialty));
+                                            $selectedCategory = request('type');
+                                            if ($selectedCategory && isset($allThemes[$selectedCategory])) {
+                                                $selectedLabel = ($allThemes[$selectedCategory]['emoji'] ?? '✨') . ' ' . ($allThemes[$selectedCategory]['label'] ?? ucfirst($selectedCategory));
                                             }
                                         @endphp
                                         {{ $selectedLabel }}
@@ -1507,18 +1732,19 @@
                                 </svg>
 
                                 <div class="custom-dropdown-menu">
-                                    <div class="custom-dropdown-item {{ !request('specialty') ? 'selected' : '' }}" data-value="">All Categories</div>
+                                    <div class="custom-dropdown-item {{ !request('type') ? 'selected' : '' }}" data-value="">All Categories</div>
                                     @foreach($allThemes as $key => $t)
-                                        <div class="custom-dropdown-item {{ request('specialty') == $key ? 'selected' : '' }}" data-value="{{ $key }}">
+                                        <div class="custom-dropdown-item {{ request('type') == $key ? 'selected' : '' }}" data-value="{{ $key }}">
                                             {{ $t['emoji'] ?? '✨' }} {{ $t['label'] ?? ucfirst($key) }}
                                         </div>
                                     @endforeach
                                 </div>
-                                <input type="hidden" name="specialty" id="specialty-input" value="{{ request('specialty') }}">
+                                <input type="hidden" name="type" id="specialty-input" value="{{ request('type') }}">
                             </div>
 
                             {{-- Near Me (location) --}}
-                            <div class="bv-search-field" style="border-right:none; cursor:pointer;" title="Find experts near you"
+                            <div class="bv-search-field bv-nearme" style="border-right:none; cursor:pointer;" title="Find experts near you"
+                                :class="{ 'is-locating': locating }"
                                 x-data="{
                                     locating: false,
                                     useGPS() {
@@ -1542,21 +1768,29 @@
                                     }
                                 }"
                                 @click="useGPS()">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
-                                    viewBox="0 0 24 24" style="flex-shrink:0;" x-show="!locating">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <svg class="animate-spin" width="20" height="20" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;" x-show="locating" x-cloak>
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                <span class="custom-dropdown-label" x-text="locating ? 'Locating…' : 'Near Me'"></span>
+                                <span class="bv-nearme-icon">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                                        viewBox="0 0 24 24" style="flex-shrink:0;" x-show="!locating">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <svg class="animate-spin" width="20" height="20" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;" x-show="locating" x-cloak>
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                                <span class="bv-nearme-label" x-text="locating ? 'Locating…' : 'Allow Near Me'"></span>
+                                <span class="bv-nearme-arrow" aria-hidden="true">
+                                    <svg width="17" height="17" fill="currentColor" stroke="none"
+                                        viewBox="0 0 24 24">
+                                        <path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z" />
+                                    </svg>
+                                </span>
                             </div>
 
                             <button class="bv-search-btn" type="submit">Search Services</button>
-                            @if(request('search') || request('specialty') || request('location'))
-                                <a href="{{ route('home', request()->only(['type'])) }}" class="bv-reset-btn">Reset</a>
+                            @if(request('search') || request('type') || request('location'))
+                                <a href="{{ route('home') }}" class="bv-reset-btn">Reset</a>
                             @endif
                         </form>
                     </div>
@@ -1704,7 +1938,7 @@
                     $avgRating = 4.9; // rating system not yet implemented
                 @endphp
                 @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
-                <div class="bv-stats">
+                <div class="bv-stats bv-stats-desktop">
                     <div>
                         <div class="bv-stat-num"><span data-counter data-target="{{ $totalClients }}" data-suffix="+">0</span></div>
                         <div class="bv-stat-label">Happy Clients</div>
@@ -1810,16 +2044,16 @@
                         style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};">
                         <img src="{{ $img }}" alt="{{ $name }}" loading="{{ $loop->iteration <= 6 ? 'eager' : 'lazy' }}">
                         @if($vendor->isSubscriptionActive())
-                        <div style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; font-weight:800; display:flex; gap:5px; border:1px solid rgba(255,255,255,0.15); z-index: 2;">
+                        <div class="bv-rc-rating" style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; font-weight:800; display:flex; gap:5px; border:1px solid rgba(255,255,255,0.15); z-index: 2;">
                             <span style="color:#ffab40;">★</span> 4.9
                         </div>
                         @endif
                         <div class="bv-card-sports-overlay">
-                            <span
+                            {{-- <span class="bv-rc-badge"
                                 style="display:inline-block; background:rgba(var(--cr),var(--cg),var(--cb),0.9); backdrop-filter:blur(4px); color:#000; font-size:10px; font-weight:900; padding:6px 12px; border-radius:8px; align-self:flex-start; margin-bottom:12px; text-transform:uppercase; letter-spacing:.05em;">
                                 {{ $catLabel }}
-                            </span>
-                            <h3 style="color:#fff; font-size:24px; font-weight:900; margin:0 0 8px; line-height:1.1; display:flex; align-items:center; gap:8px;">
+                            </span>--}}
+                            <h3 class="bv-rc-name" style="color:#fff; font-size:24px; font-weight:900; margin:0 0 8px; line-height:1.1; display:flex; align-items:center; gap:8px;">
                                 {{ $name }}
                                 @if($vendor->is_verified)
                                 <svg style="color:#38bdf8; flex-shrink:0; width:20px; height:20px;" viewBox="0 0 24 24" fill="currentColor" title="Verified">
@@ -1827,30 +2061,30 @@
                                 </svg>
                                 @endif
                             </h3>
-                            <div
+                            <div class="bv-rc-loc"
                                 style="display:flex; align-items:center; gap:6px; font-size:13px; color:rgba(255,255,255,0.8); margin-bottom:20px;">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+                                <svg class="bv-rc-loc-pin" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ $address }}</span>
+                                <span class="bv-rc-addr" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ $address }}</span>
                                 @if($vendor->isSubscriptionActive())
-                                <span style="margin-left:auto; font-weight:700; color:rgba(var(--cr),var(--cg),var(--cb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">~2.4 km</span>
+                                <span class="bv-rc-dist" style="margin-left:auto; font-weight:700; color:rgba(var(--cr),var(--cg),var(--cb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">~2.4 km</span>
                                 @endif
                             </div>
-                            <div
+                            <div class="bv-rc-pricebar"
                                 style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); padding:14px; border-radius:14px;">
                                 <div>
-                                    <div
+                                    <div class="bv-rc-price-label"
                                         style="font-size:11px; font-weight:800; text-transform:uppercase; color:rgba(255,255,255,0.6); letter-spacing:.05em;">
                                         {{ $priceLabel }}</div>
-                                    <div style="font-size:20px; font-weight:900; color:#fff;">{{ $priceStr }} {{ $vendor->starting_fee > 0 ? 'onwards' : '' }}</div>
+                                    <div class="bv-rc-price" style="font-size:20px; font-weight:900; color:#fff;">{{ $priceStr }} {{ $vendor->starting_fee > 0 ? 'onwards' : '' }}</div>
                                 </div>
                                 @if($vendor->isSubscriptionActive())
-                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <div class="bv-rc-status" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                     @if(!$isOpen)
                                         <div style="font-size: 9px; font-weight: 900; color: #ffab40; text-transform: uppercase;">Closed</div>
                                         <div style="font-size: 11px; font-weight: 700; color: #fff;">Opens At: {{ \Carbon\Carbon::parse($vendor->global_opening_time)->format('h:i A') }}</div>
@@ -1868,7 +2102,7 @@
                                     @endif
                                 </div>
                                 @else
-                                <div style="display: flex; align-items: center; justify-content: center;">
+                                <div class="bv-rc-status" style="display: flex; align-items: center; justify-content: center;">
                                     <div style="width:36px; height:36px; background:rgba(255,255,255,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff;">
                                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -1902,7 +2136,7 @@
         BOOK IN 3 EASY STEPS
         ═══════════════════════════════════════════════════════ --}}
         <section class="bv-steps-section">
-            <div style="text-align:center; margin-bottom:60px;">
+            <div class="bv-steps-head" style="text-align:center; margin-bottom:60px;">
                 <h2 style="font-size:2.4rem; font-weight:900; color:#fff; letter-spacing:-.02em; margin:0 0 10px;">
                     Book in <span style="color:#ff8c42; font-style:italic;">3 Easy Steps</span>
                 </h2>
@@ -1953,6 +2187,31 @@
             <div
                 style="position:absolute; top:20%; right:-10%; width:500px; height:500px; background:rgba(255,109,0,.05); border-radius:50%; filter:blur(100px); pointer-events:none;">
             </div>
+
+            {{-- Stats — repositioned below the steps on mobile only --}}
+            @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
+            <div class="bv-stats bv-stats-mobile">
+                <div>
+                    <div class="bv-stat-num"><span data-counter data-target="{{ $totalClients }}" data-suffix="+">0</span></div>
+                    <div class="bv-stat-label">Happy Clients</div>
+                </div>
+                <div>
+                    <div class="bv-stat-num"><span data-counter data-target="{{ $totalCities }}" data-suffix="+">0</span></div>
+                    <div class="bv-stat-label">Cities Reach</div>
+                </div>
+                <div>
+                    <div class="bv-stat-num"><span data-counter data-target="{{ $totalAppointments }}" data-suffix="+" data-decimals="0">0</span></div>
+                    <div class="bv-stat-label">Appointments</div>
+                </div>
+                <div>
+                    <div class="bv-stat-num">
+                        <span data-counter data-target="{{ number_format($avgRating, 1) }}" data-decimals="1">0</span>
+                        <span style="color:#ffab40; font-size:1.6rem;">★</span>
+                    </div>
+                    <div class="bv-stat-label">User Rating</div>
+                </div>
+            </div>
+            @endif
         </section>
 
         {{-- ═══════════════════════════════════════════════════════
@@ -1964,7 +2223,7 @@
                 <div class="bv-cta-badge">
                     <span
                         style="width:6px;height:6px;border-radius:50%;background:#ff6d00;display:inline-block;"></span>
-                    Join With Bookai Platform
+                    Join With {{ config('brand.platform') }}
                 </div>
                 <h2 class="bv-cta-title">
                     GROW YOUR <br><span class="bv-cta-accent">BUSINESS</span> WITH US

@@ -199,6 +199,17 @@ class Vendor extends Model
         return true;
     }
 
+    /**
+     * Whether the vendor qualifies for the "verified" badge shown next to their
+     * name on the public profile. Granted to vendors on the top-tier Premium
+     * plan (₹399) with an active subscription.
+     */
+    public function hasPremiumBadge(): bool
+    {
+        return $this->isSubscriptionActive()
+            && optional($this->subscriptionPlan)->price >= 399;
+    }
+
 
     /**
      * Computed attribute: is vendor truly open right now?

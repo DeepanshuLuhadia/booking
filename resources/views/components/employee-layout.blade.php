@@ -15,10 +15,10 @@
     <div class="flex min-h-screen">
         <!-- Sidebar Navigation (Hidden on Mobile, Fixed on Desktop) -->
         <aside class="hidden lg:flex flex-col w-72 fixed left-0 top-0 bottom-0 bg-white/5 border-r border-white/10 z-[150] overflow-y-auto no-scrollbar pt-8 px-6 pb-6">
-            <a href="/" class="flex items-center gap-3 mb-10 pl-2 group">
+            <a href="{{ route('employee.dashboard') }}" class="flex items-center gap-3 mb-10 pl-2 group">
                 <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xl font-black transition-transform group-hover:rotate-12 group-hover:scale-110">B</div>
                 <span class="text-xl font-black tracking-tighter text-white whitespace-nowrap">
-                    BOOK<span class="text-blue-600">APPOINTMENT</span>
+                    {{ config('brand.logo_prefix') }}<span class="text-blue-600">{{ config('brand.logo_suffix') }}</span>
                 </span>
             </a>
             <div class="flex flex-col h-full justify-between">

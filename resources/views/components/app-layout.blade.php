@@ -101,6 +101,81 @@
                 display: none !important;
             }
         }
+
+        /* Prevent mobile browsers from auto-inflating body text. */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+        /* ══════════════════════════════════════════════════════════════
+           GLOBAL MOBILE TYPE SCALE (≤600px, front website only).
+           Loaded after the compiled Tailwind CSS, so these cap the large
+           display utilities on phones without touching desktop/tablet
+           (Tailwind `md:` variants live in min-width:768px and never overlap).
+           This keeps headings, stat numbers, modal titles and popups
+           proportionate on mobile across every page using this layout.
+           ══════════════════════════════════════════════════════════════ */
+        @media (max-width: 600px) {
+            .text-2xl { font-size: 1.25rem !important;  line-height: 1.3 !important; }
+            .text-3xl { font-size: 1.375rem !important; line-height: 1.25 !important; }
+            .text-4xl { font-size: 1.625rem !important; line-height: 1.2 !important; }
+            .text-5xl { font-size: 1.875rem !important; line-height: 1.15 !important; }
+            .text-6xl { font-size: 2.125rem !important; line-height: 1.1 !important; }
+            .text-7xl { font-size: 2.5rem !important;   line-height: 1.05 !important; }
+
+            /* Buttons/tap-targets that are fixed-tall with no mobile downshift. */
+            .theme-btn.h-24 { height: 4rem !important; }
+        }
+
+        /* Vendor-detail mobile hero (inline-styled, shows by default) is hidden on
+           desktop/tablet, where the original Tailwind hero renders instead. */
+        @media (min-width: 768px) {
+            .vd-mobile-hero { display: none !important; }
+        }
+
+        /* Vendor profile — clickable rating-breakdown rows (filter reviews by star).
+           Scoped classes so they don't depend on utilities absent from the prebuilt
+           Tailwind bundle. */
+        .vd-rating-row {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 5px 8px;
+            margin: 0 -8px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            cursor: pointer;
+            text-align: left;
+            transition: background .2s ease;
+        }
+        .vd-rating-row:hover { background: rgba(255, 255, 255, 0.05); }
+        .vd-rating-row.active { background: rgba(255, 255, 255, 0.10); }
+        .vd-rating-row:disabled { cursor: default; opacity: .4; }
+
+        /* Vendor profile — reviews list: vertical stack on desktop, swipe slider on
+           mobile (one review per view, snap-scrolling). */
+        .vd-review-slider {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        @media (max-width: 767px) {
+            .vd-review-slider {
+                flex-direction: row;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                gap: 12px;
+                padding-bottom: 6px;
+            }
+            .vd-review-slider::-webkit-scrollbar { display: none; }
+            .vd-review-slider > * {
+                scroll-snap-align: center;
+                flex: 0 0 90%;
+                min-width: 0;
+            }
+        }
     </style>
 </head>
 <body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
@@ -499,7 +574,7 @@
                         {{ $theme['icon'] ?? 'B' }}
                     </div>
                     <span class="text-xl md:text-2xl font-black tracking-tighter text-white whitespace-nowrap">
-                         BOOK<span class="theme-gradient-text">APPOINTMENT</span>
+                         {{ config('brand.logo_prefix') }}<span class="theme-gradient-text">{{ config('brand.logo_suffix') }}</span>
                     </span>
                 </a>
             </div>
@@ -654,9 +729,11 @@
                      @endif
 
                      <div class="h-px bg-white/5 my-4"></div>
+                     @unless(auth()->check() && auth()->user()->isEmployee())
                      <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm mb-4">
                          Explore
                      </a>
+                     @endunless
 
                      @auth
                          <form method="POST" action="{{ route('logout') }}">
@@ -682,9 +759,9 @@
             <div class="container mx-auto px-4 md:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-10 mb-16 px-4">
                     <div class="flex flex-col items-center md:items-start gap-4">
-                        <div class="text-3xl font-black text-white tracking-tighter">BOOK<span class="theme-gradient-text">AI</span></div>
+                        <div class="text-3xl font-black text-white tracking-tighter">{{ config('brand.logo_prefix') }}<span class="theme-gradient-text">{{ config('brand.footer_suffix') }}</span></div>
                         <p class="text-[10px] font-bold uppercase tracking-[0.3em] max-w-sm text-center md:text-left text-white/30 leading-loose">
-                            The Next-Generation Multi-Vendor Booking Experience for Global Professionals.
+                            {{ config('brand.tagline') }}
                         </p>
                     </div>
                     
@@ -698,7 +775,7 @@
 
                 <div class="flex flex-col md:flex-row items-center justify-between pt-12 border-t border-white/5 gap-6">
                     <div class="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-                        &copy; {{ date('Y') }} BOOKAI PLATFORM. ALL RIGHTS RESERVED.
+                        &copy; {{ date('Y') }} {{ strtoupper(config('brand.platform')) }}. ALL RIGHTS RESERVED.
                     </div>
                     <div class="flex items-center gap-6">
                         <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">𝕏</div>

@@ -94,7 +94,7 @@
             <a href="/" class="flex items-center gap-3 mb-10 pl-2 group">
                 <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xl font-black transition-transform group-hover:rotate-12 group-hover:scale-110">B</div>
                 <span class="text-xl font-black tracking-tighter text-white whitespace-nowrap">
-                    BOOK<span class="text-blue-600">APPOINTMENT</span>
+                    {{ config('brand.logo_prefix') }}<span class="text-blue-600">{{ config('brand.logo_suffix') }}</span>
                 </span>
             </a>
             <div class="flex flex-col h-full justify-between">

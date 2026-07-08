@@ -1,12 +1,12 @@
 <x-app-layout page-title="Vendor Onboarding | Appointment Platform">
-    <div class="relative min-h-screen pb-32" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
+    <div class="relative min-h-screen pb-32 overflow-hidden" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
         <!-- Glowing Orbs (From Index) -->
         <div style="position:absolute; top:0; left:25%; width:500px; height:500px; background:rgba(255,109,0,.08); border-radius:50%; filter:blur(120px); pointer-events:none;"></div>
         <div style="position:absolute; bottom:0; right:25%; width:600px; height:600px; background:rgba(255,109,0,.04); border-radius:50%; filter:blur(150px); pointer-events:none;"></div>
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
-        <div class="relative z-10 max-w-5xl mx-auto px-6 pt-24">
+        <div class="reg-wrap relative z-10 max-w-5xl mx-auto px-6 pt-24">
             <!-- Header Section -->
             <div class="text-center mb-12 md:mb-20 animate-text-reveal">
                 {{-- <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full text-white text-[9px] font-black uppercase tracking-widest mb-6 md:mb-8">
@@ -87,14 +87,48 @@
                     border-left: 3px solid #ff6d00;
                     color: #ffab40;
                 }
+
+                /* ── Mobile refinements (≤600px). Tighter rhythm + smaller radii so the
+                      long form reads comfortably on a phone. Desktop is untouched. ── */
+                @media (max-width: 600px) {
+                    .reg-wrap {
+                        padding-top: 80px !important;
+                        padding-left: 16px !important;
+                        padding-right: 16px !important;
+                    }
+                    /* space-y-16 sets 4rem between the cards — halve it on mobile. */
+                    .reg-form > :not([hidden]) ~ :not([hidden]) {
+                        margin-top: 2.25rem !important;
+                    }
+                    .reg-card-inner {
+                        padding: 22px !important;
+                        border-radius: 26px !important;
+                    }
+                    /* gap-y-10 (2.5rem) between stacked fields is too airy on mobile. */
+                    .reg-field-grid {
+                        row-gap: 1.5rem !important;
+                    }
+                    /* gap-8 (2rem) between stacked plan cards -> tighter. */
+                    .reg-plan-grid {
+                        gap: 16px !important;
+                    }
+                    .plan-card-content {
+                        padding: 22px !important;
+                        border-radius: 24px !important;
+                    }
+                    /* Keep the selected plan's lift subtle so it doesn't overflow. */
+                    .plan-card-input:checked + .plan-card-content {
+                        transform: translateY(-4px) scale(1.0) !important;
+                    }
+                }
             </style>
 
-            <form method="POST" action="/register/vendor" class="space-y-16 animate-reveal delay-100">
+            <form method="POST" action="/register/vendor" class="reg-form space-y-16 animate-reveal delay-100">
                 @csrf
 
                 <!-- STEP 1: IDENTITY -->
                 <div class="glass-card overflow-hidden shadow-2xl">
-                    <div class="p-6 md:p-14 rounded-[3rem]">
+                    <div class="reg-card-inner p-6 md:p-14 rounded-[3rem]">
                         <div class="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
                             <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl shrink-0">01</div>
                             <div>
@@ -103,7 +137,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                        <div class="reg-field-grid grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
                             <!-- Category -->
                             <div class="space-y-2 group">
                                 <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-6">Business Category</label>
@@ -206,7 +240,7 @@
 
                 <!-- STEP 2: PLAN -->
                 <div class="glass-card overflow-hidden shadow-2xl bottom-space">
-                    <div class="p-6 md:p-14 rounded-[3rem]">
+                    <div class="reg-card-inner p-6 md:p-14 rounded-[3rem]">
                         <div class="flex items-center gap-4 md:gap-6 mb-8 md:mb-12">
                             <div class="w-12 h-12 md:w-14 md:h-14 bg-white/10 text-white border border-white/20 rounded-2xl flex items-center justify-center text-lg md:text-xl font-black italic shadow-xl shrink-0">02</div>
                             <div>
@@ -215,7 +249,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="reg-plan-grid grid grid-cols-1 md:grid-cols-3 gap-8">
                             @foreach($plans as $plan)
                             <label class="relative cursor-pointer group">
                                 <input type="radio" name="subscription_plan_id" value="{{ $plan->id }}"
@@ -254,8 +288,8 @@
                 </div>
 
                 <!-- SUBMIT -->
-                <div class="flex flex-col flex-row items-start justify-between gap-8 md:gap-12 pt-0">
-                    <p class="text-white/60 font-medium italic max-w-lg text-left md:text-left text-sm px-2">
+                <div class="flex flex-col md:flex-row items-start justify-between gap-8 md:gap-12 pt-0">
+                    <p class="text-white/60 font-medium italic max-w-lg text-center md:text-left text-sm px-2">
                         By submitting this form, you agree to our terms and conditions.
                     </p>
                     <button type="submit" class="btn-premium mx-auto w-full md:w-auto px-10 md:px-8 !rounded-2xl md:!rounded-[2rem] !text-lg md:!text-xl">

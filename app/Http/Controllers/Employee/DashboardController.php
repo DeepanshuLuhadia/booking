@@ -12,63 +12,95 @@ class DashboardController extends Controller
     public function index()
     {
         $employee = auth()->user()->employee;
-        
+
         if (!$employee) {
             return redirect('/')->with('error', 'Employee profile not found.');
         }
 
         $today = Carbon::today()->toDateString();
-        
-        $currentBooking = Booking::where('employee_id', $employee->id)
+
+        // The full confirmed queue for today, earliest slot first.
+        $queue = Booking::where('employee_id', $employee->id)
             ->where('booking_date', $today)
             ->where('status', 'confirmed')
             ->orderBy('slot_start_time', 'asc')
-            ->first();
+            ->get();
+
+        // The first confirmed booking is the one the employee is serving now.
+        $currentBooking = $queue->first();
+
+        // The next 5 after the current one — shown as a swipeable queue.
+        $upcomingBookings = $queue->slice(1, 5)->values();
 
         $stats = [
             'completed' => Booking::where('employee_id', $employee->id)->where('booking_date', $today)->where('status', 'completed')->count(),
-            'remaining' => Booking::where('employee_id', $employee->id)->where('booking_date', $today)->where('status', 'confirmed')->count(),
+            'remaining' => $queue->count(),
         ];
 
-        return view('employee.dashboard', compact('employee', 'currentBooking', 'stats'));
+        return view('employee.dashboard', compact('employee', 'currentBooking', 'upcomingBookings', 'stats'));
     }
 
     public function markDone(Request $request)
     {
+        return $this->transition($request, 'completed', 'Appointment marked as done.');
+    }
+
+    public function cancel(Request $request)
+    {
+        return $this->transition($request, 'cancelled', 'Appointment cancelled.');
+    }
+
+    /**
+     * Move a booking owned by the current employee to the given status and
+     * advance the token queue past it (a completed/cancelled customer frees
+     * the counter for the next one).
+     */
+    private function transition(Request $request, string $status, string $message)
+    {
         $employee = auth()->user()->employee;
-        
+
         if (!$employee) {
             return back()->with('error', 'Unauthorized.');
         }
 
         $booking = Booking::find($request->booking_id);
 
-        if ($booking && $booking->employee_id == $employee->id) {
-            $booking->update(['status' => 'completed']);
-
-            // Advance the token queue to the token just served.
-            if ($booking->token_number && $booking->token_number > $employee->now_serving_token) {
-                $employee->update(['now_serving_token' => $booking->token_number]);
-            }
-
-            app(\App\Services\NotificationService::class)->notifyTokenQueue($employee);
-
-            return back()->with('success', 'Appointment marked as done.');
+        if (!$booking || $booking->employee_id != $employee->id) {
+            return back()->with('error', 'Invalid appointment.');
         }
 
-        return back()->with('error', 'Invalid appointment.');
+        // Is this the customer currently being served (head of today's queue)?
+        // Only the head advances the token counter — cancelling a booking further
+        // down the queue must not skip the people waiting ahead of it. Resolve
+        // this BEFORE the status update, while the booking is still 'confirmed'.
+        $isHead = Booking::where('employee_id', $employee->id)
+            ->where('booking_date', $booking->booking_date)
+            ->where('status', 'confirmed')
+            ->orderBy('slot_start_time', 'asc')
+            ->value('id') === $booking->id;
+
+        $booking->update(['status' => $status]);
+
+        // Advance the token queue to the token just handled.
+        if ($isHead && $booking->token_number && $booking->token_number > $employee->now_serving_token) {
+            $employee->update(['now_serving_token' => $booking->token_number]);
+        }
+
+        app(\App\Services\NotificationService::class)->notifyTokenQueue($employee);
+
+        return back()->with('success', $message);
     }
 
     public function togglePause()
     {
         $employee = auth()->user()->employee;
-        
+
         if (!$employee) {
             return back()->with('error', 'Unauthorized.');
         }
 
         $employee->update(['is_paused' => !$employee->is_paused]);
-        
+
         $status = $employee->is_paused ? 'Paused' : 'Resumed';
         return back()->with('success', "Appointments $status successfully.");
     }

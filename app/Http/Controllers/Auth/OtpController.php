@@ -59,6 +59,8 @@ class OtpController extends Controller
             return redirect('/admin/dashboard');
         } elseif ($user->role === 'vendor') {
             return redirect('/vendor/dashboard');
+        } elseif ($user->role === 'employee') {
+            return redirect('/employee/dashboard');
         }
 
         return redirect('/');
@@ -101,6 +103,8 @@ class OtpController extends Controller
             return redirect('/admin/dashboard');
         } elseif ($user && $user->role === 'vendor') {
             return redirect('/vendor/dashboard');
+        } elseif ($user && $user->role === 'employee') {
+            return redirect('/employee/dashboard');
         }
 
         return redirect('/');

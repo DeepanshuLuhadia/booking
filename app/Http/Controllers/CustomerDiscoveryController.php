@@ -375,22 +375,26 @@ public function index(Request $request)
     | Reported reviews stay publicly visible (a report only flags them for
     | admin moderation); they vanish only when an admin deletes them.
     */
+    // Default view shows only the latest 5 reviews. Filtering by a star rating
+    // fetches another 5 on demand from the reviewsList() endpoint.
     $reviews = $vendor->reviews()
         ->latest()
-        ->take(50)
+        ->take(5)
         ->get()
-        ->map(fn ($r) => [
-            'name'          => $r->reviewer_name,
-            'rating'        => $r->rating,
-            'comment'       => $r->comment,
-            'verified'      => $r->is_verified,
-            'images'        => collect($r->images ?? [])->map(fn ($p) => asset('storage/' . $p))->all(),
-            'created_human' => $r->created_at->diffForHumans(),
-        ])
+        ->map(fn ($r) => $this->reviewToArray($r))
         ->values();
 
     $reviewsCount  = $vendor->reviews()->count();
     $averageRating = round((float) $vendor->reviews()->avg('rating'), 1);
+
+    // Per-star counts for the breakdown bars — independent of the 5 shown, so the
+    // bars stay accurate even though only a handful of reviews are loaded.
+    $counts = $vendor->reviews()
+        ->selectRaw('rating, COUNT(*) as c')
+        ->groupBy('rating')
+        ->pluck('c', 'rating');
+    $ratingCounts = collect([5, 4, 3, 2, 1])
+        ->mapWithKeys(fn ($n) => [$n => (int) ($counts[$n] ?? 0)]);
 
     return view('customer.vendor-details', compact(
         'vendor',
@@ -405,9 +409,46 @@ public function index(Request $request)
         'isSubscriptionExpired',
         'reviews',
         'reviewsCount',
-        'averageRating'
+        'averageRating',
+        'ratingCounts'
     ));
 }
+
+    /**
+     * JSON endpoint: latest 5 reviews for a vendor, optionally filtered to a
+     * single star rating. Powers the rating-filter clicks on the profile page.
+     */
+    public function reviewsList(Vendor $vendor, Request $request)
+    {
+        $rating = (int) $request->query('rating', 0);
+
+        $query = $vendor->reviews()->latest();
+        if ($rating >= 1 && $rating <= 5) {
+            $query->where('rating', $rating);
+        }
+
+        return response()->json([
+            'reviews' => $query->take(5)->get()
+                ->map(fn ($r) => $this->reviewToArray($r))
+                ->values(),
+        ]);
+    }
+
+    /**
+     * Shape a Review model into the array consumed by the profile page's Alpine
+     * review component. Shared by show() and reviewsList().
+     */
+    private function reviewToArray($r): array
+    {
+        return [
+            'name'          => $r->reviewer_name,
+            'rating'        => $r->rating,
+            'comment'       => $r->comment,
+            'verified'      => $r->is_verified,
+            'images'        => collect($r->images ?? [])->map(fn ($p) => asset('storage/' . $p))->all(),
+            'created_human' => $r->created_at->diffForHumans(),
+        ];
+    }
 
     public function queueStatus(Vendor $vendor, Request $request)
     {

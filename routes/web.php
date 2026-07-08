@@ -5,11 +5,16 @@ use App\Http\Controllers\Auth\VendorRegistrationController;
 use App\Http\Controllers\Auth\CustomerRegistrationController;
 use App\Http\Controllers\Auth\SessionController;
 
-Route::get('/', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('home');
-
-Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('discover');
-Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
+// Public customer-facing pages. Employees are kept out (bounced to their panel)
+// so staff accounts can't wander onto the discovery/booking site.
+Route::middleware(['employee.panel.only'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('home');
+    Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('discover');
+    Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
+});
 Route::get('/vendors/{vendor:slug}/queue-status', [\App\Http\Controllers\CustomerDiscoveryController::class, 'queueStatus'])->name('vendor.queue-status');
+// Latest 5 reviews, optionally filtered by star rating (?rating=N)
+Route::get('/vendors/{vendor:slug}/reviews-list', [\App\Http\Controllers\CustomerDiscoveryController::class, 'reviewsList'])->name('vendor.reviews.list');
 
 // PWA manifest (dynamic so icon URLs are absolute; branded as the project + our icon)
 Route::get('/manifest.webmanifest', [\App\Http\Controllers\ManifestController::class, 'site'])->name('manifest.site');
@@ -106,5 +111,6 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 Route::middleware(['auth'])->prefix('employee')->name('employee.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Employee\DashboardController::class, 'index'])->name('dashboard');
     Route::post('/mark-done', [\App\Http\Controllers\Employee\DashboardController::class, 'markDone'])->name('mark-done');
+    Route::post('/cancel', [\App\Http\Controllers\Employee\DashboardController::class, 'cancel'])->name('cancel');
     Route::post('/toggle-pause', [\App\Http\Controllers\Employee\DashboardController::class, 'togglePause'])->name('toggle-pause');
 });

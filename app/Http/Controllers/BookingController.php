@@ -66,7 +66,13 @@ class BookingController extends Controller
             if ($vendor->appointment_mode !== 'token') {
                 $request->validate([
                     'slot_start' => 'required|date_format:H:i',
-                    'slot_end'   => 'required|date_format:H:i|after:slot_start',
+                    // NOTE: cannot use `after:slot_start` here. Overnight shops
+                    // legitimately generate slots that wrap past midnight
+                    // (e.g. 23:45 -> 00:00), and `after` compares both values on
+                    // the SAME day, so it wrongly rejects the wrapped end time.
+                    // The slot values are server-generated and chosen from a fixed
+                    // list, so we only guard the format and that the two differ.
+                    'slot_end'   => 'required|date_format:H:i|different:slot_start',
                 ]);
             }
 

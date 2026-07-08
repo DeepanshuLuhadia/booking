@@ -4,7 +4,9 @@
 
         <!-- PROFILE HERO -->
         <section class="relative z-10 pt-28 pb-10 px-5 md:pt-32 md:pb-16 md:px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-12">
+            {{-- Desktop / tablet hero (≥md) — unchanged. The mobile hero is a separate
+                 block below (md:hidden) redesigned to match the approved reference. --}}
+            <div class="hidden md:flex max-w-7xl mx-auto md:flex-row items-center gap-6 md:gap-12">
                 <!-- Left: Profile Avatar -->
                 <div class="relative group shrink-0">
                     <div
@@ -33,16 +35,10 @@
 
                 <!-- Right: Business Credentials -->
                 <div class="flex-grow w-full min-w-0 text-center md:text-left animate-text-reveal">
-                    <div
-                        class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 backdrop-blur-xl rounded-full text-white/50 text-[9px] font-black uppercase tracking-widest mb-4 md:mb-6">
-                        <span class="w-2 h-2 rounded-full theme-gradient-bg animate-pulse"></span> Verified Appointment
-                        Registry
-                    </div>
-
                     <h1
                         class="text-4xl sm:text-5xl md:text-[5.5rem] font-black text-white mb-4 md:mb-6 tracking-tighter leading-[0.95] md:leading-[0.9] italic break-words">
                         {{ $vendor->business_name }}
-                        @if($vendor->is_verified)
+                        @if($vendor->hasPremiumBadge())
                         <span class="inline-flex items-center gap-1 align-middle text-[10px] not-italic font-black uppercase tracking-widest text-sky-300 bg-sky-500/10 border border-sky-400/20 px-2.5 py-1 rounded-full">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
                             Verified
@@ -90,10 +86,65 @@
                     </div>
                 </div>
             </div>
+
+            {{-- ═══════════════════════════════════════════════════════════════
+                 MOBILE HERO (<md) — matches the approved reference layout.
+                 Reuses $img/$vendor/$theme computed in the desktop block above.
+                 Desktop is untouched (that block is hidden md:flex).
+                 ═══════════════════════════════════════════════════════════════ --}}
+            {{-- Inline styles are used deliberately: the site serves a prebuilt
+                 Tailwind bundle, so newly-introduced utility classes (w-44, the amber
+                 gradient, sky tints, md:hidden, …) aren't compiled. Inline styles render
+                 reliably without a rebuild. Visibility is toggled by the .vd-mobile-hero
+                 rule added to the app layout's <style> (hidden ≥768px). --}}
+            <div class="vd-mobile-hero" style="display:flex; flex-direction:column; align-items:center; text-align:center; max-width:430px; margin:0 auto;">
+                {{-- Circular avatar with gold ring --}}
+                <div style="width:180px; height:180px; padding:3px; border-radius:50%; background:linear-gradient(135deg,#fde68a,#f4b740,#b45309); box-shadow:0 20px 45px rgba(0,0,0,0.5); margin-bottom:24px;">
+                    <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; background:#0b1020;">
+                        <img src="{{ $img }}" alt="{{ $vendor->business_name }}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                </div>
+
+                {{-- Business name + premium verified badge (Premium ₹399 plan only) --}}
+                <h1 style="font-size:30px; font-weight:900; color:#fff; letter-spacing:-0.01em; line-height:1.15; margin:0 0 30px; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; word-break:break-word;">
+                    {{ $vendor->business_name }}
+                    @if($vendor->hasPremiumBadge())
+                    <svg style="width:26px; height:26px; flex-shrink:0; color:#38bdf8;" viewBox="0 0 24 24" fill="currentColor" aria-label="Verified">
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+                    </svg>
+                    @endif
+                </h1>
+
+                {{-- Address row --}}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($vendor->address ?? 'Professional District') }}"
+                    target="_blank" rel="noopener noreferrer"
+                    style="width:100%; display:flex; align-items:center; gap:16px; margin-bottom:22px; text-align:left; text-decoration:none;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg style="width:22px; height:22px; color:rgba(255,255,255,0.75);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <span style="font-size:17px; font-weight:500; color:rgba(255,255,255,0.9); line-height:1.4;">{{ $vendor->address ?? 'Professional District' }}</span>
+                </a>
+
+                {{-- Fee row --}}
+                <div style="width:100%; display:flex; align-items:center; gap:16px; text-align:left;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg style="width:22px; height:22px; color:rgba(255,255,255,0.75);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:23px; font-weight:900; color:#fff; line-height:1;">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards</div>
+                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.14em; color:rgba(255,255,255,0.4); margin-top:6px;">Fee</div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         @if($isSubscriptionExpired)
-        <div class="max-w-7xl mx-auto px-6 mb-12 relative z-10">
+        <div class="max-w-7xl mx-auto px-6 mb-8 md:mb-12 relative z-10">
             <div class="glass-card p-8 bg-red-500/10 border-red-500/20 backdrop-blur-3xl rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 shadow-2xl relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent"></div>
                 <div class="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30">
@@ -110,7 +161,7 @@
         @endif
 
         <!-- APPOINTMENT SELECTION MATRIX -->
-        <div class="max-w-7xl mx-auto px-5 md:px-6 grid grid-cols-1 xl:grid-cols-12 gap-10 xl:gap-16 relative z-10 pb-24 md:pb-40">
+        <div class="max-w-7xl mx-auto px-5 md:px-6 grid grid-cols-1 xl:grid-cols-12 gap-10 xl:gap-16 relative z-10 pb-12 md:pb-40">
 
             <!-- STEP 1: Service Selection -->
             <div class="order-1 xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-1">
@@ -169,7 +220,7 @@
                         </button>
                     @empty
                         <div
-                            class="py-20 text-center border-4 border-dashed border-white/5 rounded-[3rem] opacity-20 italic">
+                            class="py-12 md:py-20 text-center border-4 border-dashed border-white/5 rounded-[3rem] opacity-20 italic">
                             <span class="text-6xl block mb-6 grayscale text-white">Offline</span>
                             <p class="font-black uppercase tracking-widest text-white">No Specialists Available</p>
                         </div>
@@ -180,7 +231,7 @@
             <!-- OVERVIEW + REVIEWS (sits after both steps on mobile, under Step 1 on desktop) -->
             <div class="order-3 xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-2">
                 <!-- Professional Overview -->
-                <div class="mt-12 pt-12 md:mt-24 md:pt-24 border-t border-white/5">
+                <div class="mt-10 pt-8 md:mt-24 md:pt-24 border-t border-white/5">
                     <h3 class="text-3xl font-black text-white tracking-tighter uppercase italic mb-8">Establishment
                         Overview</h3>
                     <div class="glass-card shadow-xl shadow-black/20 bg-white/5 backdrop-blur-3xl border border-white/10 p-10 text-lg font-medium text-white/60 leading-relaxed italic"
@@ -196,7 +247,7 @@
                 </div>
 
                 <!-- REVIEWS & RATINGS -->
-                <div x-data="reviewSystem()" class="mt-24 pt-24 border-t border-white/5">
+                <div x-data="reviewSystem()" class="mt-10 pt-8 md:mt-24 md:pt-24 border-t border-white/5">
                     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
                         <div>
                             <div class="flex items-center gap-3 mb-4">
@@ -229,15 +280,24 @@
                         <div class="flex-grow w-full">
                             <template x-if="reviewsCount > 0">
                                 <div class="space-y-2">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-[9px] font-black uppercase tracking-widest text-white/30 italic flex items-center gap-1.5">
+                                            <svg class="w-3 h-3 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+                                            Filter by rating
+                                        </p>
+                                        <button type="button" x-show="activeRating > 0" x-cloak @click="showLatest()" class="theme-gradient-text text-[9px] font-black uppercase tracking-widest italic">Clear</button>
+                                    </div>
                                     <template x-for="n in [5,4,3,2,1]" :key="n">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-[10px] font-black text-white/40 w-3" x-text="n"></span>
+                                        <button type="button" class="vd-rating-row" :class="{ active: activeRating === n }"
+                                            :disabled="ratingCount(n) === 0" @click="filterByRating(n)"
+                                            :title="`Show ${n}-star reviews`">
+                                            <span class="text-[10px] font-black w-3" :class="activeRating === n ? 'text-amber-400' : 'text-white/40'" x-text="n"></span>
                                             <svg class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                                             <div class="flex-grow h-2 rounded-full bg-white/5 overflow-hidden">
                                                 <div class="h-full theme-gradient-bg rounded-full transition-all duration-700" :style="`width: ${ratingPercent(n)}%`"></div>
                                             </div>
                                             <span class="text-[10px] font-black text-white/30 w-6 text-right" x-text="ratingCount(n)"></span>
-                                        </div>
+                                        </button>
                                     </template>
                                 </div>
                             </template>
@@ -247,8 +307,18 @@
                         </div>
                     </div>
 
-                    <!-- Individual Reviews -->
-                    <div class="space-y-4">
+                    <!-- Active-filter header: shown when the list is filtered by a star rating -->
+                    <div class="flex items-center justify-between mb-4" x-show="activeRating > 0" x-cloak>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-white/50 italic">
+                            Showing <span x-text="activeRating"></span>-Star Reviews
+                        </span>
+                        <button type="button" @click="showLatest()" class="theme-gradient-text text-[10px] font-black uppercase tracking-widest italic">
+                            Show Latest
+                        </button>
+                    </div>
+
+                    <!-- Individual Reviews — vertical on desktop, swipe slider on mobile -->
+                    <div class="vd-review-slider" :class="loadingReviews ? 'opacity-50' : ''">
                         <template x-for="(review, idx) in reviews" :key="idx">
                             <div class="glass-card bg-white/5 backdrop-blur-3xl border border-white/10 p-6 rounded-[2rem] animate-reveal">
                                 <div class="flex items-start justify-between gap-4 mb-3">
@@ -426,7 +496,7 @@
 
                         <div class="p-4 pt-0">
                             <!-- Loading Interface -->
-                            <div x-show="loading && !isSubscriptionExpired" class="py-32 flex flex-col items-center justify-center gap-6">
+                            <div x-show="loading && !isSubscriptionExpired" class="py-16 md:py-32 flex flex-col items-center justify-center gap-6">
                                 <div
                                     class="w-10 h-10 border-4 border-white/10 border-t-orange-500 rounded-full animate-spin">
                                 </div>
@@ -507,7 +577,7 @@
                                                 </button>
                                             </template>
                                         </div>
-                                        <div x-show="uniqueSlots.length === 0" class="py-20 text-center opacity-10 italic">
+                                        <div x-show="uniqueSlots.length === 0" class="py-12 md:py-20 text-center opacity-10 italic">
                                             <span class="text-4xl font-black uppercase tracking-widest text-white">No
                                                 Active Slots</span>
                                         </div>
@@ -517,7 +587,7 @@
                                 <!-- Offline State -->
                                 <template x-if="isOffline">
                                     <div
-                                        class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                                        class="py-12 md:py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
                                         <div
                                             class="w-20 h-20 theme-gradient-bg rounded-3xl flex items-center justify-center mx-auto mb-6 border theme-border opacity-50">
                                             <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24"
@@ -542,7 +612,7 @@
 
                                 <!-- Paused State -->
                                 <template x-if="!isOffline && isPaused">
-                                    <div class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                                    <div class="py-12 md:py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
                                         <div class="w-20 h-20 bg-amber-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-500/50">
                                             <svg class="w-10 h-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -554,14 +624,14 @@
                                 </template>
                             </div>
 
-                            <div x-show="!selectedEmployee && !isSubscriptionExpired" class="py-32 text-center opacity-30 animate-fade-in">
+                            <div x-show="!selectedEmployee && !isSubscriptionExpired" class="py-16 md:py-32 text-center opacity-30 animate-fade-in">
                                 <span class="text-6xl block mb-6 grayscale">⏳</span>
                                 <p class="text-[9px] font-black uppercase tracking-[0.4em] text-white italic">Initiate
                                     Selection Above</p>
                             </div>
 
                             <!-- Subscription Expired State -->
-                            <div x-show="isSubscriptionExpired" class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                            <div x-show="isSubscriptionExpired" class="py-12 md:py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
                                 <div class="w-20 h-20 bg-red-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-500/50">
                                     <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -911,6 +981,11 @@
                 reviews: @js($reviews),
                 averageRating: {{ $averageRating }},
                 reviewsCount: {{ $reviewsCount }},
+                // Per-star totals for the breakdown bars (server-computed, so they
+                // stay accurate even though only 5 reviews are loaded at a time).
+                ratingCounts: @js($ratingCounts),
+                activeRating: 0,      // 0 = latest; 1-5 = filter by that star rating
+                loadingReviews: false,
 
                 // Optional Google identity
                 googleClientId: @js(config('services.google.client_id')),
@@ -1021,12 +1096,40 @@
                 },
 
                 ratingCount(n) {
-                    return this.reviews.filter(r => r.rating === n).length;
+                    // Server-computed totals — not derived from the 5 loaded reviews.
+                    return this.ratingCounts[n] ?? 0;
                 },
 
                 ratingPercent(n) {
                     if (this.reviewsCount === 0) return 0;
                     return Math.round((this.ratingCount(n) / this.reviewsCount) * 100);
+                },
+
+                // Toggle a star-rating filter and fetch the matching reviews (max 5).
+                async filterByRating(n) {
+                    this.activeRating = (this.activeRating === n) ? 0 : n;
+                    await this.loadReviews();
+                },
+
+                // Reset to the latest reviews.
+                showLatest() {
+                    if (this.activeRating === 0) return;
+                    this.activeRating = 0;
+                    this.loadReviews();
+                },
+
+                async loadReviews() {
+                    this.loadingReviews = true;
+                    try {
+                        const url = new URL('{{ route('vendor.reviews.list', $vendor->slug) }}', window.location.origin);
+                        if (this.activeRating) url.searchParams.set('rating', this.activeRating);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        this.reviews = data.reviews || [];
+                    } catch (e) {
+                        console.error('LOAD REVIEWS ERROR', e);
+                    }
+                    this.loadingReviews = false;
                 },
 
                 async submit() {
@@ -1057,11 +1160,15 @@
                         });
                         const data = await res.json();
                         if (res.ok && data.success) {
-                            this.reviews.unshift(data.review);
                             this.averageRating = data.average_rating;
                             this.reviewsCount = data.reviews_count;
+                            // Reflect the new review in the breakdown bars, then refresh
+                            // the visible list (respecting any active star filter).
+                            const rk = String(this.rating);
+                            this.ratingCounts[rk] = (this.ratingCounts[rk] || 0) + 1;
                             this.showModal = false;
                             this.resetForm();
+                            await this.loadReviews();
                             window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.message, type: 'success' } }));
                         } else {
                             this.error = (data.errors ? Object.values(data.errors)[0][0] : null) || data.message || 'Could not post review';
