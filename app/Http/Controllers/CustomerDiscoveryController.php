@@ -15,12 +15,26 @@ class CustomerDiscoveryController extends Controller
 {
 public function index(Request $request)
 {
-    $search     = trim($request->search ?? '');
+    $rawSearch  = trim($request->search ?? '');
+    $search     = $rawSearch;
+    $categorySlug = $request->category;
     $specialty  = trim($request->specialty ?? '');
     $location   = trim($request->location ?? '');
     $sort       = $request->sort;
     $filterType = $request->type;
     $now        = now(); // Single source of truth for time execution
+
+    // Natural Language AI Search Intent Parsing
+    if (filled($rawSearch)) {
+        $intentParser = new \App\Services\SearchIntentParserService();
+        $parsedIntent = $intentParser->parse($rawSearch);
+        if ($parsedIntent['inferred_category'] && empty($categorySlug)) {
+            $categorySlug = $parsedIntent['inferred_category'];
+        }
+        if ($parsedIntent['clean_keyword']) {
+            $search = $parsedIntent['clean_keyword'];
+        }
+    }
 
     $isSearch = filled($search) || filled($specialty) || filled($location);
 
@@ -113,81 +127,75 @@ public function index(Request $request)
         $query->orderByDesc('is_open')->latest();
     }
 
-    $vendors = $query->paginate(24);
+    // Cache default discovery query candidate list for 60s when no specific user search is active
+    if (!$isSearch && empty($categorySlug) && empty($filterType) && empty($sort)) {
+        $candidates = Cache::remember('default_discovery_candidates', 60, fn() => $query->get());
+    } else {
+        $candidates = $query->get();
+    }
 
     /*
     |--------------------------------------------------------------------------
     | Calculate Real-Time Open Status
     |--------------------------------------------------------------------------
     */
-    $vendors->getCollection()->transform(function ($vendor) use ($now) {
-        // NOTE: use a dedicated key (not `is_currently_open`, which is a model
-        // accessor that only reflects shop hours and would shadow this value).
-        // is_bookable_now = shop open AND >=1 active employee working right now.
+    $candidates->transform(function ($vendor) use ($now) {
+        // Gate 1: Vendor/shop global hours must include $now.
+        // Gate 2: At least one non-paused employee must be working $now within that window.
+        // Both gates must pass for the vendor to appear in the default listing.
         $vendor->is_bookable_now = false;
 
         if ($vendor->employees->isEmpty()) {
             return $vendor;
         }
 
-        // Resolve vendor shift (supports overnight shifts smoothly)
+        // Resolve vendor shift — handles overnight hours (e.g. 22:00 → 02:00)
         [$shiftDate, $vOpen, $vClose] = $this->resolveShift(
             $now,
             $vendor->global_opening_time,
             $vendor->global_closing_time
         );
 
-        // Vendor storefront itself is currently closed right now
+        // GATE 1: Vendor shop itself must be open right now
         if (!$now->between($vOpen, $vClose)) {
-            return $vendor;
+            return $vendor; // Shop is closed → never show in listing
         }
 
+        // GATE 2: Check if any employee is available right now
         foreach ($vendor->employees as $employee) {
-            // A paused employee is not accepting bookings — skip them.
+            // Paused employees are not accepting bookings — skip
             if ($employee->is_paused) {
                 continue;
             }
 
-            // Anchor base times explicitly to the generated vendor shift start day
+            // Resolve employee's own shift anchored to the vendor's shift day
             $empStartDt = $vOpen->copy()->setTimeFromTimeString($employee->working_start_time);
             $empEndDt   = $vOpen->copy()->setTimeFromTimeString($employee->working_end_time);
 
-            /*
-            |--------------------------------------------------------------------------
-            | Employee Cross-Midnight Lookahead (With Defensive lte Guard)
-            |--------------------------------------------------------------------------
-            */
+            // Handle cross-midnight employee shifts (e.g. 22:00 → 01:00)
             if ($empEndDt->lte($empStartDt)) {
                 $empEndDt->addDay();
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Next-Day Symmetrical Alignment (Symmetrical Parallel Approach)
-            |--------------------------------------------------------------------------
-            */
+            // Align next-day employees symmetrically with the vendor's overnight window
             if ($vClose->isNextDay($vOpen) && $empStartDt->lt($vOpen)) {
                 $empStartDt->addDay();
                 $empEndDt->addDay();
             }
 
-            // Cap employee working bounds strictly inside global vendor operation frames
+            // Clamp employee window strictly inside the vendor's open window
             $empStartDt = $empStartDt->max($vOpen);
             $empEndDt   = $empEndDt->min($vClose);
 
-            // Cancel check if formatting results in zero overlap scenario
-            if ($empStartDt->gt($empEndDt)) {
+            // Skip if the clamping produced zero or negative overlap
+            if ($empStartDt->gte($empEndDt)) {
                 continue;
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Strict Boundary Live System Match Check
-            |--------------------------------------------------------------------------
-            */
+            // Employee is currently serving within their shift window
             if ($now->gte($empStartDt) && $now->lt($empEndDt)) {
                 $vendor->is_bookable_now = true;
-                break;
+                break; // One available employee is enough to show the vendor
             }
         }
 
@@ -205,12 +213,20 @@ public function index(Request $request)
     $revealClosed = filled($search);
 
     if (!$revealClosed) {
-        $vendors->setCollection(
-            $vendors->getCollection()
-                ->where('is_bookable_now', true)
-                ->values()
-        );
+        $candidates = $candidates->where('is_bookable_now', true)->values();
     }
+
+    $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+    $perPage = 24;
+    $results = $candidates->slice(($page - 1) * $perPage, $perPage)->values();
+
+    $vendors = new \Illuminate\Pagination\LengthAwarePaginator(
+        $results,
+        $candidates->count(),
+        $perPage,
+        $page,
+        ['path' => $request->url(), 'query' => $request->query()]
+    );
 
     return view('customer.vendors', compact('vendors', 'allThemes'));
 }
@@ -471,11 +487,30 @@ public function index(Request $request)
                 ->max('token_number') ?? 0)
             : 0;
 
+        $currentHour = (int) now()->format('H');
+        $peakHourActive = ($currentHour >= 17 && $currentHour <= 20);
+
+        // Queue progress as a percentage of total tokens issued today (0–100%)
+        $progressPercent = ($queueIndex > 0)
+            ? (int) round(($nowServing / $queueIndex) * 100)
+            : 0;
+
+        // Dynamic smart ETA using QueueVelocityService
+        $approxWait = 0;
+        if ($employee && $request->filled('my_token')) {
+            $myToken = (int) $request->my_token;
+            $queueVelocityService = new \App\Services\QueueVelocityService();
+            $approxWait = $queueVelocityService->calculateEstimatedWait($vendor, $employee, $myToken);
+        }
+
         return response()->json([
-            'now_serving' => $nowServing,
-            'queue_index' => $queueIndex,
-            'is_open' => $vendor->is_open,
-            'bookings_paused' => $vendor->bookings_paused,
+            'now_serving'           => $nowServing,
+            'queue_index'           => $queueIndex,
+            'is_open'               => $vendor->is_open,
+            'bookings_paused'       => $vendor->bookings_paused,
+            'queue_progress_percent' => $progressPercent,
+            'approx_wait_min'       => $approxWait,
+            'peak_hour_active'      => $peakHourActive,
         ]);
     }
 
@@ -522,7 +557,14 @@ public function index(Request $request)
             ]);
         }
 
-        $slots = $slotService->generateSlots($employee, $shiftDate, $vendor);
+        // Cache time-slot results for 30 seconds per employee per day.
+        // Token mode is intentionally excluded: queue index changes every few seconds.
+        if ($vendor->appointment_mode === 'time_slot') {
+            $cacheKey = "slots:{$employee->id}:{$shiftDate}";
+            $slots = \Illuminate\Support\Facades\Cache::remember($cacheKey, 30, fn() => $slotService->generateSlots($employee, $shiftDate, $vendor));
+        } else {
+            $slots = $slotService->generateSlots($employee, $shiftDate, $vendor);
+        }
 
         // Token System Metadata (per-employee queue)
         $queueIndex = Booking::where('employee_id', $employee->id)

@@ -26,7 +26,8 @@ class NotificationService
             return false;
         }
         
-        return $this->fcmService->sendToToken($user->fcm_token, $title, $message, $data);
+        \App\Jobs\SendFcmNotificationJob::dispatch($user->fcm_token, $title, $message, $data);
+        return true;
     }
 
     public function notifyVendorNewBooking($vendor, $booking)

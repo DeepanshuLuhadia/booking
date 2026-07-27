@@ -146,6 +146,34 @@ class Vendor extends Model
         return $this->reviews()->count();
     }
 
+    /**
+     * AI-generated fallback description based on vendor category and price,
+     * used when the vendor hasn't provided their own description.
+     */
+    public function getDynamicDescriptionAttribute(): string
+    {
+        if (!empty($this->attributes['description'])) {
+            return $this->attributes['description'];
+        }
+
+        $cat = strtolower($this->category?->slug ?? 'professional');
+        $name = $this->business_name;
+        $fee = number_format($this->service_fee);
+
+        return match (true) {
+            in_array($cat, ['salon', 'barber', 'beauty']) => 
+                "Premium grooming and styling services at {$name}. Experience top-tier professional care starting at ₹{$fee}.",
+            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => 
+                "Trusted healthcare and medical consultations at {$name}. Professional care prioritizing your well-being, with visits starting at ₹{$fee}.",
+            in_array($cat, ['sports', 'gym', 'fitness', 'turf']) => 
+                "Top-class sports and fitness facilities at {$name}. Book your slot today starting at ₹{$fee}.",
+            in_array($cat, ['training', 'consultant', 'coaching']) => 
+                "Expert guidance and professional consultations at {$name}. Elevate your skills starting at ₹{$fee}.",
+            default => 
+                "Professional services offered at {$name}. Book your appointment today starting at ₹{$fee}."
+        };
+    }
+
     public function hasAvailableSlotsToday()
     {
         if (!$this->isEffectivelyOpen()) {

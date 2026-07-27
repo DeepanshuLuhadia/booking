@@ -236,13 +236,7 @@
                         Overview</h3>
                     <div class="glass-card shadow-xl shadow-black/20 bg-white/5 backdrop-blur-3xl border border-white/10 p-10 text-lg font-medium text-white/60 leading-relaxed italic"
                         style="padding: 24px; border-radius: 16px;">
-                        @if($vendor->description)
-                            {!! nl2br(e($vendor->description)) !!}
-                        @else
-                                            The premier {{ strtolower($theme['label']) }} destination at <strong class="text-white">{{
-                            $vendor->business_name }}</strong>. Experience unrivaled professional standards in a
-                                            world-class environment.
-                        @endif
+                        {!! nl2br(e($vendor->dynamic_description)) !!}
                     </div>
                 </div>
 
@@ -370,11 +364,34 @@
                             <!-- Star Picker (rendered statically so each button's click binds reliably) -->
                             <div class="flex items-center justify-center gap-2 mb-8">
                                 @for($s = 1; $s <= 5; $s++)
-                                    <button type="button" @click="rating = {{ $s }}" @mouseenter="hoverRating = {{ $s }}" @mouseleave="hoverRating = 0"
+                                    <button type="button" @click="rating = {{ $s }}; refreshSuggestions()" @mouseenter="hoverRating = {{ $s }}" @mouseleave="hoverRating = 0"
                                         class="transition-transform duration-200 hover:scale-125 focus:outline-none">
                                         <svg class="w-10 h-10 transition-colors duration-150" :class="{{ $s }} <= (hoverRating || rating) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-white/15'" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                                     </button>
                                 @endfor
+                            </div>
+
+                            <!-- AI Suggestions (appear when rating is selected) -->
+                            <div x-show="rating > 0 && activeAiSuggestions.length > 0" class="mb-8" x-cloak x-transition>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <span class="flex-grow h-px bg-white/10"></span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest text-sky-400 italic flex items-center gap-1.5">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                                        AI Suggestions
+                                    </span>
+                                    <span class="flex-grow h-px bg-white/10"></span>
+                                    <button type="button" @click="refreshSuggestions()" class="text-sky-400 hover:text-sky-300 transition-colors shrink-0 flex items-center justify-center p-1 rounded-full hover:bg-sky-500/10" title="Get new suggestions">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                    </button>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <template x-for="(suggestion, index) in activeAiSuggestions" :key="index">
+                                        <button type="button" @click="comment = suggestion" 
+                                            class="text-left px-4 py-3 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 hover:border-sky-500/40 text-sm text-white/80 transition-all italic group">
+                                            <span class="text-sky-400 mr-1.5 group-hover:scale-110 transition-transform inline-block">✨</span> <span x-text="suggestion"></span>
+                                        </button>
+                                    </template>
+                                </div>
                             </div>
 
                             <div class="space-y-5 text-left mb-8">
@@ -986,6 +1003,23 @@
                 ratingCounts: @js($ratingCounts),
                 activeRating: 0,      // 0 = latest; 1-5 = filter by that star rating
                 loadingReviews: false,
+                allAiSuggestions: @js(app(\App\Services\ReviewSuggestionService::class)->getAllForCategory($vendor->category?->slug)),
+                activeAiSuggestions: [],
+
+                refreshSuggestions() {
+                    if (this.rating === 0) {
+                        this.activeAiSuggestions = [];
+                        return;
+                    }
+                    const pool = this.allAiSuggestions[this.rating] || [];
+                    if (pool.length <= 3) {
+                        this.activeAiSuggestions = pool;
+                        return;
+                    }
+                    // Shuffle and take 3
+                    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+                    this.activeAiSuggestions = shuffled.slice(0, 3);
+                },
 
                 // Optional Google identity
                 googleClientId: @js(config('services.google.client_id')),

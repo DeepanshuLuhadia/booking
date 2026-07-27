@@ -7,13 +7,37 @@
                 Multi-Vendor Appointment Platform
             </div>
 
+            @php
+                $hour = now()->hour;
+                $isWeekend = now()->isWeekend();
+                
+                if ($hour >= 5 && $hour < 12) {
+                    $greeting = "Good Morning!";
+                    $action = "Need a fresh start today?";
+                } elseif ($hour >= 12 && $hour < 17) {
+                    $greeting = "Good Afternoon!";
+                    $action = "Take some time for yourself.";
+                } elseif ($hour >= 17 && $hour < 22) {
+                    $greeting = "Good Evening!";
+                    $action = "Unwind with top professionals.";
+                } else {
+                    $greeting = "Discover & Book";
+                    $action = "Connect with trusted experts.";
+                }
+                
+                if ($isWeekend) {
+                    $greeting = "Happy Weekend!";
+                    $action = "Perfect time for self-care and sports.";
+                }
+            @endphp
+
             <h1 class="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-[1.1] mb-6 tracking-tighter">
-                Book Verified <span class="text-orange-500 italic">Experts</span><br class="hidden sm:block">
-                In Your City
+                {{ $greeting }}<br class="hidden sm:block">
+                Book Verified <span class="text-orange-500 italic">Experts</span>
             </h1>
 
             <p class="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium">
-                Personalized platform to find top-rated professionals near you.
+                {{ $action }} The personalized platform to find top-rated professionals in your city.
             </p>
 
             <!-- Premium Search Matrix -->

@@ -11,6 +11,9 @@ Route::middleware(['employee.panel.only'])->group(function () {
     Route::get('/', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('home');
     Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('discover');
     Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
+    Route::get('/qr/{vendor:slug}', function (\App\Models\Vendor $vendor) {
+        return redirect()->route('vendor.show', ['vendor' => $vendor->slug, 'qr' => 1]);
+    })->name('vendor.qr');
 });
 Route::get('/vendors/{vendor:slug}/queue-status', [\App\Http\Controllers\CustomerDiscoveryController::class, 'queueStatus'])->name('vendor.queue-status');
 // Latest 5 reviews, optionally filtered by star rating (?rating=N)

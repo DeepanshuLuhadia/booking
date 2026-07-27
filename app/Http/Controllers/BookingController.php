@@ -131,6 +131,18 @@ class BookingController extends Controller
                 } else {
                     $slotStart = $requestedStart;
                     $slotEnd   = $requestedEnd;
+
+                    // Verify slot availability under pessimistic lock to prevent concurrent double booking
+                    $alreadyBooked = Booking::where('employee_id', $employee->id)
+                        ->where('booking_date', $bookingDate)
+                        ->where('slot_start_time', $slotStart)
+                        ->whereIn('status', ['confirmed', 'pending'])
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if ($alreadyBooked) {
+                        throw new \Exception('This slot was just booked by another customer. Please select another time.', 409);
+                    }
                 }
 
                 return Booking::create([
@@ -161,22 +173,53 @@ class BookingController extends Controller
 
             \Illuminate\Support\Facades\RateLimiter::hit($phoneKey, 86400);
 
+            // Invalidate discovery and slot caches so the next listing/slot request
+            // reflects the newly confirmed booking immediately.
+            \Illuminate\Support\Facades\Cache::forget('default_discovery_candidates');
+            \Illuminate\Support\Facades\Cache::forget("slots:{$employee->id}:{$bookingDate}");
+
             $booking->setRelation('employee', $employee);
             $notificationService->notifyVendorNewBooking($vendor, $booking);
 
             $fcmToken = session('fcm_token');
             if ($fcmToken) {
                 $dummyUser = new \App\Models\User(['fcm_token' => $fcmToken]);
+                
+                // Smart Notification Title Logic
+                $hour = now()->hour;
+                $greeting = 'Booking Confirmed!';
+                
+                if ($hour >= 5 && $hour < 12) {
+                    $greeting = 'Start your day right! 🌅';
+                } elseif ($hour >= 12 && $hour < 17) {
+                    $greeting = 'Good Afternoon! ☀️';
+                } elseif ($hour >= 17 && $hour < 22) {
+                    $greeting = 'Evening plans set! 🌙';
+                }
+
+                $cat = strtolower($vendor->category?->slug ?? '');
+                if (in_array($cat, ['salon', 'barber', 'beauty'])) {
+                    $title = "{$greeting} Your grooming appointment is confirmed. ✂️";
+                } elseif (in_array($cat, ['clinic', 'doctor', 'health'])) {
+                    $title = "{$greeting} Your checkup at {$vendor->business_name} is booked. 🩺";
+                } elseif (in_array($cat, ['sports', 'gym', 'turf'])) {
+                    $title = "{$greeting} Game on! Your slot at {$vendor->business_name} is confirmed. ⚽";
+                } else {
+                    $title = "{$greeting} Your slot with {$employee->name} is confirmed.";
+                }
+
                 $notificationService->sendWebPush(
                     $dummyUser,
-                    "Booking Confirmed!",
+                    $title,
                     "Your appointment with {$employee->name} at {$vendor->business_name} is confirmed."
                 );
             }
 
             $nowServing = $employee->now_serving_token ?? 0;
             $peopleAhead = max(0, ($booking->token_number ?? 0) - $nowServing);
-            $approxWait = $peopleAhead * ($vendor->avg_consultation_time ?? 15);
+
+            $queueVelocityService = new \App\Services\QueueVelocityService();
+            $approxWait = $queueVelocityService->calculateEstimatedWait($vendor, $employee, $booking->token_number ?? 0);
 
             return response()->json([
                 'success' => true,
@@ -197,14 +240,22 @@ class BookingController extends Controller
                 'error'   => collect($e->errors())->flatten()->first(),
             ], 422);
 
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Illuminate\Support\Facades\Log::warning('BookingController@store database conflict: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error'   => 'This slot was just booked by another customer. Please choose a different time.',
+            ], 409);
+
         } catch (\Throwable $e) {
+            $code = ($e->getCode() >= 400 && $e->getCode() < 600) ? (int) $e->getCode() : 500;
             \Illuminate\Support\Facades\Log::error('BookingController@store error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
             ]);
             return response()->json([
                 'success' => false,
-                'error'   => 'Booking could not be completed. Please try again.',
-            ], 500);
+                'error'   => $e->getMessage() ?: 'Booking could not be completed. Please try again.',
+            ], $code);
         }
     }
 }
