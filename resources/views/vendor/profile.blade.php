@@ -138,21 +138,92 @@
                                 class="glass-input w-full rounded-2xl p-4 font-medium">{{ $vendor->address }}</textarea>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {{-- Coordinates. These drive the "N km away" chip on the
+                             customer listing, so an unfilled pair means the shop
+                             shows no distance at all — hence the one-tap capture
+                             on the right rather than expecting hand-typed decimals. --}}
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 md:gap-8 items-end"
+                            x-data="{
+                                locating: false,
+                                status: '',
+                                ok: false,
+                                detect() {
+                                    if (!navigator.geolocation) {
+                                        this.ok = false;
+                                        this.status = 'This browser cannot report a location.';
+                                        return;
+                                    }
+                                    // Geolocation is refused outright on plain HTTP, and the
+                                    // failure is silent enough to look like a broken button.
+                                    if (!window.isSecureContext) {
+                                        this.ok = false;
+                                        this.status = 'Needs a secure (https) connection.';
+                                        return;
+                                    }
+                                    this.locating = true;
+                                    this.status = '';
+                                    navigator.geolocation.getCurrentPosition(
+                                        (pos) => {
+                                            // 7dp matches the decimal(10,7) columns exactly.
+                                            this.$refs.lat.value = pos.coords.latitude.toFixed(7);
+                                            this.$refs.lng.value = pos.coords.longitude.toFixed(7);
+                                            this.$refs.lat.dispatchEvent(new Event('input'));
+                                            this.$refs.lng.dispatchEvent(new Event('input'));
+                                            this.locating = false;
+                                            this.ok = true;
+                                            this.status = 'Captured — accurate to about ' +
+                                                Math.round(pos.coords.accuracy) + ' m. Save to apply.';
+                                        },
+                                        (err) => {
+                                            this.locating = false;
+                                            this.ok = false;
+                                            this.status = err.code === 1
+                                                ? 'Permission denied — allow location access for this site and retry.'
+                                                : (err.code === 3
+                                                    ? 'Timed out while locating. Please try again.'
+                                                    : 'Location unavailable right now.');
+                                        },
+                                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                                    );
+                                }
+                            }">
                             <div class="space-y-4">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Latitude
                                     Reference</label>
-                                <input type="text" name="latitude" value="{{ $vendor->latitude }}"
+                                <input type="text" name="latitude" x-ref="lat" value="{{ $vendor->latitude }}"
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                             </div>
                             <div class="space-y-4">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Longitude
                                     Reference</label>
-                                <input type="text" name="longitude" value="{{ $vendor->longitude }}"
+                                <input type="text" name="longitude" x-ref="lng" value="{{ $vendor->longitude }}"
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                             </div>
+
+                            <button type="button" @click="detect()" :disabled="locating"
+                                title="Fill both fields from this device's current location"
+                                class="btn-outline w-full md:w-auto min-h-[2.75rem] px-5 justify-center gap-2 whitespace-nowrap disabled:opacity-60 disabled:cursor-wait">
+                                {{-- Two separate <svg>s rather than one with x-if inside:
+                                     a <template> in the SVG namespace is parsed as an SVG
+                                     element, not an HTML template, so Alpine never sees it. --}}
+                                <svg x-show="!locating" class="w-4 h-4 shrink-0" fill="none"
+                                    stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="7" />
+                                    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                                    <path stroke-linecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                                </svg>
+                                <svg x-show="locating" x-cloak class="w-4 h-4 shrink-0 animate-spin" fill="none"
+                                    stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" d="M12 3a9 9 0 1 0 9 9" />
+                                </svg>
+                                <span x-text="locating ? 'LOCATING…' : 'USE MY LOCATION'"></span>
+                            </button>
+
+                            <p x-show="status" x-cloak x-text="status"
+                                class="md:col-span-3 text-[9px] font-black uppercase italic tracking-widest ml-4"
+                                :class="ok ? 'text-emerald-400' : 'text-amber-400'"></p>
                         </div>
                     </div>
 

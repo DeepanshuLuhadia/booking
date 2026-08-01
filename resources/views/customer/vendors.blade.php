@@ -371,13 +371,68 @@
             }
         }
 
+        /* Icon-only submit that lives inside the text field (mobile only) */
+        .bv-search-icon-btn {
+            display: none;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #fff;
+            background: linear-gradient(135deg, #ff6d00, #ffab40);
+            box-shadow: 0 4px 14px rgba(255, 109, 0, .35);
+        }
+
+        .bv-search-icon-btn svg {
+            color: #fff;
+        }
+
+        /* ── Mobile search: Near Me on top, single input + search icon ──── */
         @media(max-width: 600px) {
+            .bv-search-form {
+                gap: 12px;
+            }
+
+            /* Near Me lives in the header (pin icon beside the hamburger) on mobile */
+            .bv-search-form .bv-nearme {
+                display: none !important;
+            }
+
+            /* No category dropdown on mobile */
+            .bv-search-form .custom-dropdown-wrap {
+                display: none !important;
+            }
+
+            /* Just the input + the search icon on its right */
+            .bv-search-field-text {
+                order: 0;
+                border-bottom: none !important;
+                gap: 10px;
+                padding: 6px 8px 6px 16px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.06);
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+            }
+
+            .bv-search-field-text .bv-search-user-icon {
+                display: none;
+            }
+
+            .bv-search-icon-btn {
+                display: inline-flex;
+            }
+
+            /* The full-width text button is replaced by the icon */
             .bv-search-btn {
-                width: 100%;
-                margin-left: 0;
-                margin-top: 4px;
-                padding: 14px;
-                font-size: 13px;
+                display: none !important;
+            }
+
+            .bv-reset-btn {
+                order: 1;
             }
         }
 
@@ -734,19 +789,22 @@
 
         @media(max-width:600px) {
             .bv-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
                 margin-top: 26px;
             }
             .bv-section {
                 padding: 30px 16px;
             }
 
-            /* ── Compact 3-up recommended cards (mobile only) ──
-               !important needed: the base .bv-card-sports rules are declared
-               later in the stylesheet, so they'd otherwise win the cascade. */
+            /* ── Compact 2-up recommended cards (mobile only) ──
+               Two per row rather than three, so every tile gets roughly half
+               again the width it had; the type scale below is stepped up to
+               match. !important needed: the base .bv-card-sports rules are
+               declared later in the stylesheet, so they'd otherwise win the
+               cascade. */
             .bv-card-sports {
-                height: 178px !important;
+                height: 210px !important;
                 border-width: 2px !important;
                 border-radius: 14px !important;
                 box-shadow: 0 4px 16px rgba(var(--cr), var(--cg), var(--cb), 0.3) !important;
@@ -756,10 +814,10 @@
                 background: linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.5) 45%, rgba(0, 0, 0, 0) 100%) !important;
             }
             .bv-rc-rating {
-                top: 6px !important;
-                right: 6px !important;
-                padding: 2px 6px !important;
-                font-size: 9px !important;
+                top: 7px !important;
+                right: 7px !important;
+                padding: 3px 7px !important;
+                font-size: 10px !important;
                 gap: 3px !important;
             }
             .bv-rc-badge {
@@ -769,9 +827,9 @@
                 border-radius: 5px !important;
             }
             .bv-rc-name {
-                font-size: 12px !important;
-                margin: 0 0 5px !important;
-                line-height: 1.1 !important;
+                font-size: 14px !important;
+                margin: 0 0 6px !important;
+                line-height: 1.15 !important;
                 display: -webkit-box !important;
                 -webkit-line-clamp: 2;
                 -webkit-box-orient: vertical;
@@ -781,10 +839,13 @@
                 display: none !important;
             }
             .bv-rc-loc {
-                margin-bottom: 8px !important;
-                font-size: 10px !important;
+                margin-bottom: 10px !important;
+                font-size: 11px !important;
             }
-            /* Narrow tile: drop the address, surface only the distance chip */
+            /* Still a narrow tile even at 2-up (~150px of usable width on a
+               390px phone): the address plus pin plus distance chip will not
+               sit on one line, so the address stays out and the distance —
+               the more useful of the two — keeps the row. */
             .bv-rc-loc-pin,
             .bv-rc-addr {
                 display: none !important;
@@ -792,7 +853,7 @@
             .bv-rc-dist {
                 margin-left: 0 !important;
                 color: #fff !important;
-                font-size: 9px !important;
+                font-size: 10px !important;
                 background: rgba(0, 0, 0, 0.55);
                 padding: 3px 7px;
                 border-radius: 6px;
@@ -800,14 +861,14 @@
                 text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
             }
             .bv-rc-pricebar {
-                padding: 7px 8px !important;
-                border-radius: 10px !important;
+                padding: 9px 10px !important;
+                border-radius: 11px !important;
             }
             .bv-rc-price-label {
-                font-size: 7px !important;
+                font-size: 9px !important;
             }
             .bv-rc-price {
-                font-size: 8px !important;
+                font-size: 11px !important;
             }
             /* Live-queue / arrow column doesn't fit the narrow tile */
             .bv-rc-status {
@@ -1653,6 +1714,322 @@
                 padding: 13px 24px;
             }
         }
+
+        /* ══════════════════════════════════════════════════════════════
+           CURVED / LAYERED THEME — ALL WIDTHS
+
+           Structure: the *look* (colours, gradients, masks, stacking) is
+           declared once as shared base rules; only the *dimensions* are
+           re-stated per breakpoint below, because a 780px glow orb or a 230px
+           arc sized for a 1440px canvas is meaningless on a 390px phone.
+
+           These rules sit at the end of the stylesheet, so where they overlap
+           an earlier max-width:600px rule they intentionally win. Every such
+           overlap is restated explicitly in the phone block further down —
+           nothing is left to chance in the cascade.
+           ══════════════════════════════════════════════════════════════ */
+
+        /* Cool teal rim lighting replacing the original warm orange orbs. */
+        .bv-hero-glow-1 {
+            background: radial-gradient(circle, rgba(16, 185, 166, .22) 0%, rgba(16, 185, 166, 0) 70%);
+        }
+
+        .bv-hero-glow-2 {
+            bottom: auto;
+            background: radial-gradient(circle, rgba(8, 168, 200, .20) 0%, rgba(8, 168, 200, 0) 70%);
+        }
+
+        /* Geometric mesh grid. Sits ABOVE the header artwork (z-index 2 vs 1) so
+           the lines rule across the scene the way they do in the reference art,
+           rather than being buried under an opaque image.
+
+           The radial mask is inverted from the usual centre-strong pattern: the
+           grid is faintest over the middle, where the figures and the brightest
+           rim lights are, and strongest out at the edges — so it frames the
+           composition instead of drawing lines over faces. The arc (z-index 6)
+           is opaque and covers whatever reaches the bottom. */
+        .bv-hero-grid {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, .07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, .07) 1px, transparent 1px);
+            -webkit-mask-image: radial-gradient(ellipse 80% 72% at 50% 46%, transparent 0%, rgba(0, 0, 0, .4) 50%, rgba(0, 0, 0, .85) 76%, #000 100%);
+            mask-image: radial-gradient(ellipse 80% 72% at 50% 46%, transparent 0%, rgba(0, 0, 0, .4) 50%, rgba(0, 0, 0, .85) 76%, #000 100%);
+        }
+
+        /* Header artwork — the professional line-up, used full-bleed as the
+           hero backdrop (it replaces the old flat SVG silhouette strip).
+
+           Two background layers in one element: a navy scrim over the photo so
+           white display type stays legible across the bright neon rim lights,
+           and the artwork itself. The scrim is deliberately light through the
+           middle band — that is where the neon rim lighting lives, and burying
+           it defeats the point of the artwork. The mask dissolves the whole
+           layer before the arc, so the glow orbs underneath blend back through
+           the bottom of the hero instead of the image ending on a hard edge.
+           The mesh grid is layered on top of this, not under it.
+
+           WEIGHT: the artwork ships as AVIF / WebP / JPEG derivatives at three
+           widths (see public/images/hero/), picked per breakpoint below. The
+           original 1.38 MB PNG is no longer referenced by any rule — the widest
+           AVIF replacing it is 29 KB.
+
+           Each breakpoint declares background-image twice on purpose: the first
+           is a plain url() every browser understands, the second overwrites it
+           with image-set() so modern browsers pick AVIF, then WebP, then JPEG.
+           Anything that cannot parse image-set() simply ignores the second
+           declaration and keeps the JPEG. The scrim is hoisted into a custom
+           property so restating the pair stays readable. */
+        .bv-hero-crowd {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            --bv-hero-scrim:
+                linear-gradient(180deg,
+                    rgba(8, 13, 38, .62) 0%,
+                    rgba(8, 13, 38, .26) 34%,
+                    rgba(8, 13, 38, .46) 72%,
+                    rgba(8, 13, 38, .80) 100%);
+            background-repeat: no-repeat;
+            background-position: center top;
+            background-size: auto, cover;
+            /* Default tier — 1280w. Laptops and tablets land here; the two
+               media queries further down swap in a lighter or heavier file. */
+            background-image:
+                var(--bv-hero-scrim),
+                url('{{ asset('images/hero/hero-1280.jpg') }}');
+            background-image:
+                var(--bv-hero-scrim),
+                image-set(
+                    url('{{ asset('images/hero/hero-1280.avif') }}') type('image/avif'),
+                    url('{{ asset('images/hero/hero-1280.webp') }}') type('image/webp'),
+                    url('{{ asset('images/hero/hero-1280.jpg') }}') type('image/jpeg'));
+            -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 96%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 96%);
+        }
+
+        /* Large desktops get the full 1717w master (29 KB as AVIF). */
+        @media (min-width: 1280px) {
+            .bv-hero-crowd {
+                background-image:
+                    var(--bv-hero-scrim),
+                    url('{{ asset('images/hero/hero-1717.jpg') }}');
+                background-image:
+                    var(--bv-hero-scrim),
+                    image-set(
+                        url('{{ asset('images/hero/hero-1717.avif') }}') type('image/avif'),
+                        url('{{ asset('images/hero/hero-1717.webp') }}') type('image/webp'),
+                        url('{{ asset('images/hero/hero-1717.jpg') }}') type('image/jpeg'));
+            }
+        }
+
+        /* Curved bottom edge of the hero. Sits above the backdrop layers but
+           below the hero content (z-index 10), so the stat tiles ride on the
+           arc exactly as in the reference. */
+        .bv-hero-curve {
+            position: absolute;
+            bottom: -1px;
+            z-index: 6;
+            pointer-events: none;
+            background: #080d26;
+            border-top: 1px solid rgba(255, 255, 255, .14);
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+            box-shadow: 0 -18px 50px -20px rgba(8, 168, 200, .35);
+        }
+
+        /* Matching tone below the arc so the curve is a single clean edge. */
+        .bv-section {
+            background: #080d26;
+        }
+
+        /* ── CTA: curved wireframe meshes flanking the headline ──────────── */
+        .bv-cta-section::before,
+        .bv-cta-section::after {
+            content: "";
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+            /* Concentric rings + radial spokes = the curved polar grid. */
+            background:
+                repeating-radial-gradient(circle at 50% 50%, transparent 0 44px, rgba(255, 140, 66, .22) 44px 45px),
+                repeating-conic-gradient(from 0deg at 50% 50%, transparent 0 7deg, rgba(255, 140, 66, .18) 7deg 7.4deg);
+            -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 16%, rgba(0, 0, 0, .5) 44%, transparent 66%);
+            mask-image: radial-gradient(circle at 50% 50%, #000 16%, rgba(0, 0, 0, .5) 44%, transparent 66%);
+        }
+
+        /* ── Sizing: desktop + tablet ────────────────────────────────────── */
+        @media (min-width: 601px) {
+            .bv-hero { padding-bottom: 170px; }
+
+            .bv-hero-glow-1 { top: -140px; left: -240px; width: 780px; height: 660px; filter: blur(90px); }
+            .bv-hero-glow-2 { top: -140px; right: -240px; width: 800px; height: 680px; filter: blur(100px); }
+
+            .bv-hero-grid { background-size: 60px 60px; }
+
+            /* Wide canvas: the artwork's own aspect is close to the hero's, so
+               cover crops only a sliver off each side. */
+            .bv-hero-crowd {
+                background-position: center top;
+                background-size: auto, cover;
+            }
+
+            .bv-hero-curve {
+                left: -14%;
+                right: -14%;
+                height: 230px;
+            }
+
+            .bv-cta-section::before,
+            .bv-cta-section::after {
+                bottom: -300px;
+                width: 900px;
+                height: 900px;
+            }
+            .bv-cta-section::before { left: -340px; }
+            .bv-cta-section::after { right: -340px; }
+        }
+
+        /* ── Sizing: phones (≤600px) ─────────────────────────────────────────
+           Same theme, scaled to the canvas. The hero gains bottom padding it
+           did not have before — the arc needs somewhere to live — and the
+           silhouette artwork is dropped to roughly half scale so individual
+           figures stay legible rather than becoming one dark smear. */
+        @media (max-width: 600px) {
+            .bv-hero { padding-bottom: 92px; }
+
+            .bv-hero-glow-1 { top: -90px; left: -150px; width: 420px; height: 380px; filter: blur(70px); }
+            .bv-hero-glow-2 { top: -70px; right: -150px; width: 420px; height: 380px; filter: blur(70px); }
+
+            .bv-hero-grid { background-size: 34px 34px; }
+
+            /* Phone: cover on a portrait hero would crop the line-up down to
+               one torso, so the artwork is laid in as a wide band across the
+               top instead — a few figures stay legible either side of the
+               headline. The scrim is heavier here because the display type sits
+               directly over the brightest part of the image. */
+            .bv-hero-crowd {
+                /* Heavier scrim than the desktop tier — the display type sits
+                   directly over the brightest part of the image here. */
+                --bv-hero-scrim:
+                    linear-gradient(180deg,
+                        rgba(8, 13, 38, .80) 0%,
+                        rgba(8, 13, 38, .58) 40%,
+                        rgba(8, 13, 38, .74) 100%);
+                /* 960w: the band renders at ~740 CSS px on a 390px phone, so
+                   this still has headroom on a 2x screen at 11 KB as AVIF. */
+                background-image:
+                    var(--bv-hero-scrim),
+                    url('{{ asset('images/hero/hero-960.jpg') }}');
+                background-image:
+                    var(--bv-hero-scrim),
+                    image-set(
+                        url('{{ asset('images/hero/hero-960.avif') }}') type('image/avif'),
+                        url('{{ asset('images/hero/hero-960.webp') }}') type('image/webp'),
+                        url('{{ asset('images/hero/hero-960.jpg') }}') type('image/jpeg'));
+                background-position: 50% 8%;
+                background-size: auto, 190% auto;
+                -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 88%);
+                mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 88%);
+            }
+
+            .bv-hero-curve {
+                left: -24%;
+                right: -24%;
+                height: 96px;
+                box-shadow: 0 -12px 30px -14px rgba(8, 168, 200, .35);
+            }
+
+            .bv-cta-section::before,
+            .bv-cta-section::after {
+                bottom: -170px;
+                width: 470px;
+                height: 470px;
+            }
+            .bv-cta-section::before { left: -190px; }
+            .bv-cta-section::after { right: -190px; }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           STAT TILES — TABLET + DESKTOP (≥601px)
+
+           Tile appearance starts at 601px so the 601–768px range is styled
+           too. The arc transform itself is held back to ≥769px: below that
+           .bv-stats still wraps (its own max-width:768px rule), and rotating
+           tiles that have wrapped onto two rows reads as a mistake, not a
+           curve.
+           ══════════════════════════════════════════════════════════════ */
+        @media (min-width: 601px) {
+            .bv-stats-desktop {
+                gap: 20px;
+                align-items: flex-start;
+                justify-content: center;
+                border-top: none;
+                padding-top: 0;
+                margin-top: 56px;
+                position: relative;
+                z-index: 10;
+            }
+
+            .bv-stats-desktop > div {
+                padding: 20px 26px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, .10);
+                background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035));
+                backdrop-filter: blur(20px) saturate(150%);
+                -webkit-backdrop-filter: blur(20px) saturate(150%);
+                box-shadow:
+                    inset 0 1px 0 rgba(255, 255, 255, .12),
+                    0 20px 44px -20px rgba(0, 0, 0, .8);
+            }
+        }
+
+        /* Arc: peak at the centre, shoulders dropping away on both sides. */
+        @media (min-width: 769px) {
+            .bv-stats-desktop > div:nth-child(1) { transform: translateY(24px) rotate(-6deg); }
+            .bv-stats-desktop > div:nth-child(2) { transform: translateY(0) rotate(-2deg); }
+            .bv-stats-desktop > div:nth-child(3) { transform: translateY(0) rotate(2deg); }
+            .bv-stats-desktop > div:nth-child(4) { transform: translateY(24px) rotate(6deg); }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           ARCED STAT TILES — PHONES (≤600px)
+
+           On phones the counters render from .bv-stats-mobile, which lives
+           below the steps section and wraps two-per-row. A four-across arc
+           does not fit at this width, so each ROW is curved instead: the two
+           tiles tilt away from each other, outer edges dropping, which reads
+           as the same arc motif at phone scale.
+           ══════════════════════════════════════════════════════════════ */
+        @media (max-width: 600px) {
+            .bv-stats-mobile {
+                border-top: none;
+                padding-top: 0;
+                gap: 12px;
+                margin-top: 40px;
+            }
+
+            .bv-stats-mobile > div {
+                flex: 1 1 calc(50% - 12px);
+                padding: 14px 8px;
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, .10);
+                background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035));
+                backdrop-filter: blur(16px) saturate(150%);
+                -webkit-backdrop-filter: blur(16px) saturate(150%);
+                box-shadow:
+                    inset 0 1px 0 rgba(255, 255, 255, .12),
+                    0 14px 30px -16px rgba(0, 0, 0, .8);
+            }
+
+            .bv-stats-mobile > div:nth-child(1) { transform: rotate(-5deg); }
+            .bv-stats-mobile > div:nth-child(2) { transform: rotate(5deg); }
+            .bv-stats-mobile > div:nth-child(3) { transform: rotate(-4deg); }
+            .bv-stats-mobile > div:nth-child(4) { transform: rotate(4deg); }
+        }
     </style>
 
     <div class="bv-page">
@@ -1661,18 +2038,25 @@
         HERO + SEARCH + CATEGORIES
         ═══════════════════════════════════════════════════════ --}}
         <section class="bv-hero">
-            <div class="bv-hero-glow-1"></div>
-            <div class="bv-hero-glow-2"></div>
+            {{-- Backdrop layers, decorative only (no hit area, hidden from AT).
+                 All of these are display:none below 601px so the phone hero is
+                 byte-for-byte the layout it was before. --}}
+            {{-- Source order matches paint order: glows, then the header
+                 artwork, then the mesh grid ruled across the top of it. --}}
+            <div class="bv-hero-glow-1" aria-hidden="true"></div>
+            <div class="bv-hero-glow-2" aria-hidden="true"></div>
+            <div class="bv-hero-crowd" aria-hidden="true"></div>
+            <div class="bv-hero-grid" aria-hidden="true"></div>
 
             <div style="position:relative; z-index:10; text-align:center;">
 
                 {{-- Badge --}}
-                <div
+                {{-- <div
                     style="display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:8px 20px; font-size:10px; font-weight:800; color:rgba(255,255,255,.7); text-transform:uppercase; letter-spacing:.25em; margin-bottom:32px;">
                     <span
                         style="width:8px; height:8px; border-radius:50%; background:#ff6d00; display:inline-block; box-shadow:0 0 10px rgba(255,109,0,.6);"></span>
                     TRUSTED BOOKING PLATFORM
-                </div>
+                </div> --}}
 
                 {{-- H1 --}}
                 <h1
@@ -1697,14 +2081,22 @@
                                  with the category pills so both selectors stay in sync. --}}
 
                             {{-- Expert Name --}}
-                            <div class="bv-search-field">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                            <div class="bv-search-field bv-search-field-text">
+                                <svg class="bv-search-user-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 <input class="bv-search-input" type="text" name="search" value="{{ request('search') }}"
                                     placeholder="Service or Professional">
+                                {{-- Icon-only submit, shown on mobile in place of the text button --}}
+                                <button class="bv-search-icon-btn" type="submit" aria-label="Search">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                                    </svg>
+                                </button>
                             </div>
 
                             {{-- Specialty --}}
@@ -1754,12 +2146,11 @@
                                         }
                                         this.locating = true;
                                         navigator.geolocation.getCurrentPosition((position) => {
-                                            document.cookie = `user_lat=${position.coords.latitude}; path=/; max-age=31536000; SameSite=Lax`;
-                                            document.cookie = `user_lng=${position.coords.longitude}; path=/; max-age=31536000; SameSite=Lax`;
-                                            document.cookie = `user_state=; path=/; max-age=31536000; SameSite=Lax`;
-                                            document.cookie = `user_city=; path=/; max-age=31536000; SameSite=Lax`;
-                                            document.cookie = `location_granted=true; path=/; max-age=31536000; SameSite=Lax`;
-                                            $el.closest('form').submit();
+                                            const lat = position.coords.latitude, lng = position.coords.longitude;
+                                            window.resolvePlaceName(lat, lng).then((place) => {
+                                                window.writeLocationCookies(lat, lng, place.state, place.city);
+                                                $el.closest('form').submit();
+                                            });
                                         }, (error) => {
                                             this.locating = false;
                                             console.warn('Geolocation failed', error);
@@ -1779,7 +2170,7 @@
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                 </span>
-                                <span class="bv-nearme-label" x-text="locating ? 'Locating…' : 'Allow Near Me'"></span>
+                                <span class="bv-nearme-label" x-text="locating ? 'Locating…' : 'Near Me'"></span>
                                 <span class="bv-nearme-arrow" aria-hidden="true">
                                     <svg width="17" height="17" fill="currentColor" stroke="none"
                                         viewBox="0 0 24 24">
@@ -1891,7 +2282,10 @@
                                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                             </button>
 
-                            <div class="bv-cat-mobile-row" id="catRowMobile">
+                            {{-- data-auto-slide: mobile-only auto-advance, driven by the
+                                 shared carousel script in the layout. Pauses on touch. --}}
+                            <div class="bv-cat-mobile-row" id="catRowMobile"
+                                 data-auto-slide data-auto-slide-interval="2800">
                                 @foreach($categoriesList as $index => $cat)
                                 @php
                                 [$cr,$cg,$cb] = explode(',', $cat['rgb']);
@@ -1932,10 +2326,13 @@
 
                 {{-- ── Stats ── --}}
                 @php
-                    $totalClients = \App\Models\Booking::distinct('customer_phone')->count('customer_phone');
-                    $totalCities = \App\Models\Vendor::distinct('address')->count('address');
-                    $totalAppointments = \App\Models\Booking::count();
-                    $avgRating = 4.9; // rating system not yet implemented
+                    // All five come from the controller (cached aggregates) —
+                    // nothing on this page is a placeholder figure any more.
+                    $totalClients      = $stats['clients'];
+                    $totalCities       = $stats['cities'];
+                    $totalAppointments = $stats['appointments'];
+                    $avgRating         = $stats['rating'];
+                    $hasRatings        = $stats['reviews'] > 0;
                 @endphp
                 @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
                 <div class="bv-stats bv-stats-desktop">
@@ -1951,6 +2348,9 @@
                         <div class="bv-stat-num"><span data-counter data-target="{{ $totalAppointments }}" data-suffix="+" data-decimals="0">0</span></div>
                         <div class="bv-stat-label">Appointments</div>
                     </div>
+                    {{-- Only shown once there is at least one real review to
+                         average — better a three-tile row than a made-up score. --}}
+                    @if($hasRatings)
                     <div>
                         <div class="bv-stat-num">
                             <span data-counter data-target="{{ number_format($avgRating, 1) }}" data-decimals="1">0</span>
@@ -1958,10 +2358,15 @@
                         </div>
                         <div class="bv-stat-label">User Rating</div>
                     </div>
+                    @endif
                 </div>
                 @endif
 
             </div>
+
+            {{-- Curved bottom edge — the section below adopts the same tone so
+                 this reads as one continuous arc, not a seam. --}}
+            <div class="bv-hero-curve" aria-hidden="true"></div>
         </section>
 
         {{-- ═══════════════════════════════════════════════════════
@@ -2026,7 +2431,9 @@
                     $routeUrl = route('vendor.show', $vendor->slug);
                     $priceStr = '₹' . number_format($vendor->starting_fee);
                     $name = $vendor->business_name;
-                    $address = $vendor->address ?? 'Premium Location, City Center';
+                    // No invented fallback — a vendor who has not filled in an
+                    // address simply shows none (the row below is skipped).
+                    $address = trim((string) $vendor->address);
                     $catLabel = $vTheme['label'] ?? ucfirst($vType);
                     @endphp
 
@@ -2043,9 +2450,14 @@
                     <a href="{{ $routeUrl }}" class="bv-dynamic-card bv-card-sports {{ $isOpen ? '' : 'bv-closed pointer-events-none' }}"
                         style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};">
                         <img src="{{ $img }}" alt="{{ $name }}" loading="{{ $loop->iteration <= 6 ? 'eager' : 'lazy' }}">
-                        @if($vendor->isSubscriptionActive())
-                        <div class="bv-rc-rating" style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; font-weight:800; display:flex; gap:5px; border:1px solid rgba(255,255,255,0.15); z-index: 2;">
-                            <span style="color:#ffab40;">★</span> 4.9
+                        {{-- Real average from vendor_reviews (aggregated in the
+                             listing query, so no per-card AVG). A vendor with no
+                             reviews yet gets no badge at all — showing a default
+                             score would be inventing reputation. --}}
+                        @if($vendor->isSubscriptionActive() && ($vendor->reviews_count ?? 0) > 0)
+                        <div class="bv-rc-rating" title="{{ $vendor->reviews_count }} {{ Str::plural('review', $vendor->reviews_count) }}" style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; font-weight:800; display:flex; gap:5px; border:1px solid rgba(255,255,255,0.15); z-index: 2;">
+                            <span style="color:#ffab40;">★</span> {{ number_format((float) $vendor->avg_rating, 1) }}
+                            <span style="color:rgba(255,255,255,0.55); font-weight:700;">({{ $vendor->reviews_count }})</span>
                         </div>
                         @endif
                         <div class="bv-card-sports-overlay">
@@ -2063,6 +2475,7 @@
                             </h3>
                             <div class="bv-rc-loc"
                                 style="display:flex; align-items:center; gap:6px; font-size:13px; color:rgba(255,255,255,0.8); margin-bottom:20px;">
+                                @if($address !== '')
                                 <svg class="bv-rc-loc-pin" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
                                     viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -2071,8 +2484,12 @@
                                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                                 <span class="bv-rc-addr" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ $address }}</span>
-                                @if($vendor->isSubscriptionActive())
-                                <span class="bv-rc-dist" style="margin-left:auto; font-weight:700; color:rgba(var(--cr),var(--cg),var(--cb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">~2.4 km</span>
+                                @endif
+                                {{-- Straight-line distance from the customer's stored
+                                     coordinates. Absent whenever either the customer
+                                     or the vendor has no coordinates on file. --}}
+                                @if($vendor->isSubscriptionActive() && $vendor->distance_km !== null)
+                                <span class="bv-rc-dist" style="margin-left:auto; font-weight:700; color:rgba(var(--cr),var(--cg),var(--cb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">{{ $vendor->distance_km < 1 ? round($vendor->distance_km * 1000) . ' m' : '~' . number_format($vendor->distance_km, 1) . ' km' }}</span>
                                 @endif
                             </div>
                             <div class="bv-rc-pricebar"
@@ -2089,8 +2506,17 @@
                                         <div style="font-size: 9px; font-weight: 900; color: #ffab40; text-transform: uppercase;">Closed</div>
                                         <div style="font-size: 11px; font-weight: 700; color: #fff;">Opens At: {{ \Carbon\Carbon::parse($vendor->global_opening_time)->format('h:i A') }}</div>
                                     @else
+                                        {{-- Backed by live_queue_count from the listing
+                                             query: confirmed bookings still to be served
+                                             today. Falls back to the bare label rather
+                                             than advertising a queue of zero. --}}
                                         <div style="font-size: 9px; font-weight: 900; color: #4ade80; text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
-                                            <span style="width:6px; height:6px; border-radius:50%; background:#4ade80; display:inline-block; box-shadow:0 0 8px #4ade80;"></span> Live Queue
+                                            <span style="width:6px; height:6px; border-radius:50%; background:#4ade80; display:inline-block; box-shadow:0 0 8px #4ade80;"></span>
+                                            @if(($vendor->live_queue_count ?? 0) > 0)
+                                                {{ $vendor->live_queue_count }} In Queue
+                                            @else
+                                                Live Queue
+                                            @endif
                                         </div>
                                         <div
                                             style="width:36px; height:36px; background:var(--c1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; box-shadow:0 6px 16px rgba(var(--cr),var(--cg),var(--cb),0.4);">
@@ -2203,6 +2629,7 @@
                     <div class="bv-stat-num"><span data-counter data-target="{{ $totalAppointments }}" data-suffix="+" data-decimals="0">0</span></div>
                     <div class="bv-stat-label">Appointments</div>
                 </div>
+                @if($hasRatings)
                 <div>
                     <div class="bv-stat-num">
                         <span data-counter data-target="{{ number_format($avgRating, 1) }}" data-decimals="1">0</span>
@@ -2210,6 +2637,7 @@
                     </div>
                     <div class="bv-stat-label">User Rating</div>
                 </div>
+                @endif
             </div>
             @endif
         </section>

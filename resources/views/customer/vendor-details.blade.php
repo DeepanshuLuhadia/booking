@@ -311,8 +311,12 @@
                         </button>
                     </div>
 
-                    <!-- Individual Reviews — vertical on desktop, swipe slider on mobile -->
-                    <div class="vd-review-slider" :class="loadingReviews ? 'opacity-50' : ''">
+                    <!-- Individual Reviews — vertical on desktop, auto-advancing swipe
+                         slider on mobile (see the carousel script in the layout).
+                         Slower cadence than the category strip: a review has to be
+                         readable before it moves on. -->
+                    <div class="vd-review-slider" :class="loadingReviews ? 'opacity-50' : ''"
+                         data-auto-slide data-auto-slide-interval="5000">
                         <template x-for="(review, idx) in reviews" :key="idx">
                             <div class="glass-card bg-white/5 backdrop-blur-3xl border border-white/10 p-6 rounded-[2rem] animate-reveal">
                                 <div class="flex items-start justify-between gap-4 mb-3">

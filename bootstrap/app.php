@@ -15,10 +15,18 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->trustProxies(at: '*');
 
-        // Exempt location_granted and notification cookies from encryption so JS-set cookies are readable server-side
+        // Exempt location and notification cookies from encryption so JS-set
+        // cookies are readable server-side. The whole user_* set is written by
+        // the location consent modal in the layout with document.cookie, so it
+        // is plaintext by definition — leaving it encrypted here means Laravel
+        // fails to decrypt it and silently hands back null.
         $middleware->encryptCookies(except: [
             'location_granted',
-            'notif_consent_decided'
+            'notif_consent_decided',
+            'user_lat',
+            'user_lng',
+            'user_state',
+            'user_city',
         ]);
 
         $middleware->alias([

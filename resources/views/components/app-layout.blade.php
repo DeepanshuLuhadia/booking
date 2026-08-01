@@ -93,11 +93,63 @@
         .nav-mobile-toggle {
             display: flex;
         }
+        /* Mobile "Near Me": bare pin icon, no border/background, next to hamburger */
+        .nav-mobile-nearme {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--theme-primary, #ff8c42);
+            cursor: pointer;
+            transition: transform .2s ease, opacity .2s ease;
+        }
+        .nav-mobile-nearme:active {
+            transform: scale(.92);
+        }
+        .nav-mobile-nearme.is-locating {
+            opacity: .6;
+        }
+        /* No location chosen yet — highlight the pin with a rounded theme border */
+        .nav-mobile-nearme.is-empty {
+            border: 1.5px solid var(--theme-primary, #ff8c42);
+            border-radius: 9999px;
+            background: rgba(255, 140, 66, .10);
+            box-shadow: 0 0 0 3px rgba(255, 140, 66, .10);
+        }
+        /* Location chosen — the pin is replaced by the (truncated) place name */
+        .nav-mobile-nearme.has-location {
+            width: auto;
+            min-width: 40px;
+            padding: 0 8px;
+        }
+        .nav-mobile-nearme-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--theme-primary, #ff8c42);
+        }
+        .nav-mobile-nearme-chip svg {
+            flex-shrink: 0;
+        }
+        .nav-mobile-nearme-label {
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .02em;
+            white-space: nowrap;
+            color: var(--theme-primary, #ff8c42);
+        }
         @media (min-width: 1024px) {
             .nav-desktop-menu {
                 display: flex !important;
             }
             .nav-mobile-toggle {
+                display: none !important;
+            }
+            .nav-mobile-nearme {
                 display: none !important;
             }
         }
@@ -152,6 +204,85 @@
         .vd-rating-row.active { background: rgba(255, 255, 255, 0.10); }
         .vd-rating-row:disabled { cursor: default; opacity: .4; }
 
+        /* ══════════════════════════════════════════════════════════════
+           FOOTER — curved top edge, matching the arc under the hero.
+           Desktop/tablet only (≥601px); phones keep the flat footer they
+           already had. Written as plain CSS because the prebuilt Tailwind
+           bundle does not contain the arbitrary `bg-[#0a0f2c]` utility, so
+           the footer background has to be declared explicitly here.
+           ══════════════════════════════════════════════════════════════ */
+        .site-footer-curved {
+            position: relative;
+            background: #070b20;
+            border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+            overflow: hidden;
+        }
+
+        /* Phones: shallower arc and a tighter pull-up, so the curve stays a
+           curve instead of eating the top of the footer content. */
+        @media (max-width: 600px) {
+            .site-footer-curved {
+                border-radius: 50% 50% 0 0 / 46px 46px 0 0;
+                margin-top: -28px;
+            }
+
+            .site-footer-curved::before {
+                content: "";
+                position: absolute;
+                top: -420px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 820px;
+                height: 820px;
+                z-index: 0;
+                pointer-events: none;
+                background:
+                    repeating-radial-gradient(circle at 50% 50%, transparent 0 34px, rgba(255, 140, 66, .16) 34px 35px),
+                    repeating-conic-gradient(from 0deg at 50% 50%, transparent 0 5deg, rgba(255, 140, 66, .11) 5deg 5.3deg);
+                -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 30%, #000 46%, transparent 74%);
+                mask-image: radial-gradient(circle at 50% 50%, transparent 0 30%, #000 46%, transparent 74%);
+            }
+
+            .site-footer-curved > * {
+                position: relative;
+                z-index: 1;
+            }
+        }
+
+        @media (min-width: 601px) {
+            .site-footer-curved {
+                border-radius: 50% 50% 0 0 / 130px 130px 0 0;
+                margin-top: -70px;
+            }
+
+            /* Curved wireframe mesh echoing the CTA section above it. */
+            .site-footer-curved::before {
+                content: "";
+                position: absolute;
+                /* Centre pushed well above the footer so only the wide outer arcs
+                   fall behind the content — the dense convergence at the middle
+                   of a polar grid would read as noise under the text. */
+                top: -880px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 1700px;
+                height: 1700px;
+                z-index: 0;
+                pointer-events: none;
+                background:
+                    repeating-radial-gradient(circle at 50% 50%, transparent 0 62px, rgba(255, 140, 66, .16) 62px 63px),
+                    repeating-conic-gradient(from 0deg at 50% 50%, transparent 0 5deg, rgba(255, 140, 66, .11) 5deg 5.3deg);
+                -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 0 30%, #000 46%, transparent 74%);
+                mask-image: radial-gradient(circle at 50% 50%, transparent 0 30%, #000 46%, transparent 74%);
+            }
+
+            /* Keep the real footer content above the decorative mesh. */
+            .site-footer-curved > * {
+                position: relative;
+                z-index: 1;
+            }
+        }
+
         /* Vendor profile — reviews list: vertical stack on desktop, swipe slider on
            mobile (one review per view, snap-scrolling). */
         .vd-review-slider {
@@ -177,6 +308,61 @@
             }
         }
     </style>
+
+    <script>
+        /*
+         * Turn raw GPS coordinates into a human place name.
+         *
+         * The geolocation API hands back numbers only, so every GPS path used to
+         * store empty user_city / user_state cookies and the header could label
+         * the pin no better than "Current Location". BigDataCloud's client
+         * endpoint is keyless and CORS-enabled; any failure (offline, blocked,
+         * rate-limited, slow) resolves to empty strings, which puts us straight
+         * back on the old generic label rather than blocking the location save.
+         */
+        window.resolvePlaceName = function (lat, lng) {
+            return new Promise(function (resolve) {
+                var settled = false;
+                var done = function (city, state) {
+                    if (settled) return;
+                    settled = true;
+                    resolve({ city: city || '', state: state || '' });
+                };
+
+                var timer = setTimeout(function () { done('', ''); }, 4000);
+                var query = '/data/reverse-geocode-client?latitude=' + encodeURIComponent(lat) +
+                            '&longitude=' + encodeURIComponent(lng) + '&localityLanguage=en';
+
+                // api-bdc.io is the current host; the older bigdatacloud.net name
+                // only 307s across to it, so it stands in as the fallback.
+                var lookup = function (hosts) {
+                    if (!hosts.length) { clearTimeout(timer); return done('', ''); }
+                    fetch(hosts[0] + query)
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (d) {
+                            if (!d) return lookup(hosts.slice(1));
+                            clearTimeout(timer);
+                            done(d.city || d.locality || d.principalSubdivision, d.principalSubdivision);
+                        })
+                        .catch(function () { lookup(hosts.slice(1)); });
+                };
+
+                lookup(['https://api-bdc.io', 'https://api.bigdatacloud.net']);
+            });
+        };
+
+        /* Cookie values may contain spaces ("New Delhi") — encode on write; PHP
+           url-decodes $_COOKIE on the way in, so Blade still reads the plain name. */
+        window.writeLocationCookies = function (lat, lng, state, city) {
+            var year = '; path=/; max-age=31536000; SameSite=Lax';
+            document.cookie = 'location_granted=true' + year;
+            document.cookie = 'user_lat=' + encodeURIComponent(lat ?? '') + year;
+            document.cookie = 'user_lng=' + encodeURIComponent(lng ?? '') + year;
+            document.cookie = 'user_state=' + encodeURIComponent(state ?? '') + year;
+            document.cookie = 'user_city=' + encodeURIComponent(city ?? '') + year;
+            try { localStorage.setItem('location_granted', 'true'); } catch (e) {}
+        };
+    </script>
 </head>
 <body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
     @if(!request()->cookie('location_granted'))
@@ -203,7 +389,10 @@
                  this.loading = true;
                  if ('geolocation' in navigator) {
                      navigator.geolocation.getCurrentPosition((position) => {
-                         this.saveLocation(position.coords.latitude, position.coords.longitude, '', '');
+                         const lat = position.coords.latitude, lng = position.coords.longitude;
+                         window.resolvePlaceName(lat, lng).then((place) => {
+                             this.saveLocation(lat, lng, place.state, place.city);
+                         });
                      }, (error) => {
                          console.warn('Geolocation failed', error);
                          this.mode = 'manual';
@@ -220,12 +409,7 @@
                  this.saveLocation('', '', this.state, this.city);
              },
              saveLocation(lat, lng, state, city) {
-                 document.cookie = 'location_granted=true; path=/; max-age=31536000; SameSite=Lax';
-                 document.cookie = `user_lat=${lat}; path=/; max-age=31536000; SameSite=Lax`;
-                 document.cookie = `user_lng=${lng}; path=/; max-age=31536000; SameSite=Lax`;
-                 document.cookie = `user_state=${state}; path=/; max-age=31536000; SameSite=Lax`;
-                 document.cookie = `user_city=${city}; path=/; max-age=31536000; SameSite=Lax`;
-                 localStorage.setItem('location_granted', 'true');
+                 window.writeLocationCookies(lat, lng, state, city);
                  window.location.reload();
              }
          }"
@@ -610,11 +794,79 @@
                 </div>
             </div>
 
-            <!-- Mobile Menu Toggle -->
-            <button @click="mobileMenu = !mobileMenu" class="nav-mobile-toggle w-10 h-10 rounded-xl bg-white/5/5 border border-white/10 items-center justify-center text-white transition-all hover:bg-white/5/10 active:scale-95">
-                <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                <svg x-show="mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" x-cloak><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            <div class="flex items-center gap-1">
+                @if(!$panelType)
+                    @php
+                        // Which place, if any, the visitor has already committed to. Manual
+                        // selection writes user_city/user_state; the GPS path writes only
+                        // coordinates, which have no name attached — hence the generic label.
+                        $navCity   = trim((string) request()->cookie('user_city'));
+                        $navState  = trim((string) request()->cookie('user_state'));
+                        $navCoords = is_numeric(request()->cookie('user_lat')) && is_numeric(request()->cookie('user_lng'));
+
+                        $navLocationSet = request()->cookie('location_granted')
+                            && ($navCity !== '' || $navState !== '' || $navCoords);
+
+                        $navLocationLabel = $navCity !== '' ? $navCity : ($navState !== '' ? $navState : 'Current Location');
+                        $navLocationShort = \Illuminate\Support\Str::limit($navLocationLabel, 5, '…');
+                    @endphp
+
+                    {{-- Mobile "Near Me": bare pin icon beside the hamburger --}}
+                    <button type="button"
+                            class="nav-mobile-nearme {{ $navLocationSet ? 'has-location' : 'is-empty' }}"
+                            title="{{ $navLocationSet ? $navLocationLabel . ' — tap to update' : 'Find experts near you' }}"
+                            aria-label="{{ $navLocationSet ? 'Location: ' . $navLocationLabel . '. Tap to update' : 'Use my location' }}"
+                            x-data="{
+                                locating: false,
+                                useGPS() {
+                                    if (!('geolocation' in navigator)) {
+                                        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'GPS not supported by this browser.', type: 'error' } }));
+                                        return;
+                                    }
+                                    this.locating = true;
+                                    navigator.geolocation.getCurrentPosition((position) => {
+                                        const lat = position.coords.latitude, lng = position.coords.longitude;
+                                        window.resolvePlaceName(lat, lng).then((place) => {
+                                            window.writeLocationCookies(lat, lng, place.state, place.city);
+                                            window.location.reload();
+                                        });
+                                    }, (error) => {
+                                        this.locating = false;
+                                        console.warn('Geolocation failed', error);
+                                        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Could not get your location. Please allow access and retry.', type: 'error' } }));
+                                    }, { timeout: 10000 });
+                                }
+                            }"
+                            :class="{ 'is-locating': locating }"
+                            @click="useGPS()">
+                        @if($navLocationSet)
+                            {{-- Location picked: a small pin plus the (truncated) place name --}}
+                            <span class="nav-mobile-nearme-chip" x-show="!locating">
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <span class="nav-mobile-nearme-label">{{ $navLocationShort }}</span>
+                            </span>
+                        @else
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" x-show="!locating">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        @endif
+                        <svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" x-show="locating" x-cloak>
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                @endif
+
+                <!-- Mobile Menu Toggle -->
+                <button @click="mobileMenu = !mobileMenu" class="nav-mobile-toggle w-10 h-10 rounded-xl bg-white/5/5 border border-white/10 items-center justify-center text-white transition-all hover:bg-white/5/10 active:scale-95">
+                    <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    <svg x-show="mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" x-cloak><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
         </nav>
 
         @if(!$panelType)
@@ -755,7 +1007,7 @@
 
         @if(!$panelType)
         <!-- Footer (Section 12) - Hidden on Dashboards -->
-        <footer class="bg-[#0a0f2c] pt-24 pb-12 border-t border-white/5">
+        <footer class="site-footer-curved bg-[#0a0f2c] pt-24 pb-12 border-t border-white/5">
             <div class="container mx-auto px-4 md:px-8">
                 <div class="flex flex-col md:flex-row items-center justify-between gap-10 mb-16 px-4">
                     <div class="flex flex-col items-center md:items-start gap-4">
@@ -966,6 +1218,125 @@
             console.error('Firebase initialization or messaging setup failed:', error);
         }
         });
+    </script>
+
+    <script>
+        /* ══════════════════════════════════════════════════════════════════
+           AUTO-SLIDING CAROUSELS — MOBILE ONLY
+
+           Opt in from any horizontal scroller with `data-auto-slide` (and an
+           optional `data-auto-slide-interval` in ms). Used by the category
+           strip on the listing page and the reviews strip on a vendor profile.
+
+           Desktop is untouched, and not merely by the media query: every one
+           of these containers stops being a horizontal scroller above its
+           breakpoint (the category strip is display:none, the review list
+           becomes a vertical column), so `scrollWidth === clientWidth` and the
+           tick bails before it can move anything. The matchMedia gate is the
+           second lock, not the only one.
+
+           It advances by one real item — measured from the live DOM each tick,
+           because the review strip is rendered by Alpine's x-for and its
+           children appear late and change when a star filter is applied. At
+           either end it reverses instead of rewinding, which avoids whipping
+           the whole strip back past every card.
+           ══════════════════════════════════════════════════════════════════ */
+        (function () {
+            'use strict';
+
+            var MOBILE  = window.matchMedia('(max-width: 767px)');
+            var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+            // How long to stay out of the way after the user touches a slider.
+            var RESUME_AFTER = 6000;
+
+            function AutoSlide(el) {
+                var period  = parseInt(el.dataset.autoSlideInterval, 10) || 3500;
+                var timer   = null;
+                var idle    = null;
+                var inView  = false;
+                var dir     = 1;
+
+                // One item's advance: the gap between the first two children,
+                // which already includes flex gap and padding. Falls back to a
+                // near-viewport step for a strip that is still empty.
+                function stride() {
+                    var kids = el.children;
+                    if (kids.length > 1) {
+                        var d = kids[1].offsetLeft - kids[0].offsetLeft;
+                        if (d > 8) return d;
+                    }
+                    return Math.round(el.clientWidth * 0.85);
+                }
+
+                function tick() {
+                    var max = el.scrollWidth - el.clientWidth;
+                    if (max <= 4) return;              // nothing to scroll (desktop layout)
+
+                    var next = el.scrollLeft + dir * stride();
+                    if (next >= max - 2) { next = max; dir = -1; }
+                    else if (next <= 2)  { next = 0;   dir =  1; }
+
+                    el.scrollTo({ left: next, behavior: 'smooth' });
+                }
+
+                function start() {
+                    if (timer || !inView || !MOBILE.matches || REDUCED.matches) return;
+                    if (document.hidden) return;
+                    timer = setInterval(tick, period);
+                }
+
+                function stop() {
+                    if (timer) { clearInterval(timer); timer = null; }
+                }
+
+                // Hand control back to the user the moment they touch it, and
+                // pick up again only once they have been still for a while.
+                // Deliberately keyed off real input events rather than the
+                // scroll event — our own smooth scrolling fires that too.
+                function yieldToUser() {
+                    stop();
+                    clearTimeout(idle);
+                    idle = setTimeout(start, RESUME_AFTER);
+                }
+
+                ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (evt) {
+                    el.addEventListener(evt, yieldToUser, { passive: true });
+                });
+
+                // Only animate while the strip is actually on screen.
+                if ('IntersectionObserver' in window) {
+                    new IntersectionObserver(function (entries) {
+                        inView = entries[0].isIntersecting;
+                        inView ? start() : stop();
+                    }, { threshold: 0.25 }).observe(el);
+                } else {
+                    inView = true;
+                    start();
+                }
+
+                document.addEventListener('visibilitychange', function () {
+                    document.hidden ? stop() : start();
+                });
+
+                var onBreakpoint = function () { stop(); start(); };
+                MOBILE.addEventListener
+                    ? MOBILE.addEventListener('change', onBreakpoint)
+                    : MOBILE.addListener(onBreakpoint);
+            }
+
+            function init() {
+                document.querySelectorAll('[data-auto-slide]').forEach(function (el) {
+                    if (el.dataset.autoSlideBound) return;
+                    el.dataset.autoSlideBound = '1';
+                    AutoSlide(el);
+                });
+            }
+
+            document.readyState === 'loading'
+                ? document.addEventListener('DOMContentLoaded', init)
+                : init();
+        })();
     </script>
 </body>
 </html>

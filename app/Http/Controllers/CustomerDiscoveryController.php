@@ -69,6 +69,18 @@ public function index(Request $request)
             ['employees as starting_fee' => $activeEmployeeConstraint],
             'service_fee_override'
         )
+        // Real star ratings for the listing cards. Aggregated in the same
+        // query rather than through the average_rating accessor, which would
+        // fire one AVG per card.
+        ->withAvg('reviews as avg_rating', 'rating')
+        ->withCount('reviews as reviews_count')
+        // Backs the "Live Queue" indicator with an actual number: confirmed
+        // bookings on today's sheet whose slot has not finished yet.
+        ->withCount(['bookings as live_queue_count' => function ($q) use ($now) {
+            $q->where('status', 'confirmed')
+                ->whereDate('booking_date', $now->toDateString())
+                ->where('slot_end_time', '>=', $now->format('H:i:s'));
+        }])
         ->whereHas('employees', $activeEmployeeConstraint);
 
     /*
@@ -216,6 +228,32 @@ public function index(Request $request)
         $candidates = $candidates->where('is_bookable_now', true)->values();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Distance From The Customer
+    |--------------------------------------------------------------------------
+    | The consent modal in the layout stores the browser's coordinates in the
+    | user_lat / user_lng cookies (plaintext — see the encryptCookies except
+    | list in bootstrap/app.php). Both sides are optional: the customer may
+    | have picked a state/city manually, which writes empty coordinates, and a
+    | vendor may not have geocoded their shop. Either gap leaves distance_km
+    | null and the card simply omits the chip rather than inventing a figure.
+    |
+    | Computed here, after the candidate cache is read, because the cached list
+    | is shared across every visitor while the distance is per-customer.
+    */
+    $userLat = $this->coordinate($request->cookie('user_lat'));
+    $userLng = $this->coordinate($request->cookie('user_lng'));
+
+    $candidates->each(function ($vendor) use ($userLat, $userLng) {
+        $vendor->distance_km = $this->distanceKm(
+            $userLat,
+            $userLng,
+            $this->coordinate($vendor->latitude),
+            $this->coordinate($vendor->longitude)
+        );
+    });
+
     $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
     $perPage = 24;
     $results = $candidates->slice(($page - 1) * $perPage, $perPage)->values();
@@ -228,7 +266,68 @@ public function index(Request $request)
         ['path' => $request->url(), 'query' => $request->query()]
     );
 
-    return view('customer.vendors', compact('vendors', 'allThemes'));
+    /*
+    |--------------------------------------------------------------------------
+    | Hero Stat Counters
+    |--------------------------------------------------------------------------
+    | Previously computed inline in the Blade — four uncached aggregates on
+    | every render, with the star rating hardcoded to 4.9. They are platform
+    | totals that shift slowly, so a five-minute cache is plenty.
+    */
+    $stats = Cache::remember('discovery_hero_stats', 300, function () {
+        return [
+            'clients'      => (int) Booking::distinct('customer_phone')->count('customer_phone'),
+            'cities'       => (int) Vendor::distinct('address')->count('address'),
+            'appointments' => (int) Booking::count(),
+            'reviews'      => (int) \App\Models\VendorReview::count(),
+            'rating'       => round((float) \App\Models\VendorReview::avg('rating'), 1),
+        ];
+    });
+
+    return view('customer.vendors', compact('vendors', 'allThemes', 'stats'));
+}
+
+/**
+ * Cast a coordinate to a usable float, or null.
+ *
+ * Guards the manual-location path, where the consent modal writes empty
+ * strings into user_lat / user_lng, as well as vendors with no geocoding.
+ * "0" is rejected deliberately: a stored zero here is an unset column, not
+ * a shop in the Gulf of Guinea.
+ */
+private function coordinate($value): ?float
+{
+    if ($value === null || $value === '' || !is_numeric($value)) {
+        return null;
+    }
+
+    $float = (float) $value;
+
+    return abs($float) < 0.00001 ? null : $float;
+}
+
+/**
+ * Great-circle distance in kilometres, or null when either point is unknown.
+ *
+ * Haversine, computed in PHP rather than SQL: the candidate list is already
+ * materialised into a collection (and cached across visitors), so there is no
+ * query to push this into without re-running it per request.
+ */
+private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $lng2): ?float
+{
+    if ($lat1 === null || $lng1 === null || $lat2 === null || $lng2 === null) {
+        return null;
+    }
+
+    $earthRadius = 6371;
+
+    $dLat = deg2rad($lat2 - $lat1);
+    $dLng = deg2rad($lng2 - $lng1);
+
+    $a = sin($dLat / 2) ** 2
+        + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+    return round($earthRadius * 2 * asin(min(1.0, sqrt($a))), 2);
 }
 
     public function show(Vendor $vendor, SlotGenerationService $slotService)
