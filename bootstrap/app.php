@@ -9,6 +9,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -27,12 +28,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'user_lng',
             'user_state',
             'user_city',
+            'user_suburb',
         ]);
 
         $middleware->alias([
             'subscription.active' => \App\Http\Middleware\EnsureSubscriptionActive::class,
             'redirect.role.auth' => \App\Http\Middleware\RedirectRoleAuthenticated::class,
             'employee.panel.only' => \App\Http\Middleware\RedirectEmployeeToPanel::class,
+            'ensure.vendor.active' => \App\Http\Middleware\EnsureVendorActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

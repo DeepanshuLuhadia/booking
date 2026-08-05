@@ -18,6 +18,22 @@ class ProfileController extends Controller
     {
         $vendor = auth()->user()->vendor;
 
+        /*
+        | Coordinates are mandatory: the customer listing ranks nearest-first
+        | from the visitor's GPS against these, so a shop without them shows no
+        | distance and sinks below every located competitor.
+        |
+        | A literal 0 is rejected as well as a missing value. The listing treats
+        | |coord| < 0.00001 as "unset" (see CustomerDiscoveryController::
+        | coordinate), so accepting a zero here would let a vendor save a figure
+        | the ranking then silently ignores — the worst of both worlds.
+        */
+        $rejectNullIsland = function ($attribute, $value, $fail) {
+            if (is_numeric($value) && abs((float) $value) < 0.00001) {
+                $fail('The ' . $attribute . ' looks unset. Use "Use My Location" or enter the real coordinate.');
+            }
+        };
+
         $request->validate([
             'business_name' => 'sometimes|required|string|min:5|max:255',
             'owner_name' => 'sometimes|required|string|min:5|max:255',
@@ -31,14 +47,19 @@ class ProfileController extends Controller
             ],
             'show_contact_number' => 'nullable|boolean',
             'address' => 'sometimes|required|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude'  => ['required', 'numeric', 'between:-90,90', $rejectNullIsland],
+            'longitude' => ['required', 'numeric', 'between:-180,180', $rejectNullIsland],
             'shop_photo' => 'nullable|image|max:2048',
             'upi_id' => 'nullable|string|max:255',
             'vendor_type' => 'nullable|in:doctor,barber,activity,training,consultant',
             'appointment_mode' => 'nullable|in:time_slot,token',
             'global_opening_time' => 'nullable|date_format:H:i',
             'global_closing_time' => 'nullable|date_format:H:i',
+        ], [
+            'latitude.required'  => 'Shop location is required — tap "Use My Location" to fill the coordinates.',
+            'longitude.required' => 'Shop location is required — tap "Use My Location" to fill the coordinates.',
+            'latitude.between'   => 'Latitude must be between -90 and 90.',
+            'longitude.between'  => 'Longitude must be between -180 and 180.',
         ]);
 
         $data = $request->except(['shop_photo', 'token_amount', 'service_fee', 'emergency_fee', 'avg_consultation_time']);
@@ -89,6 +110,11 @@ class ProfileController extends Controller
             'pause' => $vendor->update(['bookings_paused' => true]),
             'close' => $vendor->update(['is_open' => false, 'bookings_paused' => false]),
         };
+
+        // Every customer sitting on this shop's page follows the change live, and
+        // closing pushes to anyone still holding a token — otherwise they wait
+        // for a turn that is no longer coming.
+        app(\App\Services\BookingNotifier::class)->shopStatusChanged($vendor, $request->type);
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true]);

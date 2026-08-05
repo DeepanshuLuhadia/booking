@@ -51,13 +51,16 @@ class SlotGenerationService
             ->toArray();
 
         $now = Carbon::now();
-        $startTimeDateTime = $startTime->copy();
-        
-        if (Carbon::today()->isSameDay($date)) {
-            $endTimeLimit = $now->copy()->addHours(4);
-        } else {
-            $endTimeLimit = $startTimeDateTime->copy()->addHours(4);
-        }
+
+        // Customers are shown the next four hours of slots. The anchor is
+        // "now" whenever the shift being generated is the one under way — which
+        // is a window test, not a date test: on an overnight shift the business
+        // date is yesterday's while the shift itself is very much live, and
+        // comparing dates there anchored the window to the shift's start and
+        // hid the slots immediately ahead of the customer.
+        $isCurrentShift = $now->betweenIncluded($startTime, $endTime);
+
+        $endTimeLimit = ($isCurrentShift ? $now->copy() : $startTime->copy())->addHours(4);
 
         while ($current->copy()->addMinutes($duration)->lte($endTime)) {
             $slotStart = $current->format('H:i');

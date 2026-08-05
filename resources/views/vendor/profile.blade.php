@@ -190,16 +190,24 @@
                             <div class="space-y-4">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Latitude
-                                    Reference</label>
-                                <input type="text" name="latitude" x-ref="lat" value="{{ $vendor->latitude }}"
+                                    Reference <span class="text-amber-400">*</span></label>
+                                <input type="text" name="latitude" x-ref="lat" value="{{ old('latitude', $vendor->latitude) }}"
+                                    required inputmode="decimal" placeholder="e.g. 26.9124000"
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                @error('latitude')
+                                    <p class="text-[9px] font-black uppercase italic tracking-widest ml-4 text-rose-400">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div class="space-y-4">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Longitude
-                                    Reference</label>
-                                <input type="text" name="longitude" x-ref="lng" value="{{ $vendor->longitude }}"
+                                    Reference <span class="text-amber-400">*</span></label>
+                                <input type="text" name="longitude" x-ref="lng" value="{{ old('longitude', $vendor->longitude) }}"
+                                    required inputmode="decimal" placeholder="e.g. 75.7873000"
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                @error('longitude')
+                                    <p class="text-[9px] font-black uppercase italic tracking-widest ml-4 text-rose-400">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <button type="button" @click="detect()" :disabled="locating"
@@ -224,6 +232,13 @@
                             <p x-show="status" x-cloak x-text="status"
                                 class="md:col-span-3 text-[9px] font-black uppercase italic tracking-widest ml-4"
                                 :class="ok ? 'text-emerald-400' : 'text-amber-400'"></p>
+
+                            {{-- Says why the pair is compulsory. Customers are ranked
+                                 nearest-first from their own GPS, so a shop without
+                                 coordinates cannot be placed on that list at all. --}}
+                            <p class="md:col-span-3 text-[9px] font-black uppercase italic tracking-widest ml-4 text-slate-400">
+                                Required — customers are shown the nearest shops first, measured from these coordinates.
+                            </p>
                         </div>
                     </div>
 

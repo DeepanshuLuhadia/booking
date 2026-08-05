@@ -5,16 +5,24 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Employee;
+use App\Services\BookingNotifier;
+use App\Services\ShiftService;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class BookingController extends Controller
 {
+    public function __construct(private BookingNotifier $notifier)
+    {
+    }
+
     public function index(Request $request)
     {
         $vendor = auth()->user()->vendor;
         $bookings = Booking::where('vendor_id', $vendor->id)
-            ->with('employee')
+            // `vendor` is eager-loaded for the appointment_at accessor, which
+            // needs the opening hours to place after-midnight slots on the
+            // right calendar day.
+            ->with(['employee', 'vendor'])
             ->when($request->status, function ($q) use ($request) {
             return $q->where('status', $request->status);
         })
@@ -24,7 +32,7 @@ class BookingController extends Controller
         return view('vendor.bookings.index', compact('bookings'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ShiftService $shifts)
     {
         $vendor = auth()->user()->vendor;
 
@@ -48,7 +56,9 @@ class BookingController extends Controller
             'employee_id' => $request->employee_id,
             'customer_name' => $request->customer_name,
             'customer_phone' => $request->customer_phone,
-            'booking_date' => Carbon::today()->toDateString(),
+            // The shift currently being worked, so a manual booking taken after
+            // midnight joins the same sheet as the rest of that night's queue.
+            'booking_date' => $shifts->businessDate($vendor),
             'slot_start_time' => $request->slot_start,
             'slot_end_time' => $request->slot_end,
             'booking_type' => 'vendor',
@@ -56,13 +66,9 @@ class BookingController extends Controller
             'vendor_booked' => true,
         ]);
 
-        if ($employee->user && $employee->user->fcm_token) {
-            app(\App\Services\NotificationService::class)->sendWebPush(
-                $employee->user,
-                "📋 New Manual Appointment",
-                "You have a new appointment with {$request->customer_name} at {$request->slot_start}."
-            );
-        }
+        // 'vendor': the shop keyed this in itself, so it gets no "new booking"
+        // push back — but the specialist and every open dashboard still do.
+        $this->notifier->created($booking, 'vendor');
 
         return back()->with('success', 'Manual booking created successfully!');
     }
@@ -77,7 +83,11 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'completed']);
         $this->advanceNowServing($booking);
-        app(\App\Services\NotificationService::class)->notifyTokenQueue($booking->employee);
+
+        // Tells the customer their appointment is done, redraws both dashboards,
+        // and pings whoever is now at the front of the queue.
+        $this->notifier->completed($booking, 'vendor');
+        $this->notifier->queueAdvanced($booking->employee);
 
         return back()->with('success', 'Booking marked as completed.');
     }
@@ -90,7 +100,14 @@ class BookingController extends Controller
             return back()->with('error', 'Unauthorized.');
         }
 
+        // Announced BEFORE the delete — afterwards there is no row left to
+        // describe, and the customer would simply find their booking gone.
+        $employee = $booking->employee;
+        $this->notifier->removed($booking, 'vendor');
+
         $booking->delete();
+
+        $this->notifier->queueAdvanced($employee);
 
         return back()->with('success', 'Booking deleted successfully.');
     }
@@ -106,7 +123,11 @@ class BookingController extends Controller
         }
 
         $employee->increment('now_serving_token');
-        app(\App\Services\NotificationService::class)->notifyTokenQueue($employee);
+
+        // Every queue on screen — dashboards and customer pages alike — follows
+        // this, and the customers now at the front get their "you're up" push.
+        $this->notifier->queueAdvanced($employee);
+
         return back()->with('success', "{$employee->name} now serving #" . $employee->fresh()->now_serving_token);
     }
 
@@ -119,7 +140,12 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'skipped']);
         $this->advanceNowServing($booking);
-        app(\App\Services\NotificationService::class)->notifyTokenQueue($booking->employee);
+
+        // The skipped customer is told — they may still be sitting there waiting
+        // for a turn that has already gone past them.
+        $this->notifier->skipped($booking, 'vendor');
+        $this->notifier->queueAdvanced($booking->employee);
+
         return back()->with('success', 'Token #' . $booking->token_number . ' skipped.');
     }
 

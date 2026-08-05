@@ -95,7 +95,8 @@ class EmployeeController extends Controller
             ));
         }
 
-        Employee::create($data);
+        $employee = Employee::create($data);
+        app(\App\Services\QRCodeService::class)->generateForEmployee($employee);
 
         return redirect()->route('vendor.employees.index')->with('success', 'Employee added successfully!');
     }

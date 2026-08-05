@@ -97,10 +97,13 @@
                             </div>
                         </td>
                         <td class="hidden md:table-cell px-10 py-8">
+                            {{-- The day the customer actually turns up. For a
+                                 shop trading past midnight this is the day
+                                 after the sheet the booking is filed under. --}}
                             <div class="text-sm font-black text-white italic tracking-tight">{{
-                                \Carbon\Carbon::parse($booking->booking_date)->format('l, M d, Y') }}</div>
+                                ($booking->appointment_at ?? \Carbon\Carbon::parse($booking->booking_date))->format('l, M d, Y') }}</div>
                             <div class="text-[9px] text-blue-600 font-black mt-1 uppercase tracking-widest italic">{{
-                                $booking->slot_start_time }} - {{ $booking->slot_end_time }}</div>
+                                $booking->appointment_at?->format('h:i A') ?? $booking->slot_start_time }} - {{ $booking->appointment_end_at?->format('h:i A') ?? $booking->slot_end_time }}</div>
                         </td>
                         <td class="px-10 py-8">
                             @php

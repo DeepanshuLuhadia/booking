@@ -2,6 +2,9 @@
     'vendorTheme' => null,
     'pageTitle'   => null,
     'panelType'   => null,
+    // 'full' is the landing-page footer; 'minimal' keeps the copyright bar only,
+    // for pages that end on their content (e.g. the category listing).
+    'footerMode'  => 'full',
 ])
 @php
     $theme     = $vendorTheme ?? \App\Services\ThemeService::getTheme('consultant');
@@ -76,6 +79,35 @@
     <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
+
+    <!--
+        Realtime bootstrap gate.
+
+        The Vite bundle below is emitted as <script type="module">, which is
+        DEFERRED: it executes only after the document finishes parsing. Any inline
+        <script> further down the page therefore runs BEFORE window.Echo exists —
+        a listener registered there silently does nothing, which is exactly how
+        the dashboards ended up never receiving a booking without a refresh.
+
+        Pages must register realtime listeners through this helper rather than at
+        parse time. Defined here, ahead of the bundle, so it is available to every
+        inline script on the page regardless of load order.
+    -->
+    <script>
+        window.whenRealtimeReady = function (callback) {
+            var start = function () {
+                // No Echo means the bundle failed or Reverb is unreachable. Pages
+                // fall back to polling, so this is a degradation, not a break.
+                if (window.Echo) { callback(window.Echo); }
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', start, { once: true });
+            } else {
+                start();
+            }
+        };
+    </script>
 
     <!-- Styles + Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -311,57 +343,197 @@
 
     <script>
         /*
-         * Turn raw GPS coordinates into a human place name.
+         * Turn raw GPS coordinates into a human place name — down to the
+         * suburb ("Jhotwara"), not just the city ("Jaipur").
          *
-         * The geolocation API hands back numbers only, so every GPS path used to
-         * store empty user_city / user_state cookies and the header could label
-         * the pin no better than "Current Location". BigDataCloud's client
-         * endpoint is keyless and CORS-enabled; any failure (offline, blocked,
-         * rate-limited, slow) resolves to empty strings, which puts us straight
-         * back on the old generic label rather than blocking the location save.
+         * Two free, keyless, CORS-enabled services, queried in parallel,
+         * because neither alone does the whole job:
+         *
+         *   BigDataCloud — reliable city/state, but no suburb data in India.
+         *                  For Jhotwara it returns city AND locality as
+         *                  "Jaipur", and the deepest administrative entry it
+         *                  knows is "Jaipur Municipal Corporation".
+         *   Photon (OSM)  — carries the real suburb in `district`
+         *                  ("Jothwara", "Kormangala East"), with `locality`
+         *                  one level finer beneath it.
+         *
+         * So Photon supplies the suburb, BigDataCloud the city/state, and each
+         * covers for the other if it fails. Every failure path (offline,
+         * blocked, rate-limited, slow, HTML error page instead of JSON)
+         * degrades to a coarser label or an empty string — it never blocks the
+         * location save.
+         *
+         * Photon rather than Nominatim: Nominatim's operations policy rules out
+         * client-side use and it answers 403 to unidentified callers, so it
+         * would have failed in the field while looking fine in a terminal.
+         * Photon is a free keyless service intended for browser use. It does
+         * throttle bursts, which is survivable here because a lookup only
+         * happens on first detection or an explicit refresh — the answer then
+         * lives in a year-long cookie — and because failure is non-fatal.
          */
         window.resolvePlaceName = function (lat, lng) {
-            return new Promise(function (resolve) {
-                var settled = false;
-                var done = function (city, state) {
-                    if (settled) return;
-                    settled = true;
-                    resolve({ city: city || '', state: state || '' });
-                };
+            var timeout = function (promise, ms) {
+                return Promise.race([
+                    promise,
+                    new Promise(function (resolve) { setTimeout(function () { resolve(null); }, ms); })
+                ]).catch(function () { return null; });
+            };
 
-                var timer = setTimeout(function () { done('', ''); }, 4000);
-                var query = '/data/reverse-geocode-client?latitude=' + encodeURIComponent(lat) +
-                            '&longitude=' + encodeURIComponent(lng) + '&localityLanguage=en';
+            var get = function (url) {
+                return fetch(url).then(function (r) { return r.ok ? r.json() : null; });
+            };
 
-                // api-bdc.io is the current host; the older bigdatacloud.net name
-                // only 307s across to it, so it stands in as the fallback.
-                var lookup = function (hosts) {
-                    if (!hosts.length) { clearTimeout(timer); return done('', ''); }
-                    fetch(hosts[0] + query)
-                        .then(function (r) { return r.ok ? r.json() : null; })
-                        .then(function (d) {
-                            if (!d) return lookup(hosts.slice(1));
-                            clearTimeout(timer);
-                            done(d.city || d.locality || d.principalSubdivision, d.principalSubdivision);
-                        })
-                        .catch(function () { lookup(hosts.slice(1)); });
-                };
+            /* Administrative unit names are not places anyone says out loud.
+               Photon's `district` reads "K/W Ward" in Mumbai and "Ward 104
+               Kondapur" in Hyderabad, so anything shaped like a ward or civic
+               body is skipped in favour of the next candidate down. */
+            var isAdminNoise = function (name) {
+                return !name || /\b(ward|zone|circle|municipal|corporation|tehsil|taluk|mandal|district|division)\b/i.test(name);
+            };
 
-                lookup(['https://api-bdc.io', 'https://api.bigdatacloud.net']);
+            var pickSuburb = function (p) {
+                if (!p) return '';
+                // district = suburb ("Jothwara"); locality sits one level finer
+                // and stands in when the district is an administrative label.
+                var candidates = [p.district, p.locality, p.suburb, p.quarter];
+                for (var i = 0; i < candidates.length; i++) {
+                    if (!isAdminNoise(candidates[i])) return candidates[i];
+                }
+                return '';
+            };
+
+            // api-bdc.io is the current host; the older bigdatacloud.net name
+            // only 307s across to it, so it stands in as the fallback.
+            var bdcQuery = '/data/reverse-geocode-client?latitude=' + encodeURIComponent(lat) +
+                           '&longitude=' + encodeURIComponent(lng) + '&localityLanguage=en';
+            var bdc = get('https://api-bdc.io' + bdcQuery)
+                .catch(function () { return get('https://api.bigdatacloud.net' + bdcQuery); });
+
+            var photon = get('https://photon.komoot.io/reverse?lat=' + encodeURIComponent(lat) +
+                             '&lon=' + encodeURIComponent(lng));
+
+            return Promise.all([timeout(bdc, 4000), timeout(photon, 4000)]).then(function (results) {
+                var b = results[0] || {};
+                var f = results[1] && results[1].features && results[1].features[0];
+                var p = (f && f.properties) || {};
+
+                var city  = b.city || b.locality || (isAdminNoise(p.city) ? '' : p.city) || '';
+                var state = b.principalSubdivision || p.state || '';
+                // Photon first — it is the only one of the two that knows suburbs.
+                var suburb = pickSuburb(p) || b.locality || b.city || '';
+
+                return { city: city, state: state, suburb: suburb };
+            }).catch(function () {
+                return { city: '', state: '', suburb: '' };
             });
         };
 
         /* Cookie values may contain spaces ("New Delhi") — encode on write; PHP
            url-decodes $_COOKIE on the way in, so Blade still reads the plain name. */
-        window.writeLocationCookies = function (lat, lng, state, city) {
+        window.writeLocationCookies = function (lat, lng, state, city, suburb) {
             var year = '; path=/; max-age=31536000; SameSite=Lax';
             document.cookie = 'location_granted=true' + year;
             document.cookie = 'user_lat=' + encodeURIComponent(lat ?? '') + year;
             document.cookie = 'user_lng=' + encodeURIComponent(lng ?? '') + year;
             document.cookie = 'user_state=' + encodeURIComponent(state ?? '') + year;
             document.cookie = 'user_city=' + encodeURIComponent(city ?? '') + year;
+            document.cookie = 'user_suburb=' + encodeURIComponent(suburb ?? '') + year;
             try { localStorage.setItem('location_granted', 'true'); } catch (e) {}
         };
+
+        /*
+         * Same spelling corrections Blade applies (config/place_names.php),
+         * mirrored here so a label patched in by the background backfill reads
+         * identically to one rendered by the server.
+         */
+        window.__placeAliases = @json(\App\Services\PlaceNameService::aliasMap());
+
+        window.correctPlaceName = function (name) {
+            if (!name) return name || '';
+            var hit = window.__placeAliases[String(name).trim().toLowerCase()];
+            return hit || name;
+        };
+
+        window.readCookie = function (name) {
+            var hit = ('; ' + document.cookie).split('; ' + name + '=');
+            return hit.length === 2 ? decodeURIComponent(hit.pop().split(';').shift()) : '';
+        };
+
+        /*
+         * Ask the device for its position without making the visitor pick
+         * anything first.
+         *
+         * The site used to open on a blocking modal whose only routes forward
+         * were a button press or a manual state/city dropdown, so a visitor
+         * arriving on the landing page saw "Near Me" instead of where they
+         * actually are. getCurrentPosition does not require a user gesture, so
+         * this fires straight away: the OS prompt is the only thing between the
+         * visitor and a suburb-level location.
+         *
+         * Nothing here can trap the visitor — every failure path (unsupported,
+         * denied, timed out) rejects, and the caller falls back to the manual
+         * picker exactly as before.
+         */
+        window.detectLocation = function (options) {
+            options = options || {};
+            return new Promise(function (resolve, reject) {
+                if (!('geolocation' in navigator)) {
+                    return reject(new Error('unsupported'));
+                }
+
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    var lat = position.coords.latitude, lng = position.coords.longitude;
+                    window.resolvePlaceName(lat, lng).then(function (place) {
+                        window.writeLocationCookies(lat, lng, place.state, place.city, place.suburb);
+                        resolve({ lat: lat, lng: lng, state: place.state, city: place.city, suburb: place.suburb });
+                    });
+                }, reject, { timeout: options.timeout || 10000, maximumAge: 600000 });
+            });
+        };
+
+        /*
+         * Has the visitor already allowed location at the OS level? Lets the
+         * consent modal stay out of the way entirely for returning visitors —
+         * we can just read the position instead of asking again. Browsers
+         * without the Permissions API report 'prompt', which is the safe
+         * assumption (we ask).
+         */
+        window.locationPermissionState = function () {
+            if (!navigator.permissions || !navigator.permissions.query) {
+                return Promise.resolve('prompt');
+            }
+            return navigator.permissions.query({ name: 'geolocation' })
+                .then(function (status) { return status.state; })
+                .catch(function () { return 'prompt'; });
+        };
+
+        /*
+         * Backfill for visitors who granted location before suburbs existed:
+         * their cookies hold coordinates but no suburb name. Resolve it quietly
+         * in the background and patch the labels in place — no reload, and no
+         * second permission prompt, because the coordinates are already ours.
+         */
+        window.__backfillSuburb = function () {
+            var lat = window.readCookie('user_lat'), lng = window.readCookie('user_lng');
+            if (!lat || !lng || window.readCookie('user_suburb')) return;
+
+            window.resolvePlaceName(lat, lng).then(function (place) {
+                if (!place.suburb && !place.city) return;
+                window.writeLocationCookies(lat, lng, place.state, place.city, place.suburb);
+
+                var label = window.correctPlaceName(place.suburb || place.city);
+                document.querySelectorAll('[data-location-label]').forEach(function (el) {
+                    var max = parseInt(el.getAttribute('data-location-max') || '0', 10);
+                    el.textContent = (max && label.length > max) ? label.slice(0, max) + '…' : label;
+                });
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (document.cookie.indexOf('location_granted=true') !== -1) {
+                window.__backfillSuburb();
+            }
+        });
     </script>
 </head>
 <body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
@@ -370,7 +542,10 @@
     <div x-data="{
              showLocationModal: true,
              loading: false,
-             mode: 'gps',
+             /* 'detecting' is the opening state: we ask the device straight
+                away rather than making the visitor choose a city from a list
+                first. It falls back to 'gps' (retry) and then 'manual'. */
+             mode: 'detecting',
              state: '',
              city: '',
              states: {
@@ -383,33 +558,53 @@
              init() {
                  if (localStorage.getItem('location_granted') || document.cookie.includes('location_granted')) {
                      this.showLocationModal = false;
+                     return;
                  }
+
+                 window.locationPermissionState().then((state) => {
+                     /* Already refused at the OS level — re-asking would be a
+                        no-op prompt the browser never shows, so go straight to
+                        the manual picker. */
+                     if (state === 'denied') {
+                         this.mode = 'manual';
+                         return;
+                     }
+
+                     this.autoDetect();
+                 });
+             },
+             /* Silent when permission is already granted; a single OS prompt
+                otherwise. Either way the visitor lands on their own suburb
+                without picking anything. */
+             autoDetect() {
+                 this.mode = 'detecting';
+                 this.loading = true;
+
+                 window.detectLocation()
+                     .then(() => window.location.reload())
+                     .catch((error) => {
+                         console.warn('Geolocation failed', error);
+                         this.loading = false;
+                         this.mode = 'gps';
+                     });
              },
              requestLocation() {
                  this.loading = true;
-                 if ('geolocation' in navigator) {
-                     navigator.geolocation.getCurrentPosition((position) => {
-                         const lat = position.coords.latitude, lng = position.coords.longitude;
-                         window.resolvePlaceName(lat, lng).then((place) => {
-                             this.saveLocation(lat, lng, place.state, place.city);
-                         });
-                     }, (error) => {
+                 window.detectLocation()
+                     .then(() => window.location.reload())
+                     .catch((error) => {
                          console.warn('Geolocation failed', error);
                          this.mode = 'manual';
                          this.loading = false;
-                     }, { timeout: 10000 });
-                 } else {
-                     this.mode = 'manual';
-                     this.loading = false;
-                 }
+                     });
              },
              saveManualLocation() {
                  if(!this.state || !this.city) return;
                  this.loading = true;
                  this.saveLocation('', '', this.state, this.city);
              },
-             saveLocation(lat, lng, state, city) {
-                 window.writeLocationCookies(lat, lng, state, city);
+             saveLocation(lat, lng, state, city, suburb) {
+                 window.writeLocationCookies(lat, lng, state, city, suburb ?? city);
                  window.location.reload();
              }
          }"
@@ -428,15 +623,37 @@
                 </svg>
             </div>
             
-            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10">Location Required</h2>
-            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed" x-show="mode === 'gps'">
+            <h2 class="text-2xl font-black text-white tracking-tight mb-3 relative z-10"
+                x-text="mode === 'detecting' ? 'Finding Your Location' : 'Location Required'">Finding Your Location</h2>
+            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed" x-show="mode === 'detecting'">
+                Detecting your area so we can show the professionals closest to you. Allow location access if your browser asks.
+            </p>
+            <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed" x-show="mode === 'gps'" x-cloak>
                 To discover verified experts near you, please share your location. You can also manually select your city if you prefer.
             </p>
             <p class="text-sm text-white/60 mb-6 relative z-10 leading-relaxed" x-show="mode === 'manual'" x-cloak>
                 Please select your state and city to continue.
             </p>
 
-            <div x-show="mode === 'gps'" class="w-full space-y-3 relative z-10">
+            {{-- Auto-detection in flight. No button to press: the only prompt
+                 the visitor sees is the browser's own. --}}
+            <div x-show="mode === 'detecting'" class="w-full space-y-3 relative z-10">
+                <div class="w-full h-14 rounded-xl bg-white/5 border border-white/10 text-white/70 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3">
+                    <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Detecting…
+                </div>
+                <button
+                    @click="mode = 'manual'; loading = false"
+                    class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all hover:bg-white/10 hover:text-white/80 active:scale-95"
+                >
+                    Choose city manually instead
+                </button>
+            </div>
+
+            <div x-show="mode === 'gps'" x-cloak class="w-full space-y-3 relative z-10">
                 <button 
                     @click="requestLocation()" 
                     :disabled="loading"
@@ -509,35 +726,86 @@
     </div>
     @endif
 
-    @if(!request()->cookie('notif_consent_decided'))
+    {{--
+        Notification consent.
+
+        ALWAYS rendered — it used to be omitted entirely once the visitor had
+        decided once, which meant a customer who dismissed it could never be asked
+        again no matter how many appointments they later booked, and stayed
+        permanently unreachable. It costs nothing to render: it is hidden until
+        something asks for it.
+
+        It is raised on two occasions:
+          - every booking placed (trigger-notification-prompt), asked once per
+            booking so each new appointment gets its own chance;
+          - on arrival, when the device is already holding a booking we have no
+            way to notify about ($pushSetupNeeded).
+
+        Never raised when the browser has already refused: once permission is
+        'denied' no prompt can appear, so the modal could not do anything and
+        would just be nagging. Those customers get a one-line pointer to their
+        browser settings instead.
+    --}}
     <!-- Step 2: Notification Consent Modal (custom — browser prompt only fires AFTER user clicks Enable) -->
     <div x-data="{
              showNotifModal: false,
              loading: false,
+             // A booking is on file that we currently cannot reach.
+             pushNeeded: {{ ($pushSetupNeeded ?? false) ? 'true' : 'false' }},
+
+             canAsk() {
+                 return (typeof Notification !== 'undefined') && Notification.permission === 'default';
+             },
+
+             /*
+              * The two prompts never stack, so one has to yield.
+              *
+              * On iOS a Safari tab cannot receive web push at all — the site must
+              * be installed to the Home Screen first — so there the install prompt
+              * genuinely has to come first or notifications are pointless.
+              * Everywhere else push works in an ordinary browser, so asking for it
+              * is the thing that actually delivers the updates, and the install
+              * prompt waits its turn.
+              */
+             raise(delay = 0) {
+                 if (!this.canAsk() || this.showNotifModal) return;
+
+                 const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+
+                 setTimeout(() => {
+                     if (window.__a2hsCanShow && iOS) return;
+                     this.showNotifModal = true;
+                 }, delay);
+             },
+
              init() {
                  const isSupported = (typeof Notification !== 'undefined');
-                 const notifDecided = isSupported && (Notification.permission === 'granted' || Notification.permission === 'denied');
-                 const dismissed = !!localStorage.getItem('notif_consent_decided')
-                                || document.cookie.includes('notif_consent_decided');
-                 const locationOk = !!localStorage.getItem('location_granted')
-                                 || document.cookie.includes('location_granted');
 
-                 if (isSupported && (notifDecided || dismissed)) {
-                     // Silently set cookie to avoid rendering HTML next time
-                     document.cookie = 'notif_consent_decided=true; path=/; max-age=31536000; SameSite=Lax';
-                     localStorage.setItem('notif_consent_decided', 'true');
-                     return; // do NOT show modal
-                 }
+                 /*
+                  * A booking was just placed. Ask again — every booking earns its
+                  * own ask, regardless of anything dismissed before, because the
+                  * customer has just committed to turning up somewhere and the
+                  * updates are now worth something to them.
+                  */
+                 window.addEventListener('trigger-notification-prompt', () => {
+                     if (this.canAsk()) {
+                         this.raise(600);
+                     } else if (isSupported && Notification.permission === 'denied') {
+                         // Cannot be re-prompted by us; point at the only thing
+                         // that can actually change it.
+                         window.dispatchEvent(new CustomEvent('toast', {
+                             detail: {
+                                 message: 'Turn on notifications in your browser settings to get queue updates.',
+                                 type: 'info',
+                             },
+                         }));
+                     }
+                 });
 
-                 if (isSupported && !notifDecided && !dismissed) {
-                     // Listen for meaningful action events instead of firing on load
-                     window.addEventListener('trigger-notification-prompt', () => {
-                         // If the Add-to-Home-Screen prompt is taking over (mobile browser,
-                         // not yet installed), let it show instead — the two never stack.
-                         if (!this.showNotifModal && !window.__a2hsCanShow) {
-                             this.showNotifModal = true;
-                         }
-                     });
+                 // Arriving with a booking we cannot reach: offer once per visit.
+                 if (this.pushNeeded && !sessionStorage.getItem('push_reoffered')) {
+                     sessionStorage.setItem('push_reoffered', '1');
+                     this.raise(1200);
                  }
              },
              enableNotifications() {
@@ -551,6 +819,9 @@
                  this.showNotifModal = false;
              },
              dismissNotifications() {
+                 // Deliberately NOT permanent any more. The cookie still records
+                 // that they have seen it (it suppresses the first-visit ask), but
+                 // the next booking asks again — see the listener above.
                  document.cookie = 'notif_consent_decided=true; path=/; max-age=31536000; SameSite=Lax';
                  localStorage.setItem('notif_consent_decided', 'true');
                  this.showNotifModal = false;
@@ -600,7 +871,6 @@
             </button>
         </div>
     </div>
-    @endif
 
     @if(!request()->cookie('a2hs_decided'))
     <!-- Add to Home Screen prompt — shown after a booking when the page is running in a
@@ -639,6 +909,18 @@
                  });
 
                  window.addEventListener('trigger-notification-prompt', () => {
+                     /*
+                      * Stand down for the notification ask on anything but iOS.
+                      * Off iOS, push works without installing, so permission is the
+                      * more valuable of the two and only one prompt may show. On
+                      * iOS the reverse is true — push is impossible until the site
+                      * is installed — so there this prompt still goes first.
+                      */
+                     const canAskNotif = (typeof Notification !== 'undefined')
+                                      && Notification.permission === 'default';
+
+                     if (!this.isIOS && canAskNotif) return;
+
                      if (!this.show && !this.dismissed) {
                          this.show = true;
                      }
@@ -766,7 +1048,18 @@
             <!-- Desktop Menu -->
             <div class="nav-desktop-menu items-center gap-4 ml-auto">
                 <div class="flex items-center gap-10">
-                    <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Explore</a>
+                    {{--  <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Explore</a> --}}
+
+                    {{-- Live bookings the visitor is holding, at any business. Shown
+                         only once they hold one, so a first-time visitor is not
+                         offered an empty page. --}}
+                    @if(!$panelType && ($myBookingCount ?? 0) > 0)
+                        <a href="{{ route('bookings.mine') }}" class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">
+                            My Bookings
+                            <span class="min-w-[20px] h-5 px-1.5 rounded-full theme-gradient-bg text-white text-[10px] font-black flex items-center justify-center">{{ $myBookingCount }}</span>
+                        </a>
+                    @endif
+
                     @auth
                         @if(auth()->user()->isAdmin())
                             <a href="/admin/dashboard" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Admin Portal</a>
@@ -797,18 +1090,24 @@
             <div class="flex items-center gap-1">
                 @if(!$panelType)
                     @php
-                        // Which place, if any, the visitor has already committed to. Manual
-                        // selection writes user_city/user_state; the GPS path writes only
-                        // coordinates, which have no name attached — hence the generic label.
+                        // Which place the visitor is standing in. GPS now resolves a
+                        // suburb-level name (see resolvePlaceName), so the pin reads
+                        // "Koramangala" rather than the old generic "Current Location";
+                        // manual selection still only knows city/state.
+                        // Corrected on display — OSM misspells some suburbs
+                        // (see config/place_names.php).
+                        $navSuburb = \App\Services\PlaceNameService::correct(request()->cookie('user_suburb'));
                         $navCity   = trim((string) request()->cookie('user_city'));
                         $navState  = trim((string) request()->cookie('user_state'));
                         $navCoords = is_numeric(request()->cookie('user_lat')) && is_numeric(request()->cookie('user_lng'));
 
                         $navLocationSet = request()->cookie('location_granted')
-                            && ($navCity !== '' || $navState !== '' || $navCoords);
+                            && ($navSuburb !== '' || $navCity !== '' || $navState !== '' || $navCoords);
 
-                        $navLocationLabel = $navCity !== '' ? $navCity : ($navState !== '' ? $navState : 'Current Location');
-                        $navLocationShort = \Illuminate\Support\Str::limit($navLocationLabel, 5, '…');
+                        $navLocationLabel = $navSuburb ?: ($navCity ?: ($navState ?: 'Current Location'));
+                        // Roomier than the old 5-character cut, which turned every
+                        // suburb into an ellipsis.
+                        $navLocationShort = \Illuminate\Support\Str::limit($navLocationLabel, 12, '…');
                     @endphp
 
                     {{-- Mobile "Near Me": bare pin icon beside the hamburger --}}
@@ -819,22 +1118,17 @@
                             x-data="{
                                 locating: false,
                                 useGPS() {
-                                    if (!('geolocation' in navigator)) {
-                                        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'GPS not supported by this browser.', type: 'error' } }));
-                                        return;
-                                    }
                                     this.locating = true;
-                                    navigator.geolocation.getCurrentPosition((position) => {
-                                        const lat = position.coords.latitude, lng = position.coords.longitude;
-                                        window.resolvePlaceName(lat, lng).then((place) => {
-                                            window.writeLocationCookies(lat, lng, place.state, place.city);
-                                            window.location.reload();
+                                    window.detectLocation()
+                                        .then(() => window.location.reload())
+                                        .catch((error) => {
+                                            this.locating = false;
+                                            console.warn('Geolocation failed', error);
+                                            const message = error && error.message === 'unsupported'
+                                                ? 'GPS not supported by this browser.'
+                                                : 'Could not get your location. Please allow access and retry.';
+                                            window.dispatchEvent(new CustomEvent('toast', { detail: { message, type: 'error' } }));
                                         });
-                                    }, (error) => {
-                                        this.locating = false;
-                                        console.warn('Geolocation failed', error);
-                                        window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'Could not get your location. Please allow access and retry.', type: 'error' } }));
-                                    }, { timeout: 10000 });
                                 }
                             }"
                             :class="{ 'is-locating': locating }"
@@ -846,7 +1140,11 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
-                                <span class="nav-mobile-nearme-label">{{ $navLocationShort }}</span>
+                                {{-- data-location-label lets the background suburb
+                                     backfill patch this in place, without a reload. --}}
+                                <span class="nav-mobile-nearme-label"
+                                      data-location-label
+                                      data-location-max="12">{{ $navLocationShort }}</span>
                             </span>
                         @else
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" x-show="!locating">
@@ -906,11 +1204,19 @@
 
                             <div class="flex flex-col gap-3">
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Platform</h4>
-                                <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                {{--  <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
                                     <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                                     Explore
-                                </a>
-                                
+                                </a>--}}
+
+                                @if(($myBookingCount ?? 0) > 0)
+                                    <a href="{{ route('bookings.mine') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                        <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        My Bookings
+                                        <span class="ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full theme-gradient-bg text-white text-[10px] font-black flex items-center justify-center not-italic">{{ $myBookingCount }}</span>
+                                    </a>
+                                @endif
+
                                 @auth
                                     @if(auth()->user()->isAdmin())
                                         <a href="/admin/dashboard" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
@@ -1005,7 +1311,23 @@
             {{ $slot }}
         </main>
 
-        @if(!$panelType)
+        @if(!$panelType && $footerMode === 'minimal')
+        <!-- Minimal footer: copyright bar only, no link columns or curved top -->
+        <footer class="bg-[#0a0f2c] py-8 border-t border-white/5">
+            <div class="container mx-auto px-4 md:px-8">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+                    <div class="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
+                        &copy; {{ date('Y') }} {{ strtoupper(config('brand.platform')) }}. ALL RIGHTS RESERVED.
+                    </div>
+                    <div class="flex flex-wrap justify-center gap-6 text-[9px] font-black uppercase tracking-[0.3em] text-white/30">
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Privacy</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Terms</a>
+                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Help</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        @elseif(!$panelType)
         <!-- Footer (Section 12) - Hidden on Dashboards -->
         <footer class="site-footer-curved bg-[#0a0f2c] pt-24 pb-12 border-t border-white/5">
             <div class="container mx-auto px-4 md:px-8">

@@ -8,7 +8,10 @@
         ];
     @endphp
 
-    <div class="space-y-8 md:space-y-10">
+    {{-- id="emp-live": the region the realtime listener re-renders in place when a
+         booking arrives or the queue moves. Everything that can change while the
+         specialist is standing at the screen has to live inside it. --}}
+    <div id="emp-live" class="space-y-8 md:space-y-10">
         {{-- Greeting + live status -------------------------------------------------- --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div class="space-y-2">
@@ -39,6 +42,50 @@
                         <svg class="w-6 h-6 md:w-7 md:h-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <h3 class="text-4xl md:text-5xl font-black text-amber-400 leading-none">{{ $stats['remaining'] }}</h3>
+                </div>
+            </div>
+        </div>
+
+        {{-- Employee QR Code Section ------------------------------------------------ --}}
+        <div class="glass-card p-5 sm:p-8 bg-white/5 border border-white/10 rounded-3xl" x-data="{ copied: false }">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <!-- Left: QR Code + Text details -->
+                <div class="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full">
+                    {{--<div class="w-28 h-28 sm:w-24 sm:h-24 rounded-2xl bg-white p-2.5 shrink-0 border border-white/20 shadow-2xl flex items-center justify-center">
+                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code" class="w-full h-full object-contain">
+                    </div>
+                     <div class="flex-1 min-w-0 space-y-2 w-full">
+                        <div class="flex items-center justify-center sm:justify-start gap-2">
+                            <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+                            <h3 class="text-lg sm:text-xl font-black text-white italic tracking-tight">Your Personal QR Code</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 font-medium leading-relaxed max-w-xl">
+                            Customers scan this QR code or use your personal link to access your direct booking page.
+                        </p>
+                        <div class="pt-1 flex items-center justify-center sm:justify-start">
+                            <div class="max-w-full inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10 text-[11px] font-mono text-sky-300 overflow-hidden">
+                                <svg class="w-3.5 h-3.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                <span class="truncate select-all">{{ $employee->public_url }}</span>
+                            </div>
+                        </div>
+                    </div> --}}
+                </div>
+
+                <!-- Right: Action Buttons -->
+                <div class="grid grid-cols-2 sm:flex sm:flex-col gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/10">
+                    {{-- <button type="button" @click="navigator.clipboard.writeText('{{ $employee->public_url }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="px-4 py-3 rounded-xl bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                        <span x-text="copied ? 'COPIED!' : 'COPY LINK'"></span>
+                    </button> --}}
+                    <div class="w-28 h-28 sm:w-24 sm:h-24 rounded-2xl bg-white p-2.5 shrink-0 border border-white/20 shadow-2xl flex items-center justify-center">
+                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code" class="w-full h-full object-contain">
+                    </div>
+                    <a href="{{ asset('storage/' . $employee->qr_code_path) }}" download="qr-{{ $employee->slug }}.svg"
+                        class="px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 border border-white/10 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span>DOWNLOAD QR</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -242,7 +289,47 @@
         }
     </style>
 
+    {{--
+        Realtime: the specialist's own feed.
+
+        This screen is what somebody works from all day, and it used to only
+        change when they reloaded it — a booking made thirty seconds ago was
+        simply not there. It now follows two channels:
+
+          private-employee.{id}  their bookings arriving and changing
+          queue.{id}             their own queue counters moving
+
+        Both just re-render #emp-live from the server (see Realtime.refresh), so
+        there is one definition of how a queue looks and it stays in Blade.
+    --}}
     <script>
+        // Must go through whenRealtimeReady: the Echo bundle is a deferred module
+        // and does not exist yet while this script is being parsed.
+        window.whenRealtimeReady(function (Echo) {
+            const employeeId = {{ $employee->id }};
+
+            Echo.private(`employee.${employeeId}`)
+                .listen('.booking.changed', (e) => {
+                    window.Realtime.refresh('#emp-live');
+
+                    const who = e.booking?.customer_name ?? 'A customer';
+                    const messages = {
+                        created:   `New booking — ${who}${e.booking?.token_number ? ' (token #' + e.booking.token_number + ')' : ''}`,
+                        cancelled: e.actor === 'customer' ? `${who} cancelled their booking` : null,
+                        expired:   null,
+                    };
+
+                    // Only announce what the specialist did NOT just do themselves;
+                    // their own actions already show a confirmation.
+                    if (messages[e.action]) {
+                        window.Realtime.toast(messages[e.action], e.action === 'created' ? 'success' : 'info');
+                    }
+                });
+
+            Echo.channel(`queue.${employeeId}`)
+                .listen('.queue.updated', () => window.Realtime.refresh('#emp-live'));
+        });
+
         function queueSlider() {
             return {
                 scrollByCard(dir) {

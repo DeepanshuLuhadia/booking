@@ -1,4 +1,33 @@
 <x-app-layout :vendor-theme="$theme" :page-title="$vendor->business_name">
+    @php
+        /*
+        | Map link for the address rows below (one desktop, one mobile).
+        |
+        | Prefer the coordinates the vendor captured in their panel: a text
+        | search on the address string lands wherever Google decides to
+        | interpret it, which for a shop on an unnamed lane is often the wrong
+        | end of the neighbourhood. `query=lat,lng` drops the pin on the exact
+        | point instead — the same figures the "N km away" chip is measured from.
+        |
+        | The address search stays as the fallback for vendors registered before
+        | coordinates became mandatory. A stored 0 counts as unset, matching
+        | CustomerDiscoveryController::coordinate().
+        */
+        $mapLat = is_numeric($vendor->latitude) && abs((float) $vendor->latitude) >= 0.00001
+            ? (float) $vendor->latitude : null;
+        $mapLng = is_numeric($vendor->longitude) && abs((float) $vendor->longitude) >= 0.00001
+            ? (float) $vendor->longitude : null;
+
+        $addressLabel = $vendor->address ?? 'Professional District';
+
+        $mapUrl = 'https://www.google.com/maps/search/?api=1&query=' . urlencode(
+            $mapLat !== null && $mapLng !== null
+                ? $mapLat . ',' . $mapLng
+                : $addressLabel
+        );
+
+        $mapIsExact = $mapLat !== null && $mapLng !== null;
+    @endphp
     <div x-data="bookingSystem()"
         class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['label'] ?? 'default')) }}">
 
@@ -47,8 +76,9 @@
                     </h1>
 
                     <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 md:gap-8 mb-6 md:mb-10">
-                        <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($vendor->address ?? 'Professional District') }}"
+                        <a href="{{ $mapUrl }}"
                             target="_blank" rel="noopener noreferrer"
+                            title="{{ $mapIsExact ? 'Open the shop\'s exact location in Google Maps' : 'Search this address in Google Maps' }}"
                             class="flex items-center gap-3 group/address transition-all hover:scale-[1.02] w-full md:w-auto justify-start md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
                                 class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 group-hover/address:border-white/30 group-hover/address:bg-white/20 transition-all">
@@ -59,7 +89,7 @@
                             </div>
                             <span
                                 class="text-base font-bold text-white/60 italic group-hover/address:text-white transition-colors underline underline-offset-4">{{
-    $vendor->address ?? 'Professional District' }}</span>
+    $addressLabel }}</span>
                         </a>
                         <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
@@ -116,8 +146,9 @@
                 </h1>
 
                 {{-- Address row --}}
-                <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($vendor->address ?? 'Professional District') }}"
+                <a href="{{ $mapUrl }}"
                     target="_blank" rel="noopener noreferrer"
+                    title="{{ $mapIsExact ? 'Open the shop\'s exact location in Google Maps' : 'Search this address in Google Maps' }}"
                     style="width:100%; display:flex; align-items:center; gap:16px; margin-bottom:22px; text-align:left; text-decoration:none;">
                     <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                         <svg style="width:22px; height:22px; color:rgba(255,255,255,0.75);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,7 +156,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                     </div>
-                    <span style="font-size:17px; font-weight:500; color:rgba(255,255,255,0.9); line-height:1.4;">{{ $vendor->address ?? 'Professional District' }}</span>
+                    <span style="font-size:17px; font-weight:500; color:rgba(255,255,255,0.9); line-height:1.4;">{{ $addressLabel }}</span>
                 </a>
 
                 {{-- Fee row --}}
@@ -516,8 +547,132 @@
                         </div>
 
                         <div class="p-4 pt-0">
+                            <!-- ACTIVE BOOKING — mirrors the single-employee page.
+                                 One active booking is allowed per vendor per day
+                                 (enforced in BookingController), so while it stands
+                                 this panel takes the place of the whole booking
+                                 interface rather than letting the customer fill in
+                                 a form that the server would reject. -->
+                            <template x-if="activeBooking">
+                                <div class="p-2 md:p-4 animate-reveal">
+                                    <div class="p-6 md:p-8 bg-sky-500/10 border border-sky-400/30 rounded-[2.5rem] text-center relative overflow-hidden shadow-xl">
+                                        <div class="w-16 h-16 theme-gradient-bg text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+
+                                        <span class="inline-block px-4 py-1.5 bg-sky-500/20 text-sky-300 rounded-full text-[10px] font-black uppercase tracking-widest italic mb-3">Your Active Booking</span>
+
+                                        <template x-if="activeBooking.token_number">
+                                            <div>
+                                                <h2 class="text-4xl sm:text-5xl font-black italic tracking-tighter uppercase text-white mb-4"
+                                                    x-text="'Token #' + activeBooking.token_number"></h2>
+
+                                                {{-- Label and value both come from the server: between
+                                                     customers this reads "Up Next #10" rather than
+                                                     still announcing a token that has already left. --}}
+                                                <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
+                                                    <div>
+                                                        <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic"
+                                                           x-text="activeBooking.serving_label ?? 'Now Serving'"></p>
+                                                        <p class="text-3xl font-black text-white italic"
+                                                           x-text="activeBooking.serving_display ?? '—'"></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic">Ahead Of You</p>
+                                                        <p class="text-3xl font-black text-sky-400 italic"
+                                                           x-text="'#' + (activeBooking.people_ahead ?? 0)"></p>
+                                                    </div>
+                                                </div>
+
+                                                <p x-show="activeBooking.approx_wait_min > 0" style="display:none;"
+                                                   class="mt-4 text-[10px] font-black uppercase tracking-widest text-white/40 italic"
+                                                   x-text="'Approx. ' + activeBooking.approx_wait_min + ' min wait'"></p>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="!activeBooking.token_number">
+                                            <div>
+                                                <h2 class="text-3xl font-black italic tracking-tighter uppercase text-white mb-2"
+                                                    x-text="'Slot: ' + activeBooking.slot_time"></h2>
+                                                <p class="text-white/60 font-medium text-sm" x-text="'Date: ' + activeBooking.booking_date"></p>
+                                                <span class="inline-block mt-3 px-3 py-1 bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase rounded-lg"
+                                                      x-text="'Status: ' + (activeBooking.status_label ?? activeBooking.status)"></span>
+                                            </div>
+                                        </template>
+
+                                        <p class="text-white/50 text-xs mt-6 italic">
+                                            You already have a booking with <span class="font-black text-white" x-text="activeBooking.employee_name"></span>
+                                            at {{ $vendor->business_name }}. Only one active booking per business is allowed each day —
+                                            you can book here again once this one is complete.
+                                        </p>
+
+                                        {{-- The customer may be holding tokens at other businesses too;
+                                             this is the one page that shows all of them. --}}
+                                        <a href="{{ route('bookings.mine') }}"
+                                           class="inline-block mt-5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all active:scale-95">
+                                            See All My Bookings
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+
+                            {{-- OUTCOME PANEL — the shop just closed this customer's booking.
+                                 Their token panel must not simply vanish back into a booking
+                                 form: they were watching a number, and they need to be told
+                                 plainly that their turn happened (or was called off) rather
+                                 than left to work it out from the form reappearing. --}}
+                            <template x-if="closedBooking">
+                                <div class="p-2 md:p-4 animate-reveal">
+                                    <div class="p-6 md:p-8 rounded-[2.5rem] text-center relative overflow-hidden shadow-xl border"
+                                         :class="closedBooking.status === 'completed'
+                                            ? 'bg-emerald-500/10 border-emerald-400/30'
+                                            : 'bg-amber-500/10 border-amber-400/30'">
+
+                                        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                                             :class="closedBooking.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'">
+                                            <template x-if="closedBooking.status === 'completed'">
+                                                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </template>
+                                            <template x-if="closedBooking.status !== 'completed'">
+                                                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </template>
+                                        </div>
+
+                                        <h2 class="text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-white mb-3"
+                                            x-text="closedBookingHeadline()"></h2>
+
+                                        <p class="text-white/60 text-sm font-medium mb-2">
+                                            <template x-if="closedBooking.token_number">
+                                                <span>Token <span class="font-black text-white" x-text="'#' + closedBooking.token_number"></span> at {{ $vendor->business_name }}</span>
+                                            </template>
+                                            <template x-if="!closedBooking.token_number">
+                                                <span>Your appointment at {{ $vendor->business_name }}</span>
+                                            </template>
+                                        </p>
+                                        <p class="text-white/40 text-xs italic mb-7" x-text="closedBookingNote()"></p>
+
+                                        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                                            <a href="{{ route('bookings.mine') }}"
+                                               class="px-7 py-4 rounded-xl theme-gradient-bg text-[10px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:brightness-110 active:scale-95">
+                                                View My Bookings
+                                            </a>
+                                            <button type="button" @click="closedBooking = null"
+                                                    class="px-7 py-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all active:scale-95">
+                                                Book Again
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
                             <!-- Loading Interface -->
-                            <div x-show="loading && !isSubscriptionExpired" class="py-16 md:py-32 flex flex-col items-center justify-center gap-6">
+                            <div x-show="loading && !isSubscriptionExpired && !activeBooking && !closedBooking" class="py-16 md:py-32 flex flex-col items-center justify-center gap-6">
                                 <div
                                     class="w-10 h-10 border-4 border-white/10 border-t-orange-500 rounded-full animate-spin">
                                 </div>
@@ -526,7 +681,7 @@
                             </div>
 
                             <!-- Interactive Selection Logic -->
-                            <div x-show="!loading && selectedEmployee && !isSubscriptionExpired" class="animate-reveal">
+                            <div x-show="!loading && selectedEmployee && !isSubscriptionExpired && !activeBooking && !closedBooking" class="animate-reveal">
 
                                 <!-- Token Flow -->
                                 <template x-if="isTokenEnabled && !isOffline">
@@ -645,7 +800,7 @@
                                 </template>
                             </div>
 
-                            <div x-show="!selectedEmployee && !isSubscriptionExpired" class="py-16 md:py-32 text-center opacity-30 animate-fade-in">
+                            <div x-show="!selectedEmployee && !isSubscriptionExpired && !activeBooking && !closedBooking" class="py-16 md:py-32 text-center opacity-30 animate-fade-in">
                                 <span class="text-6xl block mb-6 grayscale">⏳</span>
                                 <p class="text-[9px] font-black uppercase tracking-[0.4em] text-white italic">Initiate
                                     Selection Above</p>
@@ -783,20 +938,58 @@
         <div x-show="successModal" class="fixed inset-0 z-[300] flex items-center justify-center p-6" x-cloak
             x-transition>
             <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl"></div>
+            <!-- Sized for a phone first: the fixed p-16 / rounded-[5rem] shell left
+                 almost no content width at 390px once the token block was added. -->
             <div
-                class="relative bg-slate-900/90 text-white rounded-[5rem] p-16 text-center max-w-lg shadow-[0_100px_200px_-50px_rgba(0,0,0,0.5)] border-8 border-white/5">
+                class="relative bg-slate-900/90 text-white rounded-[2.5rem] sm:rounded-[4rem] p-6 sm:p-12 text-center w-full max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar shadow-[0_100px_200px_-50px_rgba(0,0,0,0.5)] border-4 sm:border-8 border-white/5">
                 <div
-                    class="w-24 h-24 theme-gradient-bg text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 animate-reveal-zoom shadow-2xl theme-glow-sm">
+                    class="w-20 h-20 sm:w-24 sm:h-24 theme-gradient-bg text-white rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 sm:mb-10 animate-reveal-zoom shadow-2xl theme-glow-sm">
                     <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h2 class="text-5xl font-black mb-4 italic tracking-tighter uppercase leading-none theme-gradient-text">Appointment
-                    Segmented</h2>
-                <p class="text-white/60 font-medium text-lg mb-12" x-text="successMsg"></p>
-                <button @click="window.location.href='/'"
-                    class="theme-btn w-full h-24 text-xl rounded-3xl opacity-100 italic">GLOBAL
-                    REGISTRY</button>
+                <h2 class="text-3xl sm:text-5xl font-black mb-4 italic tracking-tighter uppercase leading-none theme-gradient-text">Booking
+                    Confirmed</h2>
+                <p class="text-white/60 font-medium text-base sm:text-lg mb-8" x-text="successMsg"></p>
+
+                <!-- The token is the thing the customer came for — show it here
+                     rather than only on the panel behind the modal. -->
+                <div class="bg-white/5 border border-white/10 rounded-[2rem] p-6 mb-10 text-center">
+                    <template x-if="confirmedBooking && confirmedBooking.token_number">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1 italic">Your Token Number</p>
+                            <p class="text-6xl font-black theme-gradient-text italic leading-none"
+                               x-text="'#' + confirmedBooking.token_number"></p>
+                            <div class="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-white/10">
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic"
+                                       x-text="confirmedBooking.serving_label ?? 'Now Serving'"></p>
+                                    <p class="text-2xl font-black text-white italic"
+                                       x-text="confirmedBooking.serving_display ?? '—'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic">Ahead Of You</p>
+                                    <p class="text-2xl font-black text-sky-400 italic" x-text="'#' + (confirmedBooking.people_ahead ?? 0)"></p>
+                                </div>
+                            </div>
+                            <p x-show="confirmedBooking.approx_wait_min > 0" style="display:none;"
+                               class="mt-5 text-[10px] font-black uppercase tracking-widest text-white/40 italic"
+                               x-text="'Approx. ' + confirmedBooking.approx_wait_min + ' min wait'"></p>
+                        </div>
+                    </template>
+                    <template x-if="!(confirmedBooking && confirmedBooking.token_number)">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1 italic">Your Appointment Time</p>
+                            <p class="text-4xl font-black theme-gradient-text italic" x-text="selectedSlot ? selectedSlot.start : ''"></p>
+                        </div>
+                    </template>
+                    <p class="text-xs text-white/50 font-medium mt-5 italic">
+                        With <span x-text="employeeName(selectedEmployee)"></span> at {{ $vendor->business_name }}
+                    </p>
+                </div>
+
+                <button @click="successModal = false"
+                    class="theme-btn w-full h-20 text-xl rounded-3xl opacity-100 italic">GOT IT</button>
             </div>
         </div>
     </div>
@@ -805,10 +998,28 @@
     @if($vendor->appointment_mode !== 'token')
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     @endif
+    @php
+        /*
+        | Shape the customer's live booking for Alpine. Built by
+        | CustomerBookingService::present() so the first paint agrees with every
+        | later socket update — in particular people_ahead, which is COUNTED from
+        | the tokens still waiting rather than derived by subtracting now_serving
+        | (that treated completed and cancelled tokens below yours as people
+        | still standing in front of you).
+        */
+        $activeBookingPayload = $activeBooking
+            ? app(\App\Services\CustomerBookingService::class)->present($activeBooking)
+            : null;
+    @endphp
     <script>
         function bookingSystem() {
             return {
                 selectedEmployee: {{ $selectedEmployee ? $selectedEmployee->id : 'null' }},
+
+                // Non-null while this customer holds a booking here today. Set on
+                // load from the server and again the moment a booking succeeds, so
+                // the interface flips without waiting for a refresh.
+                activeBooking: @js($activeBookingPayload),
 
                 selectedServiceFee: {{ $selectedEmployee ? ($selectedEmployee->service_fee_override ?? $vendor->service_fee) : 0 }},
                 slots: @js($slots),
@@ -820,6 +1031,11 @@
 
                 successModal: false,
                 successMsg: '',
+                // What the server returned for the booking just made — drives the
+                // token number shown on the confirmation screen.
+                confirmedBooking: null,
+                employeeNames: @js($vendor->employees->pluck('name', 'id')),
+                todayLabel: '{{ now()->format('M d, Y') }}',
                 selectedSlot: null,
                 guestName: '',
                 guestPhone: '',
@@ -832,6 +1048,23 @@
                 avgTimePerToken: {{ $vendor->avg_consultation_time ?: 15 }},
                 queueIndex: {{ $queueIndex ?? 0 }},
                 runningToken: {{ $runningToken ?? 0 }},
+
+                // Queue channel of the specialist currently being browsed. Moves
+                // as the customer taps around. See watchQueue().
+                watchedEmployee: null,
+
+                // Queue channel of the specialist holding THIS customer's booking.
+                // Pinned for the life of the page — browsing must never cost them
+                // updates about their own appointment.
+                pinnedEmployee: null,
+
+                // Employee ids we already hold a subscription for.
+                subscribed: [],
+
+                // Set when the shop closes out this customer's booking while they
+                // are watching. Replaces the token panel with a plain statement of
+                // what happened, instead of the form silently reappearing.
+                closedBooking: null,
 
                 get uniqueSlots() {
                     const seen = new Set();
@@ -938,14 +1171,58 @@
                 const data = await res.json();
                 if (data.success) {
                     this.successMsg = data.message;
+                    this.confirmedBooking = data.booking || null;
+
+                    // Same flow as the single-employee page: the token becomes the
+                    // customer's standing state here, so the booking interface is
+                    // replaced by the token panel straight away.
+                    this.activeBooking = {
+                        id: data.booking?.id ?? null,
+                        employee_id: this.selectedEmployee,
+                        employee_name: this.employeeName(this.selectedEmployee),
+                        token_number: data.booking?.token_number ?? null,
+                        // The server resolves the real appointment date and
+                        // time (an after-midnight slot lands on the NEXT day,
+                        // not today), so prefer its values and only fall back
+                        // to the local ones if the response omits them.
+                        slot_time: data.booking?.token_number
+                            ? null
+                            : (data.booking?.slot_time || this.selectedSlot.start),
+                        booking_date: data.booking?.booking_date || this.todayLabel,
+                        status: 'confirmed',
+                        status_label: 'Confirmed',
+                        now_serving: data.booking?.now_serving ?? 0,
+                        serving_label: data.booking?.serving_label ?? 'Now Serving',
+                        serving_display: data.booking?.serving_display ?? '—',
+                        // Counted server-side from the tokens still waiting.
+                        people_ahead: data.booking?.people_ahead ?? 0,
+                        approx_wait_min: data.booking?.approx_wait_min ?? 0,
+                    };
+
+                    // Follow the new booking's queue for the rest of this visit,
+                    // pinned so browsing other specialists cannot drop it.
+                    this.watchQueue(this.selectedEmployee, { pin: true });
+
                     this.successModal = true;
                     setTimeout(() => {
                         window.dispatchEvent(new Event('trigger-notification-prompt'));
                     }, 500);
-                    // Refresh slots so the just-booked slot reflects as taken
-                    await this.fetchSlots(this.selectedEmployee, this.selectedServiceFee);
                 } else {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.error || 'ALLOCATION FAILED', type: 'error' } }));
+
+                    /*
+                     * The server refused because this customer already holds a
+                     * booking we were not showing — the phone they just typed is
+                     * not the one this device was remembered by. Reload
+                     * identified by that number so the token panel replaces the
+                     * form, rather than leaving them on an error with no way to
+                     * see the booking that caused it.
+                     */
+                    if (data.bookings_url) {
+                        setTimeout(() => {
+                            window.location.search = '?phone=' + encodeURIComponent(this.guestPhone);
+                        }, 2000);
+                    }
                 }
             } catch (e) {
                 console.error('ALLOCATION FAILURE', e);
@@ -953,6 +1230,30 @@
             }
             this.loading = false;
         },
+                employeeName(id) {
+                    return this.employeeNames[id] || 'your specialist';
+                },
+
+                /*
+                 * Keep the customer's own token panel live. The general queue poll
+                 * follows whichever specialist is selected, which is not
+                 * necessarily the one holding their booking — so this asks for the
+                 * booking's own employee and passes the token, which is what makes
+                 * the endpoint return an estimated wait.
+                 */
+                async refreshActiveBooking() {
+                    if (!this.activeBooking || !this.activeBooking.token_number) return;
+                    try {
+                        const res = await fetch(`/vendors/{{ $vendor->slug }}/queue-status?employee_id=${this.activeBooking.employee_id}&my_token=${this.activeBooking.token_number}`);
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        this.activeBooking.now_serving = data.now_serving;
+                        this.activeBooking.approx_wait_min = data.approx_wait_min;
+                    } catch (e) {
+                        console.error('Active booking refresh failed', e);
+                    }
+                },
+
                 async refreshQueueStatus() {
                     if (this.isSubscriptionExpired) return;
                     try {
@@ -972,13 +1273,156 @@
                     }
                 },
 
+                /*
+                 * Follow a specialist's queue over the socket.
+                 *
+                 * The customer's OWN booking channel is pinned and never left. It
+                 * used to be dropped the instant they tapped a different
+                 * specialist to compare wait times — and from that moment their
+                 * token screen stopped hearing about their own appointment, so it
+                 * never closed out when the shop completed it. Browsing the shop
+                 * must not cost you updates about the booking you are holding.
+                 *
+                 * The merely-selected channel is still released on the way out, so
+                 * a long browse does not accumulate a subscription per tap.
+                 */
+                watchQueue(employeeId, { pin = false } = {}) {
+                    if (!window.Echo || !employeeId) return;
+
+                    if (pin) {
+                        this.pinnedEmployee = employeeId;
+                    }
+
+                    // Release the previous *selected* channel, never the pinned one.
+                    if (this.watchedEmployee
+                        && this.watchedEmployee !== employeeId
+                        && this.watchedEmployee !== this.pinnedEmployee) {
+                        window.Echo.leave(`queue.${this.watchedEmployee}`);
+                        this.subscribed = this.subscribed.filter(id => id !== this.watchedEmployee);
+                    }
+
+                    if (!pin) {
+                        this.watchedEmployee = employeeId;
+                    }
+
+                    if (this.subscribed.includes(employeeId)) return;
+                    this.subscribed.push(employeeId);
+
+                    window.Echo.channel(`queue.${employeeId}`)
+                        .listen('.queue.updated', (e) => this.onQueueUpdate(e));
+                },
+
+                onQueueUpdate(e) {
+                    // Counters for the specialist currently on screen.
+                    if (e.employee_id === this.selectedEmployee) {
+                        this.runningToken = e.now_serving;
+                        this.queueIndex   = e.queue_index;
+                        this.isPaused     = e.is_paused;
+                    }
+
+                    if (this.activeBooking && this.activeBooking.employee_id === e.employee_id) {
+                        this.activeBooking.now_serving     = e.now_serving;
+                        this.activeBooking.serving_label   = e.serving_label;
+                        this.activeBooking.serving_display = e.serving_display;
+                        this.activeBooking.is_serving      = e.is_serving;
+
+                        // Counted from the tokens still waiting, not derived by
+                        // subtracting now_serving — a completed or cancelled token
+                        // below yours is nobody standing in front of you.
+                        if (Array.isArray(e.waiting_tokens) && this.activeBooking.token_number) {
+                            this.activeBooking.people_ahead = e.waiting_tokens
+                                .filter(t => t < this.activeBooking.token_number).length;
+                        }
+                    }
+
+                    // The shop just acted on THIS customer's booking —
+                    // completed, cancelled, skipped or deleted it.
+                    const changed = e.changed;
+                    if (changed && this.activeBooking && changed.booking_id === this.activeBooking.id
+                        && changed.status !== 'confirmed' && changed.status !== 'pending') {
+                        this.closeOutBooking(changed.status, this.activeBooking);
+                    }
+                },
+
+                /*
+                 * Swap the live token panel for the outcome of the appointment.
+                 *
+                 * The customer has been watching a number climb; when their turn
+                 * is finished, cancelled or skipped they need to be told which of
+                 * those happened. Dropping straight back to a booking form leaves
+                 * them guessing whether it worked or something went wrong.
+                 */
+                closeOutBooking(status, booking) {
+                    this.closedBooking = {
+                        status:        status,
+                        token_number:  booking?.token_number ?? null,
+                        employee_name: booking?.employee_name ?? null,
+                    };
+                    this.activeBooking = null;
+
+                    window.dispatchEvent(new CustomEvent('toast', {
+                        detail: { message: this.closedBookingHeadline(), type: status === 'completed' ? 'success' : 'info' }
+                    }));
+                },
+
+                closedBookingHeadline() {
+                    return {
+                        completed: 'Appointment Complete',
+                        cancelled: 'Booking Cancelled',
+                        skipped:   'Token Skipped',
+                        removed:   'Booking Removed',
+                        expired:   'Booking Expired',
+                    }[this.closedBooking?.status] ?? 'Booking Closed';
+                },
+
+                closedBookingNote() {
+                    return {
+                        completed: 'Thanks for visiting. You are free to book here again.',
+                        cancelled: 'The business cancelled this booking. You are free to book again.',
+                        skipped:   'Your token was passed over. Please speak to the counter if you are still there.',
+                        removed:   'The business removed this booking. You are free to book again.',
+                        expired:   'The shift closed before your turn came up.',
+                    }[this.closedBooking?.status] ?? 'You are free to book again.';
+                },
+
                 init() {
+                    // The shop opening, closing or pausing bookings, live — this
+                    // page used to keep offering a form for a shop that had shut.
+                    if (window.Echo) {
+                        window.Echo.channel(`shop.{{ $vendor->id }}`)
+                            .listen('.shop.status', (e) => {
+                                this.isOffline = !e.is_open;
+                                this.isPaused  = e.bookings_paused;
+                            });
+
+                        // Pin the customer's own booking first, so the subscription
+                        // that carries its completion survives everything below.
+                        if (this.activeBooking?.employee_id) {
+                            this.watchQueue(this.activeBooking.employee_id, { pin: true });
+                        }
+
+                        this.watchQueue(this.selectedEmployee);
+
+                        // Selecting a different specialist moves the browsing
+                        // subscription; the pinned one stays put.
+                        this.$watch('selectedEmployee', (id) => this.watchQueue(id));
+                    }
+
                     if (this.isTokenEnabled) {
+                        // Fallback only. While the socket is connected the queue is
+                        // pushed to us, so this poll stands down to a slow safety
+                        // net for the case where Reverb is unreachable.
                         setInterval(() => {
-                            if (!this.bookingModal) {
-                                this.refreshQueueStatus();
-                            }
-                        }, 10000); // 10 seconds
+                            if (this.bookingModal) return;
+                            if (window.Realtime?.connected()) return;
+
+                            this.refreshQueueStatus();
+                            this.refreshActiveBooking();
+                        }, 10000);
+
+                        // First refresh straight away so a returning customer sees
+                        // the current "now serving" rather than the page-load value.
+                        this.refreshActiveBooking();
                     }
                 }
             }

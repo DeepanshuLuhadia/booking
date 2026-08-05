@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Vendor;
 use App\Models\Employee;
 use App\Models\Booking;
+use App\Services\CustomerBookingService;
+use App\Services\ShiftService;
 use App\Services\SlotGenerationService;
 use App\Services\ThemeService;
 use Illuminate\Http\Request;
@@ -13,30 +15,334 @@ use Illuminate\Support\Facades\Cache;
 
 class CustomerDiscoveryController extends Controller
 {
+    /** How many cards the landing page's "Recommended Professionals" grid shows. */
+    private const RECOMMENDED_LIMIT = 8;
+
+    /** Batch size for the category page's infinite scroll. */
+    private const CATEGORY_PAGE_SIZE = 10;
+
+    public function __construct(
+        private ShiftService $shifts,
+        private CustomerBookingService $customerBookings
+    ) {
+    }
+
 public function index(Request $request)
 {
-    $rawSearch  = trim($request->search ?? '');
-    $search     = $rawSearch;
-    $categorySlug = $request->category;
-    $specialty  = trim($request->specialty ?? '');
-    $location   = trim($request->location ?? '');
+    $terms      = $this->searchTerms($request);
+    $search     = $terms['search'];
+    $specialty  = $terms['specialty'];
+    $location   = $terms['location'];
+    $isSearch   = $terms['is_search'];
     $sort       = $request->sort;
     $filterType = $request->type;
-    $now        = now(); // Single source of truth for time execution
 
-    // Natural Language AI Search Intent Parsing
-    if (filled($rawSearch)) {
-        $intentParser = new \App\Services\SearchIntentParserService();
-        $parsedIntent = $intentParser->parse($rawSearch);
-        if ($parsedIntent['inferred_category'] && empty($categorySlug)) {
-            $categorySlug = $parsedIntent['inferred_category'];
+    $categorySlug = $request->category ?: $terms['inferred_category'];
+
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    $candidates = $this->discoverCandidates($request, [
+        'search'    => $search,
+        'specialty' => $specialty,
+        'location'  => $location,
+        'state'     => $terms['state'],
+        'type'      => $filterType,
+        'sort'      => $sort,
+        'cache'     => !$isSearch && empty($categorySlug) && empty($filterType) && empty($sort),
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recommended Shortlist
+    |--------------------------------------------------------------------------
+    | The default landing grid is a shortlist, not a catalogue: eight cards,
+    | ranked nearest-first once the visitor has shared a location and by
+    | rating otherwise (see rankCandidates). Browsing the full set is what the
+    | category pages are for, so there is no pager on this path. A search or
+    | filter is a different intent — those stay paginated as before.
+    */
+    $isShortlist = !$isSearch && empty($filterType) && empty($sort)
+        && $request->query('view') !== 'all';
+
+    $totalVendors = $candidates->count();
+
+    if ($isShortlist) {
+        $vendors = $candidates->take(self::RECOMMENDED_LIMIT)->values();
+    } else {
+        $page    = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $perPage = 24;
+
+        $vendors = new \Illuminate\Pagination\LengthAwarePaginator(
+            $candidates->slice(($page - 1) * $perPage, $perPage)->values(),
+            $candidates->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+    }
+
+    // Drives the section subtitle, so the ordering is never a silent surprise.
+    $rankedByDistance = $this->hasCustomerLocation($request);
+    $locationLabel    = $this->customerLocationLabel($request);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Hero Stat Counters
+    |--------------------------------------------------------------------------
+    | Previously computed inline in the Blade — four uncached aggregates on
+    | every render, with the star rating hardcoded to 4.9. They are platform
+    | totals that shift slowly, so a five-minute cache is plenty.
+    */
+    $stats = $this->heroStats();
+
+    return view('customer.vendors', compact(
+        'vendors',
+        'allThemes',
+        'stats',
+        'rankedByDistance',
+        'locationLabel',
+        'isShortlist',
+        'totalVendors'
+    ));
+}
+
+/**
+ * Category detail page: every vendor in one category, streamed in batches of
+ * ten by the infinite scroll rather than paged.
+ *
+ * Searching from here stays here — the form posts back to this route and the
+ * terms are applied on top of the category filter, so the customer never gets
+ * bounced to the global listing mid-browse.
+ */
+public function category(Request $request, string $slug)
+{
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    $category = \App\Models\VendorCategory::where('slug', $slug)->first();
+
+    // A slug is legitimate if either the theme matrix or the categories table
+    // knows it — the two are maintained separately.
+    if (!$category && !isset($allThemes[$slug])) {
+        abort(404);
+    }
+
+    /*
+    | The category dropdown submits with the form, so it is the one control
+    | that can legitimately move the customer off this page: a different
+    | category hops to that category page, "All Categories" falls back to the
+    | global listing. Either way the search terms travel along.
+    */
+    if ($request->has('type')) {
+        $requestedType = trim((string) $request->query('type'));
+        $carried       = $request->except(['type', 'page', 'slug']);
+
+        if ($requestedType === '') {
+            return redirect()->route('home', $carried);
         }
-        if ($parsedIntent['clean_keyword']) {
-            $search = $parsedIntent['clean_keyword'];
+
+        if ($requestedType !== $slug) {
+            return redirect()->route('category.show', ['slug' => $requestedType] + $carried);
         }
     }
 
+    $theme      = $allThemes[$slug] ?? ThemeService::getTheme('consultant');
+    $terms      = $this->searchTerms($request);
+    $candidates = $this->categoryCandidates($request, $slug, $terms);
+
+    $total   = $candidates->count();
+    $vendors = $candidates->take(self::CATEGORY_PAGE_SIZE)->values();
+
+    return view('customer.category', [
+        'vendors'          => $vendors,
+        'allThemes'        => $allThemes,
+        'theme'            => $theme,
+        'categorySlug'     => $slug,
+        'categoryLabel'    => $theme['label'] ?? ($category->name ?? ucfirst($slug)),
+        'categoryEmoji'    => $theme['emoji'] ?? '✨',
+        'totalVendors'     => $total,
+        'hasMore'          => $total > self::CATEGORY_PAGE_SIZE,
+        'perPage'          => self::CATEGORY_PAGE_SIZE,
+        'rankedByDistance' => $this->hasCustomerLocation($request),
+        'locationLabel'    => $this->customerLocationLabel($request),
+        'isSearch'         => $terms['is_search'],
+        'searchTerm'       => $terms['search'] ?: $terms['specialty'] ?: $terms['location'],
+    ]);
+}
+
+/**
+ * Infinite-scroll feed for the category page: the next batch of cards,
+ * pre-rendered so the markup stays in one place (the vendor-card partial).
+ *
+ * The page's own query string is replayed here, so a search narrows every
+ * batch and not just the first.
+ */
+public function categoryVendors(Request $request, string $slug)
+{
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    $page = max(1, (int) $request->query('page', 1));
+
+    $candidates = $this->categoryCandidates($request, $slug, $this->searchTerms($request));
+
+    $batch = $candidates
+        ->slice(($page - 1) * self::CATEGORY_PAGE_SIZE, self::CATEGORY_PAGE_SIZE)
+        ->values();
+
+    return response()->json([
+        'html'      => $batch->isEmpty() ? '' : view('customer.partials.vendor-cards', [
+            'vendors'   => $batch,
+            'allThemes' => $allThemes,
+        ])->render(),
+        'has_more'  => $candidates->count() > $page * self::CATEGORY_PAGE_SIZE,
+        'next_page' => $page + 1,
+    ]);
+}
+
+/**
+ * The customer's own live booking at this vendor, if they have one.
+ *
+ * Identity resolution and the live-booking window both live in
+ * CustomerBookingService now, so this page, the single-employee page, the
+ * "My Bookings" page and BookingController's refusal all agree on what counts
+ * as live. They used to each carry their own copy, and the narrower windows
+ * hid bookings that were still being counted against the customer.
+ */
+private function activeBookingFor(Vendor $vendor, Request $request): ?Booking
+{
+    return $this->customerBookings->liveBookingFor($vendor, $request);
+}
+
+/**
+ * Normalise the search inputs shared by the listing and the category page.
+ *
+ * The raw keyword goes through the intent parser first, so "cheap haircut
+ * near me" narrows to the keyword the SQL LIKE can actually use; the category
+ * it infers is returned separately for the caller to apply or ignore.
+ */
+private function searchTerms(Request $request): array
+{
+    $rawSearch = trim($request->search ?? '');
+    $search    = $rawSearch;
+    $inferred  = null;
+
+    if (filled($rawSearch)) {
+        $parsed = (new \App\Services\SearchIntentParserService())->parse($rawSearch);
+
+        $inferred = $parsed['inferred_category'] ?: null;
+
+        if ($parsed['clean_keyword']) {
+            $search = $parsed['clean_keyword'];
+        }
+    }
+
+    $specialty = trim($request->specialty ?? '');
+    $location  = trim($request->location ?? '');
+
+    return [
+        'search'            => $search,
+        'specialty'         => $specialty,
+        'location'          => $location,
+        'state'             => trim($request->state ?? ''),
+        'inferred_category' => $inferred,
+        'is_search'         => filled($search) || filled($specialty) || filled($location),
+    ];
+}
+
+/**
+ * Candidate list for one category, with any search terms layered on top.
+ *
+ * Shared by the page and its infinite-scroll feed so both slice the same
+ * ordering. Only the unsearched list is cached — a per-keyword cache would
+ * churn the store for no gain.
+ */
+private function categoryCandidates(Request $request, string $slug, array $terms): \Illuminate\Support\Collection
+{
+    return $this->discoverCandidates($request, [
+        'search'    => $terms['search'],
+        'specialty' => $terms['specialty'],
+        'location'  => $terms['location'],
+        'state'     => $terms['state'],
+        'type'      => $slug,
+        'cache'     => !$terms['is_search'],
+    ]);
+}
+
+/**
+ * Platform totals behind the hero counters.
+ */
+private function heroStats(): array
+{
+    return Cache::remember('discovery_hero_stats', 300, function () {
+        return [
+            'clients'      => (int) Booking::distinct('customer_phone')->count('customer_phone'),
+            'cities'       => (int) Vendor::distinct('address')->count('address'),
+            'appointments' => (int) Booking::count(),
+            'reviews'      => (int) \App\Models\VendorReview::count(),
+            'rating'       => round((float) \App\Models\VendorReview::avg('rating'), 1),
+        ];
+    });
+}
+
+/**
+ * True when the visitor has usable coordinates on file, which is what turns
+ * the listing from rating-ranked into distance-ranked.
+ */
+private function hasCustomerLocation(Request $request): bool
+{
+    return $this->coordinate($request->cookie('user_lat')) !== null
+        && $this->coordinate($request->cookie('user_lng')) !== null;
+}
+
+/**
+ * The place name to show the visitor: their suburb where GPS resolved one,
+ * otherwise the widest thing we know. Null when no location has been shared.
+ *
+ * Only used for wording — the ranking itself runs off the coordinates.
+ */
+private function customerLocationLabel(Request $request): ?string
+{
+    foreach (['user_suburb', 'user_city', 'user_state'] as $cookie) {
+        $value = trim((string) $request->cookie($cookie));
+
+        if ($value !== '') {
+            // OSM misspells some suburbs; correct on display only.
+            return \App\Services\PlaceNameService::correct($value);
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Build the ranked vendor list shared by the listing and the category pages.
+ *
+ * Accepts the already-normalised filters ('search', 'specialty', 'location',
+ * 'state', 'type', 'sort') plus a 'cache' flag for the filter-free variants,
+ * whose candidate set is identical for every visitor.
+ */
+private function discoverCandidates(Request $request, array $filters = []): \Illuminate\Support\Collection
+{
+    $search     = $filters['search']    ?? '';
+    $specialty  = $filters['specialty'] ?? '';
+    $location   = $filters['location']  ?? '';
+    $state      = $filters['state']     ?? '';
+    $filterType = $filters['type']      ?? null;
+    $sort       = $filters['sort']      ?? null;
+
     $isSearch = filled($search) || filled($specialty) || filled($location);
+    $now      = now(); // Single source of truth for time execution
 
     $allThemes = Cache::remember(
         'all_themes',
@@ -74,12 +380,16 @@ public function index(Request $request)
         // fire one AVG per card.
         ->withAvg('reviews as avg_rating', 'rating')
         ->withCount('reviews as reviews_count')
-        // Backs the "Live Queue" indicator with an actual number: confirmed
-        // bookings on today's sheet whose slot has not finished yet.
-        ->withCount(['bookings as live_queue_count' => function ($q) use ($now) {
+        // Backs the "Live Queue" indicator with an actual number: bookings
+        // still standing on a live sheet. Two business dates are in play at
+        // once for shops trading past midnight, and comparing slot_end_time
+        // against the clock cannot tell a 00:15 slot tonight from one that
+        // already passed this morning — so the queue is defined by status
+        // instead. Leftovers from a finished shift are moved to 'expired' by
+        // booking:reset-daily, which is what keeps this honest.
+        ->withCount(['bookings as live_queue_count' => function ($q) {
             $q->where('status', 'confirmed')
-                ->whereDate('booking_date', $now->toDateString())
-                ->where('slot_end_time', '>=', $now->format('H:i:s'));
+                ->whereIn('booking_date', $this->shifts->liveBusinessDates());
         }])
         ->whereHas('employees', $activeEmployeeConstraint);
 
@@ -87,8 +397,14 @@ public function index(Request $request)
     |--------------------------------------------------------------------------
     | Category Filter
     |--------------------------------------------------------------------------
+    | A slug is honoured when the theme matrix knows it or the categories table
+    | does — the category pages are keyed on the table, which may carry slugs
+    | the theme matrix has no entry for.
     */
-    if ($filterType && array_key_exists($filterType, $allThemes)) {
+    if (filled($filterType) && (
+        array_key_exists($filterType, $allThemes)
+        || \App\Models\VendorCategory::where('slug', $filterType)->exists()
+    )) {
         $query->whereHas('category', function ($q) use ($filterType) {
             $q->where('slug', $filterType);
         });
@@ -99,8 +415,7 @@ public function index(Request $request)
     | Search Filters
     |--------------------------------------------------------------------------
     */
-    if ($isSearch || filled($request->state)) {
-        $state = trim($request->state ?? '');
+    if ($isSearch || filled($state)) {
         $query->where(function ($q) use ($search, $specialty, $location, $state) {
             if ($search) {
                 $q->where(function ($sub) use ($search) {
@@ -139,9 +454,12 @@ public function index(Request $request)
         $query->orderByDesc('is_open')->latest();
     }
 
-    // Cache default discovery query candidate list for 60s when no specific user search is active
-    if (!$isSearch && empty($categorySlug) && empty($filterType) && empty($sort)) {
-        $candidates = Cache::remember('default_discovery_candidates', 60, fn() => $query->get());
+    // Cache the candidate list for 60s whenever it is filter-free — the same
+    // rows for every visitor. Keyed by category so each category page gets its
+    // own bucket instead of sharing the unfiltered one.
+    if ($filters['cache'] ?? false) {
+        $cacheKey = 'default_discovery_candidates' . (filled($filterType) ? ':' . $filterType : '');
+        $candidates = Cache::remember($cacheKey, 60, fn() => $query->get());
     } else {
         $candidates = $query->get();
     }
@@ -254,37 +572,37 @@ public function index(Request $request)
         );
     });
 
-    $page = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
-    $perPage = 24;
-    $results = $candidates->slice(($page - 1) * $perPage, $perPage)->values();
+    // An explicit sort is the customer's choice — leave the SQL ordering alone.
+    if ($sort === 'newest') {
+        return $candidates->values();
+    }
 
-    $vendors = new \Illuminate\Pagination\LengthAwarePaginator(
-        $results,
-        $candidates->count(),
-        $perPage,
-        $page,
-        ['path' => $request->url(), 'query' => $request->query()]
-    );
+    return $this->rankCandidates($candidates, $userLat !== null && $userLng !== null);
+}
 
-    /*
-    |--------------------------------------------------------------------------
-    | Hero Stat Counters
-    |--------------------------------------------------------------------------
-    | Previously computed inline in the Blade — four uncached aggregates on
-    | every render, with the star rating hardcoded to 4.9. They are platform
-    | totals that shift slowly, so a five-minute cache is plenty.
-    */
-    $stats = Cache::remember('discovery_hero_stats', 300, function () {
-        return [
-            'clients'      => (int) Booking::distinct('customer_phone')->count('customer_phone'),
-            'cities'       => (int) Vendor::distinct('address')->count('address'),
-            'appointments' => (int) Booking::count(),
-            'reviews'      => (int) \App\Models\VendorReview::count(),
-            'rating'       => round((float) \App\Models\VendorReview::avg('rating'), 1),
-        ];
-    });
+/**
+ * Rank the candidate list the way the listing presents it.
+ *
+ * Nearest first once the visitor has shared coordinates, best-rated first
+ * otherwise, with bookable-now shops always ahead of closed ones (which only
+ * appear at all on a name search). Applied as successive stable sorts, so
+ * each earlier pass survives as the tie-breaker for the next.
+ */
+private function rankCandidates(\Illuminate\Support\Collection $candidates, bool $byDistance): \Illuminate\Support\Collection
+{
+    $ranked = $candidates
+        ->sortByDesc(fn ($vendor) => (int) ($vendor->reviews_count ?? 0))
+        ->sortByDesc(fn ($vendor) => (float) ($vendor->avg_rating ?? 0));
 
-    return view('customer.vendors', compact('vendors', 'allThemes', 'stats'));
+    if ($byDistance) {
+        // Vendors with no coordinates on file sink below every located one
+        // rather than being treated as if they were on the customer's doorstep.
+        $ranked = $ranked->sortBy(fn ($vendor) => $vendor->distance_km ?? INF);
+    }
+
+    return $ranked
+        ->sortByDesc(fn ($vendor) => (bool) ($vendor->is_bookable_now ?? false))
+        ->values();
 }
 
 /**
@@ -330,14 +648,35 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
     return round($earthRadius * 2 * asin(min(1.0, sqrt($a))), 2);
 }
 
-    public function show(Vendor $vendor, SlotGenerationService $slotService)
+    public function show(Vendor $vendor, SlotGenerationService $slotService, Request $request)
 {
     $vendor->load(['employees', 'category']);
 
     $isSubscriptionExpired = !$vendor->isSubscriptionActive();
 
     $now = Carbon::now();
-    $today = $now->toDateString();
+
+    // The shift on the books right now — see ShiftService. Every queue and
+    // token lookup below keys on this, never on the calendar date, so a shop
+    // trading past midnight keeps one continuous sheet.
+    $today = $this->shifts->businessDate($vendor, $now);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Returning Customer's Live Booking
+    |--------------------------------------------------------------------------
+    | Mirrors the single-employee booking page: a customer who already holds a
+    | token here sees it — with their queue position — instead of a booking
+    | button they are not allowed to press. BookingController enforces one
+    | active booking per vendor per day, so this lookup is scoped to the
+    | vendor, not to one employee: a token with any specialist here closes
+    | booking for the whole shop, and the UI now says so up front rather than
+    | letting the customer fill in the form and collect a 422.
+    */
+    $activeBooking = $this->activeBookingFor($vendor, $request);
+    $activeBookingNowServing = $activeBooking
+        ? (int) ($activeBooking->employee?->now_serving_token ?? 0)
+        : 0;
 
     /*
     |--------------------------------------------------------------------------
@@ -525,7 +864,9 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
         'reviews',
         'reviewsCount',
         'averageRating',
-        'ratingCounts'
+        'ratingCounts',
+        'activeBooking',
+        'activeBookingNowServing'
     ));
 }
 
@@ -581,7 +922,7 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
 
         $queueIndex = $employee
             ? (Booking::where('employee_id', $employee->id)
-                ->where('booking_date', now()->toDateString())
+                ->where('booking_date', $this->shifts->businessDate($vendor))
                 ->whereNotNull('token_number')
                 ->max('token_number') ?? 0)
             : 0;
@@ -665,9 +1006,13 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
             $slots = $slotService->generateSlots($employee, $shiftDate, $vendor);
         }
 
-        // Token System Metadata (per-employee queue)
+        // Token System Metadata (per-employee queue). Keyed on the vendor's
+        // business date — the same value BookingController stamps on new
+        // bookings — so the index shown always counts the rows the next token
+        // will actually be drawn from. The calendar date used before drifted
+        // off the shift the moment the clock passed midnight.
         $queueIndex = Booking::where('employee_id', $employee->id)
-            ->where('booking_date', now()->toDateString())
+            ->where('booking_date', $this->shifts->businessDate($vendor))
             ->whereNotNull('token_number')
             ->max('token_number');
 
@@ -691,59 +1036,22 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
         }
     }
 
+    /**
+     * Shift resolution and vendor-window clamping now live in ShiftService, so
+     * the listing, the booking pages and the nightly reset all agree on which
+     * trading day it is.
+     */
     private function resolveShift(\Carbon\Carbon $now, string $startTime, string $endTime): array
     {
-        $shiftDate = $now->toDateString();
-        $start = \Carbon\Carbon::parse("$shiftDate " . $startTime);
-        $end = \Carbon\Carbon::parse("$shiftDate " . $endTime);
-
-        if ($end->lt($start)) {
-            $end->addDay();
-        }
-
-        if ($now->lt($start)) {
-            $yDate = $now->copy()->subDay()->toDateString();
-            $yStart = \Carbon\Carbon::parse("$yDate " . $startTime);
-            $yEnd = \Carbon\Carbon::parse("$yDate " . $endTime);
-            
-            if ($yEnd->lt($yStart)) {
-                $yEnd->addDay();
-            }
-            
-            if ($now->lte($yEnd)) {
-                $shiftDate = $yDate;
-                $start = $yStart;
-                $end = $yEnd;
-            }
-        }
-
-        return [$shiftDate, $start, $end];
+        return $this->shifts->resolveShift($now, $startTime, $endTime);
     }
 
-    /**
-     * Clamp an employee's start/end times within the vendor's global window.
-     * Extracted from three identical duplicate blocks to a single source of truth.
-     */
     private function clampEmployeeToVendorWindow(
         string $shiftDate,
         \Carbon\Carbon $empStart,
         \Carbon\Carbon $empEnd,
         Vendor $vendor
     ): array {
-        if (!$vendor->global_opening_time) {
-            return [$empStart, $empEnd];
-        }
-
-        $vStart = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_opening_time);
-        $vEnd   = \Carbon\Carbon::parse("$shiftDate " . $vendor->global_closing_time);
-
-        if ($vEnd->lt($vStart)) {
-            $vEnd->addDay();
-        }
-
-        if ($empStart->lt($vStart)) $empStart = $vStart->copy();
-        if ($empEnd->gt($vEnd))    $empEnd   = $vEnd->copy();
-
-        return [$empStart, $empEnd];
+        return $this->shifts->clampToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
     }
 }

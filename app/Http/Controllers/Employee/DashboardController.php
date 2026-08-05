@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use App\Models\Booking;
+use App\Services\ShiftService;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(ShiftService $shifts)
     {
         $employee = auth()->user()->employee;
 
@@ -17,12 +17,21 @@ class DashboardController extends Controller
             return redirect('/')->with('error', 'Employee profile not found.');
         }
 
-        $today = Carbon::today()->toDateString();
+        if (empty($employee->qr_code_path) || !\Illuminate\Support\Facades\Storage::disk('public')->exists($employee->qr_code_path)) {
+            app(\App\Services\QRCodeService::class)->generateForEmployee($employee);
+            $employee->refresh();
+        }
 
-        // The full confirmed queue for today, earliest slot first.
+        // The shift being worked right now. On an overnight rota this is still
+        // yesterday's date at 00:30, which is where that night's queue lives —
+        // reading Carbon::today() here emptied the screen at midnight.
+        $today = $shifts->businessDate($employee->vendor);
+
+        // The full confirmed queue for this shift, earliest slot first.
         $queue = Booking::where('employee_id', $employee->id)
             ->where('booking_date', $today)
             ->where('status', 'confirmed')
+            ->with('vendor')
             ->orderBy('slot_start_time', 'asc')
             ->get();
 
@@ -86,7 +95,22 @@ class DashboardController extends Controller
             $employee->update(['now_serving_token' => $booking->token_number]);
         }
 
-        app(\App\Services\NotificationService::class)->notifyTokenQueue($employee);
+        /*
+        | Tell the customer what just happened to their booking, redraw the
+        | owner's dashboard and every customer queue watching this specialist,
+        | and ping whoever is now at the front. Completing or cancelling used to
+        | notify nobody but the next person in the queue — the customer whose
+        | appointment it actually was heard nothing at all.
+        */
+        $notifier = app(\App\Services\BookingNotifier::class);
+
+        if ($status === 'completed') {
+            $notifier->completed($booking, 'employee');
+        } else {
+            $notifier->cancelledByShop($booking, 'employee');
+        }
+
+        $notifier->queueAdvanced($employee);
 
         return back()->with('success', $message);
     }
@@ -100,6 +124,10 @@ class DashboardController extends Controller
         }
 
         $employee->update(['is_paused' => !$employee->is_paused]);
+
+        // Customers waiting on this specialist see the pause immediately, and
+        // those holding a live token are told — they are sitting there in person.
+        app(\App\Services\BookingNotifier::class)->employeePauseChanged($employee);
 
         $status = $employee->is_paused ? 'Paused' : 'Resumed';
         return back()->with('success', "Appointments $status successfully.");

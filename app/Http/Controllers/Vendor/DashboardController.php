@@ -7,19 +7,22 @@ use App\Models\Booking;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use App\Services\QRCodeService;
-use Carbon\Carbon;
+use App\Services\ShiftService;
 
 class DashboardController extends Controller
 {
-    public function index(QRCodeService $qrService)
+    public function index(QRCodeService $qrService, ShiftService $shifts)
     {
         $vendor = auth()->user()->vendor;
-        
+
         if (!$vendor) {
             return redirect('/')->with('error', 'Vendor profile not found.');
         }
 
-        $today = Carbon::today()->toDateString();
+        // The shift currently on the books. For a shop trading past midnight
+        // this stays on the same date all night, so the counters don't reset
+        // under the vendor while they are still serving.
+        $today = $shifts->businessDate($vendor);
         
         $stats = [
             'today_bookings' => Booking::where('vendor_id', $vendor->id)->where('booking_date', $today)->count(),
@@ -35,7 +38,8 @@ class DashboardController extends Controller
         }
 
         $recentBookings = Booking::where('vendor_id', $vendor->id)
-            ->with('employee')
+            // `vendor` feeds the appointment_at accessor (after-midnight slots).
+            ->with(['employee', 'vendor'])
             ->latest()
             ->take(5)
             ->get();

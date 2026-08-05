@@ -11,9 +11,26 @@ Route::middleware(['employee.panel.only'])->group(function () {
     Route::get('/', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('home');
     Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('discover');
     Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
+
+    // Category detail page + the batch endpoint its infinite scroll pulls from
+    Route::get('/category/{slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'category'])->name('category.show');
+    Route::get('/category/{slug}/vendors', [\App\Http\Controllers\CustomerDiscoveryController::class, 'categoryVendors'])->name('category.vendors');
+
     Route::get('/qr/{vendor:slug}', function (\App\Models\Vendor $vendor) {
         return redirect()->route('vendor.show', ['vendor' => $vendor->slug, 'qr' => 1]);
     })->name('vendor.qr');
+
+    // Every booking the visitor holds, across all vendors. Guest-accessible:
+    // identity comes from the phone stored at booking time (session + cookie),
+    // which is the only handle a guest has.
+    Route::get('/my-bookings', [\App\Http\Controllers\MyBookingsController::class, 'index'])->name('bookings.mine');
+    Route::get('/my-bookings/status', [\App\Http\Controllers\MyBookingsController::class, 'status'])->name('bookings.mine.status');
+
+    // Customers cancelling their own booking. Ownership is proved by the device
+    // having booked with that number, not by the id in the URL.
+    Route::post('/my-bookings/{booking}/cancel', [\App\Http\Controllers\MyBookingsController::class, 'cancel'])
+        ->middleware('throttle:10,1')
+        ->name('bookings.mine.cancel');
 });
 Route::get('/vendors/{vendor:slug}/queue-status', [\App\Http\Controllers\CustomerDiscoveryController::class, 'queueStatus'])->name('vendor.queue-status');
 // Latest 5 reviews, optionally filtered by star rating (?rating=N)
@@ -111,9 +128,11 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
 });
 
 // Employee Panel
-Route::middleware(['auth'])->prefix('employee')->name('employee.')->group(function () {
+Route::middleware(['auth', 'ensure.vendor.active'])->prefix('employee')->name('employee.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Employee\DashboardController::class, 'index'])->name('dashboard');
     Route::post('/mark-done', [\App\Http\Controllers\Employee\DashboardController::class, 'markDone'])->name('mark-done');
     Route::post('/cancel', [\App\Http\Controllers\Employee\DashboardController::class, 'cancel'])->name('cancel');
     Route::post('/toggle-pause', [\App\Http\Controllers\Employee\DashboardController::class, 'togglePause'])->name('toggle-pause');
 });
+
+Route::get('/employee/{employee}', [\App\Http\Controllers\EmployeePublicBookingController::class, 'show'])->name('employee.public.show');

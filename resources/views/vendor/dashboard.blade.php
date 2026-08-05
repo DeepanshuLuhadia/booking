@@ -51,6 +51,12 @@
         }
     }">
 
+        {{-- id="vendor-live": re-rendered in place by the realtime listener when a
+             booking arrives or a queue moves. It deliberately stops short of the
+             manual-booking modal below — swapping that out from under an owner
+             halfway through keying in a walk-in would lose their work. --}}
+        <div id="vendor-live">
+
         <!-- Header Operational Intel -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             <div class="glass-card p-5 sm:p-6 hover:scale-[1.01] hover:shadow-xl transition-all duration-300">
@@ -151,8 +157,11 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-5 hidden sm:table-cell">
-                                        <div class="text-xs font-black text-white">{{ $booking->booking_date->format('M d, Y') }}</div>
-                                        <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ $booking->slot_start_time }} - {{ $booking->slot_end_time }}</div>
+                                        {{-- Real appointment day: after-midnight
+                                             slots sit on the previous day's
+                                             sheet but happen the day after. --}}
+                                        <div class="text-xs font-black text-white">{{ $booking->appointment_date_label }}</div>
+                                        <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ $booking->appointment_at?->format('h:i A') ?? $booking->slot_start_time }} - {{ $booking->appointment_end_at?->format('h:i A') ?? $booking->slot_end_time }}</div>
                                     </td>
                                     <td class="px-6 py-5">
                                         @php
@@ -250,8 +259,10 @@
             </div>
         </div>
 
+        </div>{{-- /#vendor-live --}}
+
         <!-- Manual Booking Modal -->
-        <div x-show="showBookingModal" 
+        <div x-show="showBookingModal"
              class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" 
              x-cloak
              x-transition:enter="transition ease-out duration-300"
@@ -462,6 +473,43 @@
             </div>
         </div>
     </div>
+
+    {{--
+        Realtime: the whole shop's feed.
+
+        The owner's dashboard follows every specialist working here at once, so
+        it subscribes to the shop channel rather than one queue — a booking with
+        any of them redraws the same region.
+    --}}
+    <script>
+        // Must go through whenRealtimeReady: the Echo bundle is a deferred module
+        // and does not exist yet while this script is being parsed.
+        window.whenRealtimeReady(function (Echo) {
+            const vendorId = {{ $vendor->id }};
+
+            Echo.private(`vendor.${vendorId}`)
+                .listen('.booking.changed', (e) => {
+                    window.Realtime.refresh('#vendor-live');
+
+                    const who   = e.booking?.customer_name ?? 'A customer';
+                    const token = e.booking?.token_number ? ` (token #${e.booking.token_number})` : '';
+
+                    if (e.action === 'created' && e.actor === 'customer') {
+                        window.Realtime.toast(`New booking — ${who}${token} with ${e.booking?.employee_name ?? 'your team'}`, 'success');
+                    } else if (e.action === 'cancelled' && e.actor === 'customer') {
+                        window.Realtime.toast(`${who} cancelled${token}`, 'info');
+                    } else if (e.actor === 'employee') {
+                        // What a specialist did to their own queue is news here.
+                        window.Realtime.toast(`${e.booking?.employee_name ?? 'A specialist'} marked ${who}${token} ${e.action}`, 'info');
+                    }
+                });
+
+            // Specialists going on or off a break, and the shop's own open/paused
+            // state — which the owner can change from another device.
+            Echo.channel(`shop.${vendorId}`)
+                .listen('.shop.status', () => window.Realtime.refresh('#vendor-live'));
+        });
+    </script>
 </x-vendor-layout>
 
 <style>

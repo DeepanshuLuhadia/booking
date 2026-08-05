@@ -18,6 +18,13 @@ class RedirectEmployeeToPanel
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check() && Auth::user()->isEmployee()) {
+            $employee = Auth::user()->employee;
+            $vendor = $employee?->vendor;
+
+            if (!$vendor || $vendor->status !== 'active') {
+                return redirect()->route('vendor.approval.pending');
+            }
+
             return redirect()->route('employee.dashboard');
         }
 

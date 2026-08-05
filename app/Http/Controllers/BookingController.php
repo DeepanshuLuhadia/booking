@@ -5,15 +5,24 @@ namespace App\Http\Controllers;
 use App\Models\Vendor;
 use App\Models\Employee;
 use App\Models\Booking;
+use App\Services\BookingNotifier;
+use App\Services\CustomerBookingService;
 use App\Services\PaymentService;
 use App\Services\NotificationService;
+use App\Services\ShiftService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class BookingController extends Controller
 {
-    public function store(Request $request, PaymentService $paymentService, NotificationService $notificationService)
-    {
+    public function store(
+        Request $request,
+        PaymentService $paymentService,
+        NotificationService $notificationService,
+        ShiftService $shifts,
+        CustomerBookingService $customerBookings,
+        BookingNotifier $bookingNotifier
+    ) {
         try {
             $request->validate([
                 'vendor_id' => 'required|exists:vendors,id',
@@ -34,19 +43,44 @@ class BookingController extends Controller
                 return response()->json(['success' => false, 'error' => 'Booking limit reached for this phone number today.'], 429);
             }
 
-            // 2. Cross-Vendor Daily Limit (Max 3 active tokens)
+            $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
+
+            /*
+            | The shift this booking belongs to, NOT the calendar date. A shop
+            | trading 22:00 → 02:00 is still working the same sheet at 00:30, so
+            | filing that booking under "today" would restart its token sequence
+            | mid-shift and hide it from the queue the vendor is looking at.
+            */
+            $bookingDate = $shifts->businessDate($vendor);
+
+            // 2. Cross-Vendor Daily Limit (Max 3 active tokens). Spans the two
+            // live business dates so an overnight shift keeps counting the
+            // tokens a customer already holds instead of resetting at midnight.
             $activeBookingsToday = Booking::where('customer_phone', $request->customer_phone)
-                ->where('booking_date', Carbon::today()->toDateString())
+                ->whereIn('booking_date', $shifts->liveBusinessDates())
                 ->whereIn('status', ['confirmed', 'pending'])
                 ->count();
-            
+
             if ($activeBookingsToday >= 3) {
-                return response()->json(['success' => false, 'error' => 'You have reached the maximum number of active bookings for today.'], 429);
+                // Point at the page that lists them. The limit counts bookings
+                // made with *other* vendors too, which the customer cannot see
+                // from here — without the link this reads as an arbitrary refusal.
+                return response()->json([
+                    'success'      => false,
+                    'error'        => 'You have reached the maximum number of active bookings for today.',
+                    'bookings_url' => route('bookings.mine'),
+                ], 429);
             }
 
-            // 3. One Active Token Per Vendor (Duplicate Check)
-            $duplicate = Booking::where('vendor_id', $request->vendor_id)
-                ->where('booking_date', Carbon::today()->toDateString())
+            /*
+            | 3. One Active Token Per Vendor (Duplicate Check), scoped to the shift.
+            |
+            | Only `pending` / `confirmed` block. The moment the vendor marks the
+            | appointment completed — or it is cancelled, skipped, or expired by
+            | the nightly reset — this vendor is bookable again for the customer.
+            */
+            $duplicate = Booking::where('vendor_id', $vendor->id)
+                ->where('booking_date', $bookingDate)
                 ->whereIn('status', ['confirmed', 'pending'])
                 ->where(function ($q) use ($request) {
                     $q->where('customer_phone', $request->customer_phone);
@@ -56,10 +90,12 @@ class BookingController extends Controller
                 })->exists();
 
             if ($duplicate) {
-                return response()->json(['success' => false, 'error' => 'You already have an active booking with this vendor today.'], 422);
+                return response()->json([
+                    'success'      => false,
+                    'error'        => 'You already have an active booking with this business. You can book again once it is completed.',
+                    'bookings_url' => route('bookings.mine'),
+                ], 422);
             }
-
-            $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
 
             // Time-slot bookings carry a real customer-chosen slot; enforce its
             // format. Token bookings ignore the submitted slot entirely.
@@ -94,7 +130,6 @@ class BookingController extends Controller
             $tokenAmount = ($vendor->appointment_mode === 'token') ? $vendor->token_amount : 0;
             $totalToPay = $tokenAmount + $premiumFee;
 
-            $bookingDate = Carbon::today()->toDateString();
             $avgTime = $vendor->avg_consultation_time ?: 15;
 
             // Time-slot mode persists the customer's chosen slot. Token-mode slot
@@ -151,10 +186,18 @@ class BookingController extends Controller
                     'customer_id'          => auth()->id(),
                     'customer_name'        => $request->customer_name,
                     'customer_phone'       => $request->customer_phone,
-                    // Persist the device token so we can ping this customer when their
-                    // token is called. Present only if they granted notifications
-                    // (typically after installing the app to the home screen).
-                    'fcm_token'            => session('fcm_token'),
+                    /*
+                    | The device to ping when this customer's token is called.
+                    |
+                    | Guests carry it in the session; a signed-in customer has it
+                    | on their user record instead (FcmTokenController writes to
+                    | one or the other), so both are consulted. Still null when
+                    | they have not granted notifications yet — that case is
+                    | repaired later by CustomerBookingService::attachDeviceToken,
+                    | because permission is asked for only after this point.
+                    */
+                    'fcm_token'            => session('fcm_token')
+                        ?? (auth()->check() ? auth()->user()->fcm_token : null),
                     'booking_date'         => $bookingDate,
                     'slot_start_time'      => $slotStart,
                     'slot_end_time'        => $slotEnd,
@@ -173,13 +216,25 @@ class BookingController extends Controller
 
             \Illuminate\Support\Facades\RateLimiter::hit($phoneKey, 86400);
 
+            // Remember the guest so every booking page can recognise them on the
+            // next visit and show their live token instead of the "book" button.
+            // Guests have no account, so the phone number is the only identity we
+            // hold — and the service keeps *every* number booked from this device,
+            // not just the latest, so booking for a second person no longer hides
+            // the first person's booking.
+            $customerBookings->remember($booking->customer_phone, $request);
+
             // Invalidate discovery and slot caches so the next listing/slot request
             // reflects the newly confirmed booking immediately.
             \Illuminate\Support\Facades\Cache::forget('default_discovery_candidates');
             \Illuminate\Support\Facades\Cache::forget("slots:{$employee->id}:{$bookingDate}");
 
             $booking->setRelation('employee', $employee);
-            $notificationService->notifyVendorNewBooking($vendor, $booking);
+            $booking->setRelation('vendor', $vendor);
+
+            // Announces on both channels at once — the shop's dashboards redraw
+            // live, and the owner and specialist get their push. See BookingNotifier.
+            $bookingNotifier->created($booking, 'customer');
 
             $fcmToken = session('fcm_token');
             if ($fcmToken) {
@@ -216,10 +271,16 @@ class BookingController extends Controller
             }
 
             $nowServing = $employee->now_serving_token ?? 0;
-            $peopleAhead = max(0, ($booking->token_number ?? 0) - $nowServing);
 
             $queueVelocityService = new \App\Services\QueueVelocityService();
-            $approxWait = $queueVelocityService->calculateEstimatedWait($vendor, $employee, $booking->token_number ?? 0);
+
+            // Counted, not `token - now_serving`. now_serving_token records the
+            // last token *handled*, so subtracting it counts the customer who has
+            // just been finished with as somebody still in front of you — the
+            // confirmation screen said "1 ahead" when the queue was clear.
+            $peopleAhead = $queueVelocityService->peopleAheadOf($employee, $booking->token_number ?? 0);
+            $approxWait  = $queueVelocityService->calculateEstimatedWait($vendor, $employee, $booking->token_number ?? 0);
+            $serving     = $queueVelocityService->servingState($employee);
 
             return response()->json([
                 'success' => true,
@@ -231,6 +292,13 @@ class BookingController extends Controller
                     'now_serving'     => $nowServing,
                     'people_ahead'    => $peopleAhead,
                     'approx_wait_min' => $approxWait,
+                    'serving_label'   => $serving['serving_label'],
+                    'serving_display' => $serving['serving_display'],
+                    // The date the customer actually turns up on. Differs from
+                    // the business date for after-midnight slots, so the
+                    // confirmation screen must use this and not "today".
+                    'booking_date'    => $booking->appointment_date_label,
+                    'slot_time'       => $booking->appointment_at?->format('h:i A'),
                 ]
             ]);
 
