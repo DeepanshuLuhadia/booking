@@ -10,6 +10,10 @@ use App\Http\Controllers\Auth\SessionController;
 Route::middleware(['employee.panel.only'])->group(function () {
     Route::get('/', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('home');
     Route::get('/discover', [\App\Http\Controllers\CustomerDiscoveryController::class, 'index'])->name('discover');
+
+    // Batch endpoint the landing listing's infinite scroll pulls from — the
+    // search/filter counterpart of category.vendors.
+    Route::get('/discover/vendors', [\App\Http\Controllers\CustomerDiscoveryController::class, 'vendorsFeed'])->name('discover.vendors');
     Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
 
     // Category detail page + the batch endpoint its infinite scroll pulls from

@@ -21,6 +21,19 @@ class CustomerDiscoveryController extends Controller
     /** Batch size for the category page's infinite scroll. */
     private const CATEGORY_PAGE_SIZE = 10;
 
+    /** Batch size for the landing page's infinite scroll (search / filter results). */
+    private const LISTING_PAGE_SIZE = 12;
+
+    /**
+     * Reserved category slug meaning "every category".
+     *
+     * Gives the full catalogue a home of its own — same header, same pills,
+     * same infinite scroll as any single category — so "View All Professionals"
+     * lands somewhere that belongs to the category section rather than on a
+     * paged variant of the landing page.
+     */
+    public const ALL_CATEGORIES_SLUG = 'all';
+
     public function __construct(
         private ShiftService $shifts,
         private CustomerBookingService $customerBookings
@@ -30,14 +43,9 @@ class CustomerDiscoveryController extends Controller
 public function index(Request $request)
 {
     $terms      = $this->searchTerms($request);
-    $search     = $terms['search'];
-    $specialty  = $terms['specialty'];
-    $location   = $terms['location'];
     $isSearch   = $terms['is_search'];
     $sort       = $request->sort;
     $filterType = $request->type;
-
-    $categorySlug = $request->category ?: $terms['inferred_category'];
 
     $allThemes = Cache::remember(
         'all_themes',
@@ -45,15 +53,7 @@ public function index(Request $request)
         fn() => ThemeService::getAllThemes()
     );
 
-    $candidates = $this->discoverCandidates($request, [
-        'search'    => $search,
-        'specialty' => $specialty,
-        'location'  => $location,
-        'state'     => $terms['state'],
-        'type'      => $filterType,
-        'sort'      => $sort,
-        'cache'     => !$isSearch && empty($categorySlug) && empty($filterType) && empty($sort),
-    ]);
+    $candidates = $this->listingCandidates($request);
 
     /*
     |--------------------------------------------------------------------------
@@ -63,7 +63,8 @@ public function index(Request $request)
     | ranked nearest-first once the visitor has shared a location and by
     | rating otherwise (see rankCandidates). Browsing the full set is what the
     | category pages are for, so there is no pager on this path. A search or
-    | filter is a different intent — those stay paginated as before.
+    | filter is a different intent — those stream in batches as the customer
+    | scrolls, the same way the category pages do.
     */
     $isShortlist = !$isSearch && empty($filterType) && empty($sort)
         && $request->query('view') !== 'all';
@@ -72,18 +73,15 @@ public function index(Request $request)
 
     if ($isShortlist) {
         $vendors = $candidates->take(self::RECOMMENDED_LIMIT)->values();
+        $hasMore = false;
     } else {
-        $page    = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 24;
-
-        $vendors = new \Illuminate\Pagination\LengthAwarePaginator(
-            $candidates->slice(($page - 1) * $perPage, $perPage)->values(),
-            $candidates->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $vendors = $candidates->take(self::LISTING_PAGE_SIZE)->values();
+        $hasMore = $totalVendors > self::LISTING_PAGE_SIZE;
     }
+
+    // The feed replays the page's own query string, so a search or filter
+    // narrows every batch the scroll pulls and not just the first.
+    $feedEndpoint = route('discover.vendors', $request->except(['page']));
 
     // Drives the section subtitle, so the ordering is never a silent surprise.
     $rankedByDistance = $this->hasCustomerLocation($request);
@@ -106,8 +104,67 @@ public function index(Request $request)
         'rankedByDistance',
         'locationLabel',
         'isShortlist',
-        'totalVendors'
+        'totalVendors',
+        'hasMore',
+        'feedEndpoint'
     ));
+}
+
+/**
+ * Infinite-scroll feed for the landing listing: the next batch of cards for
+ * whatever search / filter / sort the page itself was rendered with.
+ *
+ * Shares listingCandidates() with index() so both slice one ordering — a
+ * batch can never disagree with the first screenful about what comes next.
+ */
+public function vendorsFeed(Request $request)
+{
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    $page       = max(1, (int) $request->query('page', 1));
+    $candidates = $this->listingCandidates($request);
+
+    $batch = $candidates
+        ->slice(($page - 1) * self::LISTING_PAGE_SIZE, self::LISTING_PAGE_SIZE)
+        ->values();
+
+    return response()->json([
+        'html'      => $batch->isEmpty() ? '' : view('customer.partials.vendor-cards', [
+            'vendors'   => $batch,
+            'allThemes' => $allThemes,
+        ])->render(),
+        'has_more'  => $candidates->count() > $page * self::LISTING_PAGE_SIZE,
+        'next_page' => $page + 1,
+    ]);
+}
+
+/**
+ * Candidate list behind the landing listing, filters and all.
+ *
+ * Lifted out of index() so the scroll feed builds its batches from exactly
+ * the same list rather than a second, subtly different query.
+ */
+private function listingCandidates(Request $request): \Illuminate\Support\Collection
+{
+    $terms      = $this->searchTerms($request);
+    $sort       = $request->sort;
+    $filterType = $request->type;
+
+    $categorySlug = $request->category ?: $terms['inferred_category'];
+
+    return $this->discoverCandidates($request, [
+        'search'    => $terms['search'],
+        'specialty' => $terms['specialty'],
+        'location'  => $terms['location'],
+        'state'     => $terms['state'],
+        'type'      => $filterType,
+        'sort'      => $sort,
+        'cache'     => !$terms['is_search'] && empty($categorySlug) && empty($filterType) && empty($sort),
+    ]);
 }
 
 /**
@@ -126,34 +183,36 @@ public function category(Request $request, string $slug)
         fn() => ThemeService::getAllThemes()
     );
 
-    $category = \App\Models\VendorCategory::where('slug', $slug)->first();
+    // "all" is the catalogue view — every category at once — so it skips the
+    // per-category lookup entirely rather than pretending to be a category.
+    $isAllCategories = $slug === self::ALL_CATEGORIES_SLUG;
+
+    $category = $isAllCategories
+        ? null
+        : \App\Models\VendorCategory::where('slug', $slug)->first();
 
     // A slug is legitimate if either the theme matrix or the categories table
     // knows it — the two are maintained separately.
-    if (!$category && !isset($allThemes[$slug])) {
+    if (!$isAllCategories && !$category && !isset($allThemes[$slug])) {
         abort(404);
     }
 
     /*
     | The category dropdown submits with the form, so it is the one control
     | that can legitimately move the customer off this page: a different
-    | category hops to that category page, "All Categories" falls back to the
-    | global listing. Either way the search terms travel along.
+    | category hops to that category page, "All Categories" widens to the
+    | catalogue. Either way the search terms travel along.
     */
     if ($request->has('type')) {
-        $requestedType = trim((string) $request->query('type'));
+        $requestedType = trim((string) $request->query('type')) ?: self::ALL_CATEGORIES_SLUG;
         $carried       = $request->except(['type', 'page', 'slug']);
-
-        if ($requestedType === '') {
-            return redirect()->route('home', $carried);
-        }
 
         if ($requestedType !== $slug) {
             return redirect()->route('category.show', ['slug' => $requestedType] + $carried);
         }
     }
 
-    $theme      = $allThemes[$slug] ?? ThemeService::getTheme('consultant');
+    $theme      = $isAllCategories ? [] : ($allThemes[$slug] ?? ThemeService::getTheme('consultant'));
     $terms      = $this->searchTerms($request);
     $candidates = $this->categoryCandidates($request, $slug, $terms);
 
@@ -165,8 +224,9 @@ public function category(Request $request, string $slug)
         'allThemes'        => $allThemes,
         'theme'            => $theme,
         'categorySlug'     => $slug,
-        'categoryLabel'    => $theme['label'] ?? ($category->name ?? ucfirst($slug)),
-        'categoryEmoji'    => $theme['emoji'] ?? '✨',
+        'isAllCategories'  => $isAllCategories,
+        'categoryLabel'    => $isAllCategories ? 'All' : ($theme['label'] ?? ($category->name ?? ucfirst($slug))),
+        'categoryEmoji'    => $isAllCategories ? '⭐' : ($theme['emoji'] ?? '✨'),
         'totalVendors'     => $total,
         'hasMore'          => $total > self::CATEGORY_PAGE_SIZE,
         'perPage'          => self::CATEGORY_PAGE_SIZE,
@@ -274,7 +334,8 @@ private function categoryCandidates(Request $request, string $slug, array $terms
         'specialty' => $terms['specialty'],
         'location'  => $terms['location'],
         'state'     => $terms['state'],
-        'type'      => $slug,
+        // The catalogue view carries no category filter at all.
+        'type'      => $slug === self::ALL_CATEGORIES_SLUG ? null : $slug,
         'cache'     => !$terms['is_search'],
     ]);
 }
@@ -486,8 +547,8 @@ private function discoverCandidates(Request $request, array $filters = []): \Ill
             $vendor->global_closing_time
         );
 
-        // GATE 1: Vendor shop itself must be open right now
-        if (!$now->between($vOpen, $vClose)) {
+        // GATE 1: Vendor shop itself must be open right now and manually active/open
+        if (!$vendor->is_open || $vendor->status !== 'active' || !$now->between($vOpen, $vClose)) {
             return $vendor; // Shop is closed → never show in listing
         }
 
@@ -751,7 +812,7 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
 
     $slots = [];
     $isOffline = true;
-    $opensAt = '';
+    $opensAt = $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('h:i A') : '';
     $isPaused = false;
     $queueIndex = 0;
     $runningToken = 0;
@@ -770,12 +831,23 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
             $vendor
         );
 
-        // Populate a fallback timestamp format before checking length bounds
+        // Populate opening time from selected employee window
         $opensAt = $empStart->format('h:i A');
         $isPaused = (bool) $selectedEmployee->is_paused;
 
+        if (!$vendor->is_open || $vendor->status !== 'active') {
+            $isOffline = true;
+        }
+        if ($vendor->bookings_paused) {
+            $isPaused = true;
+        }
+
         if ($empStart->lt($empEnd)) {
-            $isOffline = !($now->gte($empStart) && $now->lt($empEnd));
+            if (!$vendor->is_open || $vendor->status !== 'active') {
+                $isOffline = true;
+            } else {
+                $isOffline = !($now->gte($empStart) && $now->lt($empEnd));
+            }
 
             /*
             |--------------------------------------------------------------------------
@@ -972,6 +1044,26 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
 
         // Global Vendor Constraints
         [$empStart, $empEnd] = $this->clampEmployeeToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
+
+        if (!$vendor->is_open || $vendor->status !== 'active') {
+            return response()->json([
+                'offline'  => true,
+                'opens_at' => $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('h:i A') : 'Tomorrow',
+                'slots'    => [],
+                'queue_index' => 0,
+                'running_token' => 0
+            ]);
+        }
+
+        if ($vendor->bookings_paused) {
+            return response()->json([
+                'offline'  => false,
+                'paused'   => true,
+                'slots'    => [],
+                'queue_index' => 0,
+                'running_token' => 0
+            ]);
+        }
 
         // Visibility / Window Logic
         if ($vendor->appointment_mode === 'time_slot') {

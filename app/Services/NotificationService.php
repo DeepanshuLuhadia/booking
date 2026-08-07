@@ -30,6 +30,48 @@ class NotificationService
         return true;
     }
 
+    /**
+     * Notify vendor owner when their account status changes (approved, rejected, suspended, reinstated).
+     */
+    public function notifyVendorStatusChanged($vendor, string $newStatus, ?string $oldStatus = null): bool
+    {
+        if (!$vendor) {
+            return false;
+        }
+
+        $user = $vendor->user;
+        if (!$user || !$user->fcm_token) {
+            Log::info("Vendor #{$vendor->id} status changed to {$newStatus}, but vendor user has no FCM token; push notification skipped.");
+            return false;
+        }
+
+        [$title, $message] = match ($newStatus) {
+            'active' => [
+                $oldStatus === 'suspended' ? "🎉 Vendor Account Reinstated" : "🎉 Vendor Account Approved!",
+                "Great news! Your business account '{$vendor->business_name}' has been approved and is now active for customer bookings.",
+            ],
+            'suspended' => [
+                "⛔ Vendor Account Suspended",
+                "Your business account for '{$vendor->business_name}' has been suspended. Please contact support for assistance.",
+            ],
+            'rejected' => [
+                "❌ Vendor Account Rejected",
+                "Your business account registration for '{$vendor->business_name}' has been rejected by administration.",
+            ],
+            default => [
+                "Vendor Account Status Updated",
+                "Your business account status for '{$vendor->business_name}' has been updated to {$newStatus}.",
+            ]
+        };
+
+        return (bool) $this->sendWebPush($user, $title, $message, [
+            'type'       => 'vendor_status_change',
+            'status'     => $newStatus,
+            'old_status' => $oldStatus,
+            'vendor_id'  => $vendor->id,
+        ]);
+    }
+
     public function notifyVendorNewBooking($vendor, $booking)
     {
         $user = $vendor->user;

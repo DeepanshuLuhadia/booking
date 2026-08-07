@@ -807,7 +807,7 @@
             text-align: center;
         }
 
-        /* ── Vendor Grid ─────────────────────────────────────────────── */
+        /* ── Vendor Grid ─────────────────────────────────────────── */
         .bv-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -823,46 +823,431 @@
         }
 
         @media(max-width:600px) {
+            .bv-section {
+                padding: 16px 12px 30px;
+            }
+
+            /* ── Default mobile: GRID VIEW (2 columns, original overlay card) ── */
             .bv-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 12px;
                 margin-top: 26px;
             }
-            .bv-section {
-                padding: 16px 16px 30px;
+
+            /* Grid mode: show desktop card, hide horizontal card */
+            .bv-desktop-card-wrap { display: contents !important; }
+            .bv-hcard             { display: none    !important; }
+
+            /* ── List mode: 1 column, horizontal cards ─────────────────── */
+            .bv-grid.bv-list-mode {
+                grid-template-columns: 1fr;
+                gap: 12px;
             }
 
-            /* ── Compact 2-up recommended cards (mobile only) ──
-               Two per row rather than three, so every tile gets roughly half
-               again the width it had; the type scale below is stepped up to
-               match. !important needed: the base .bv-card-sports rules are
-               declared later in the stylesheet, so they'd otherwise win the
-               cascade. */
-            .bv-card-sports {
-                height: 210px !important;
-                border-width: 2px !important;
-                border-radius: 14px !important;
-                box-shadow: 0 4px 16px rgba(var(--cr), var(--cg), var(--cb), 0.3) !important;
+            .bv-grid.bv-list-mode .bv-desktop-card-wrap { display: none !important; }
+            .bv-grid.bv-list-mode .bv-hcard             { display: flex !important; }
+        }
+
+        /* Desktop always: show desktop card, hide hcard */
+        @media(min-width:601px) {
+            .bv-desktop-card-wrap { display: contents; }
+            .bv-hcard             { display: none; }
+        }
+
+        /* ── Mobile View Toggle Bar ────────────────────────────────── */
+        .bv-view-toggle {
+            display: none; /* hidden on desktop */
+        }
+
+        @media(max-width:600px) {
+            .bv-view-toggle {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin: 16px 0 4px;
+                justify-content: flex-end; /* right-align */
+                position: relative;
+                z-index: 10;
             }
-            .bv-card-sports-overlay {
-                padding: 8px !important;
-                background: linear-gradient(to top, rgba(0, 0, 0, 0.96) 0%, rgba(0, 0, 0, 0.5) 45%, rgba(0, 0, 0, 0) 100%) !important;
+
+            .bv-view-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                padding: 7px 14px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                background: rgba(255, 255, 255, 0.05);
+                color: rgba(255, 255, 255, 0.45);
+                font-size: 11px;
+                font-weight: 700;
+                cursor: pointer;
+                pointer-events: auto;
+                position: relative;
+                z-index: 10;
+                transition: all .2s ease;
+                letter-spacing: .03em;
+                -webkit-tap-highlight-color: transparent;
+                user-select: none;
             }
-            .bv-rc-rating {
+
+            .bv-view-btn:hover {
+                background: rgba(255, 255, 255, 0.10);
+                color: rgba(255, 255, 255, 0.75);
+            }
+
+            .bv-view-btn--active {
+                background: linear-gradient(135deg, rgba(255,109,0,0.2), rgba(255,171,64,0.15));
+                border-color: rgba(255, 140, 66, 0.5);
+                color: #ffab40;
+                box-shadow: 0 0 0 1px rgba(255,140,66,0.2);
+            }
+
+            .bv-view-label {
+                font-size: 10px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: .08em;
+            }
+        }
+
+        /* ── Horizontal Vendor Card ──────────────────────────────────── */
+        .bv-hcard {
+            /* display is controlled by the toggle block above:
+               none on desktop, flex on mobile via !important */
+            align-items: stretch;
+            background: rgba(14, 18, 42, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 20px;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            transition: transform .3s cubic-bezier(.16,1,.3,1), box-shadow .3s, border-color .3s;
+            position: relative;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 6px 28px rgba(0,0,0,.35);
+        }
+
+        .bv-hcard:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(var(--cr),var(--cg),var(--cb),0.35);
+            border-color: rgba(var(--cr),var(--cg),var(--cb),0.45);
+        }
+
+        /* Left pane — image */
+        .bv-hcard-img {
+            position: relative;
+            flex: 0 0 200px;
+            min-height: 180px;
+            overflow: hidden;
+        }
+
+        .bv-hcard-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform .5s cubic-bezier(.16,1,.3,1);
+        }
+
+        .bv-hcard:hover .bv-hcard-img img {
+            transform: scale(1.07);
+        }
+
+        /* Subtle gradient overlay on the image so the left edge blends */
+        .bv-hcard-img::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent 60%, rgba(14,18,42,0.55) 100%);
+            pointer-events: none;
+        }
+
+        /* Offer badge on image */
+        .bv-hcard-offer {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: linear-gradient(135deg, #ff6d00, #ffab40);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: 5px 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(255,109,0,.55);
+            z-index: 2;
+            animation: hcard-offer-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes hcard-offer-pulse {
+            0%, 100% { box-shadow: 0 4px 14px rgba(255,109,0,.55); }
+            50%       { box-shadow: 0 4px 22px rgba(255,109,0,.9); }
+        }
+
+        /* Right pane — details */
+        .bv-hcard-body {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 18px 20px;
+            gap: 0;
+        }
+
+        /* Top row: category badge + open/closed status */
+        .bv-hcard-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .bv-hcard-cat {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+            color: rgba(var(--cr),var(--cg),var(--cb),0.9);
+            background: rgba(var(--cr),var(--cg),var(--cb),0.12);
+            border: 1px solid rgba(var(--cr),var(--cg),var(--cb),0.25);
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .bv-hcard-status-open {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 9px;
+            font-weight: 900;
+            color: #4ade80;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .bv-hcard-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 8px #4ade80;
+            flex-shrink: 0;
+        }
+
+        .bv-hcard-status-closed {
+            font-size: 9px;
+            font-weight: 900;
+            color: #ffab40;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        /* Business name */
+        .bv-hcard-name {
+            font-size: 19px;
+            font-weight: 900;
+            color: #fff;
+            margin: 0 0 6px;
+            line-height: 1.15;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bv-hcard-name svg {
+            flex-shrink: 0;
+        }
+
+        /* Address + distance row */
+        .bv-hcard-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: rgba(255,255,255,.5);
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .bv-hcard-addr {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bv-hcard-dist {
+            flex-shrink: 0;
+            margin-left: auto;
+            font-size: 10px;
+            font-weight: 800;
+            color: rgba(var(--cr),var(--cg),var(--cb),0.9);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            background: rgba(var(--cr),var(--cg),var(--cb),0.10);
+            border: 1px solid rgba(var(--cr),var(--cg),var(--cb),0.22);
+            padding: 3px 9px;
+            border-radius: 999px;
+        }
+
+        /* Rating row */
+        .bv-hcard-rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,.12);
+            padding: 4px 10px;
+            border-radius: 999px;
+            margin-bottom: 12px;
+            align-self: flex-start;
+        }
+
+        /* Divider */
+        .bv-hcard-divider {
+            height: 1px;
+            background: rgba(255,255,255,.07);
+            margin: 4px 0 14px;
+        }
+
+        /* Price + CTA row */
+        .bv-hcard-footer {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .bv-hcard-price-label {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: rgba(255,255,255,.4);
+            margin-bottom: 2px;
+        }
+
+        .bv-hcard-price {
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .bv-hcard-price-onwards {
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255,255,255,.4);
+        }
+
+        .bv-hcard-cta {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--c1, #ff6d00), var(--c2, #ffab40));
+            border-radius: 14px;
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(var(--cr),var(--cg),var(--cb),0.45);
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .bv-hcard:hover .bv-hcard-cta {
+            transform: scale(1.12);
+            box-shadow: 0 8px 22px rgba(var(--cr),var(--cg),var(--cb),0.65);
+        }
+
+        /* ── Mobile: keep left-right split, narrow the image column ─────── */
+        @media(max-width: 600px) {
+            .bv-hcard {
+                flex-direction: row;   /* always horizontal */
+                border-radius: 16px;
+                min-height: 130px;
+            }
+            .bv-hcard-img {
+                flex: 0 0 120px;       /* fixed narrow image column */
+                min-height: 130px;
+                width: 120px;
+            }
+            /* gradient stays left-to-right so the edge blends into the body */
+            .bv-hcard-img::after {
+                background: linear-gradient(to right, transparent 60%, rgba(14,18,42,0.6) 100%);
+            }
+            .bv-hcard-body {
+                padding: 12px 12px;
+            }
+            .bv-hcard-name {
+                font-size: 14px;
+                margin-bottom: 4px;
+            }
+            .bv-hcard-cat {
+                font-size: 8px;
+                padding: 2px 8px;
+            }
+            .bv-hcard-status-open,
+            .bv-hcard-status-closed {
+                font-size: 8px;
+            }
+            .bv-hcard-meta {
+                font-size: 11px;
+                margin-bottom: 6px;
+            }
+            .bv-hcard-rating {
+                font-size: 11px;
+                padding: 3px 8px;
+                margin-bottom: 8px;
+            }
+            .bv-hcard-price {
+                font-size: 16px;
+            }
+            .bv-hcard-price-label {
+                font-size: 8px;
+            }
+            .bv-hcard-cta {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+            }
+            .bv-hcard-offer {
+                font-size: 9px;
+                padding: 4px 7px;
+                top: 8px;
+                left: 8px;
+            }
+        }
+
+        /* ── Mobile GRID view: compact 2-up sports overlay cards ────────── */
+        @media(max-width:600px) {
+            .bv-grid:not(.bv-list-mode) .bv-card-sports {
+                height: 210px;
+                border-width: 2px;
+                border-radius: 14px;
+                box-shadow: 0 4px 16px rgba(var(--cr), var(--cg), var(--cb), 0.3);
+            }
+            .bv-grid:not(.bv-list-mode) .bv-card-sports-overlay {
+                padding: 8px;
+                background: linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.5) 45%, rgba(0,0,0,0) 100%);
+            }
+            .bv-grid:not(.bv-list-mode) .bv-rc-rating {
                 top: 7px !important;
                 right: 7px !important;
                 padding: 3px 7px !important;
                 font-size: 10px !important;
                 gap: 3px !important;
             }
-            .bv-rc-badge {
-                font-size: 7px !important;
-                padding: 3px 6px !important;
-                margin-bottom: 6px !important;
-                border-radius: 5px !important;
-            }
-            .bv-rc-name {
-                font-size: 14px !important;
+            .bv-grid:not(.bv-list-mode) .bv-rc-name {
+                font-size: 13px !important;
                 margin: 0 0 6px !important;
                 line-height: 1.15 !important;
                 display: -webkit-box !important;
@@ -870,43 +1255,36 @@
                 -webkit-box-orient: vertical;
                 overflow: hidden;
             }
-            .bv-rc-name svg {
+            .bv-grid:not(.bv-list-mode) .bv-rc-name svg {
                 display: none !important;
             }
-            .bv-rc-loc {
-                margin-bottom: 10px !important;
+            .bv-grid:not(.bv-list-mode) .bv-rc-loc {
+                margin-bottom: 8px !important;
                 font-size: 11px !important;
             }
-            /* Still a narrow tile even at 2-up (~150px of usable width on a
-               390px phone): the address plus pin plus distance chip will not
-               sit on one line, so the address stays out and the distance —
-               the more useful of the two — keeps the row. */
-            .bv-rc-loc-pin,
-            .bv-rc-addr {
+            .bv-grid:not(.bv-list-mode) .bv-rc-loc-pin,
+            .bv-grid:not(.bv-list-mode) .bv-rc-addr {
                 display: none !important;
             }
-            .bv-rc-dist {
+            .bv-grid:not(.bv-list-mode) .bv-rc-dist {
                 margin-left: 0 !important;
                 color: #fff !important;
                 font-size: 10px !important;
-                background: rgba(0, 0, 0, 0.55);
+                background: rgba(0,0,0,0.55);
                 padding: 3px 7px;
                 border-radius: 6px;
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55);
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
             }
-            .bv-rc-pricebar {
+            .bv-grid:not(.bv-list-mode) .bv-rc-pricebar {
                 padding: 9px 10px !important;
                 border-radius: 11px !important;
             }
-            .bv-rc-price-label {
+            .bv-grid:not(.bv-list-mode) .bv-rc-price-label {
                 font-size: 9px !important;
             }
-            .bv-rc-price {
+            .bv-grid:not(.bv-list-mode) .bv-rc-price {
                 font-size: 11px !important;
             }
-            /* Live-queue / arrow column doesn't fit the narrow tile */
-            .bv-rc-status {
+            .bv-grid:not(.bv-list-mode) .bv-rc-status {
                 display: none !important;
             }
         }

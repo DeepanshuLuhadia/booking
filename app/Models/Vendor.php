@@ -55,6 +55,16 @@ class Vendor extends Model
         // cases (demo-mode activation, double-submit, admin activation, etc.).
         // The `referral_reward_paid` guard above prevents duplicate payouts.
         static::updated(function ($vendor) {
+            if ($vendor->wasChanged('status')) {
+                $oldStatus = $vendor->getOriginal('status');
+                $newStatus = $vendor->status;
+                try {
+                    app(\App\Services\NotificationService::class)->notifyVendorStatusChanged($vendor, $newStatus, $oldStatus);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send vendor status push notification: " . $e->getMessage());
+                }
+            }
+
             if (!$vendor->referred_by_id || $vendor->referral_reward_paid) {
                 return;
             }

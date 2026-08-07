@@ -118,7 +118,10 @@
                     </p>
                 </div>
 
-                <div class="bv-grid">
+                {{-- Mobile only: grid / list toggle (hidden on desktop via CSS) --}}
+                @include('customer.partials.view-toggle')
+
+                <div class="bv-grid" id="bvListingGrid">
                     @forelse($vendors as $vendor)
                     @include('customer.partials.vendor-card', [
                         'vendor'    => $vendor,
@@ -139,11 +142,13 @@
                 </div>
 
                 {{-- The default listing is a fixed shortlist, so it gets a
-                     "view all" escape hatch instead of a pager; search results
-                     stay paginated as before. --}}
+                     "view all" escape hatch that hands the customer over to the
+                     catalogue page — the All entry of the category section,
+                     which streams the full list as it scrolls. Search and
+                     filter results stream in place instead. --}}
                 @if($isShortlist && $totalVendors > $vendors->count())
                 <div style="margin-top:52px; text-align:center;">
-                    <a href="{{ route('home', ['view' => 'all']) }}"
+                    <a href="{{ route('category.show', \App\Http\Controllers\CustomerDiscoveryController::ALL_CATEGORIES_SLUG) }}"
                         style="display:inline-flex; align-items:center; gap:10px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); color:#fff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.2em; padding:16px 34px; border-radius:14px; text-decoration:none;">
                         View All {{ $totalVendors }} Professionals
                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
@@ -151,8 +156,13 @@
                         </svg>
                     </a>
                 </div>
-                @elseif($vendors instanceof \Illuminate\Contracts\Pagination\Paginator && $vendors->hasPages())
-                <div style="margin-top:60px;">{{ $vendors->links() }}</div>
+                @elseif(!$isShortlist && $vendors->isNotEmpty())
+                @include('customer.partials.scroll-feed', [
+                    'gridId'     => 'bvListingGrid',
+                    'endpoint'   => $feedEndpoint,
+                    'hasMore'    => $hasMore,
+                    'endMessage' => 'You’ve seen every matching professional',
+                ])
                 @endif
             </div>
         </section>

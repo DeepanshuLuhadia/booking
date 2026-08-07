@@ -8,6 +8,11 @@
     $searchAction   = $searchAction ?? route('home');
     $resetUrl       = $resetUrl ?? route('home');
     $canReset       = $canReset ?? (request('search') || $activeCategory || request('location'));
+
+    // The catalogue page — "All" is a destination in the category strip like
+    // every other pill, not a link back to the landing page.
+    $allSlug     = \App\Http\Controllers\CustomerDiscoveryController::ALL_CATEGORIES_SLUG;
+    $isAllActive = $activeCategory === '' || $activeCategory === $allSlug;
 @endphp
                 <div class="bv-search-wrap">
                     <div class="bv-search-bar">
@@ -71,7 +76,7 @@
                                 </svg>
 
                                 <div class="custom-dropdown-menu">
-                                    <div class="custom-dropdown-item {{ !$activeCategory ? 'selected' : '' }}" data-value="">All Categories</div>
+                                    <div class="custom-dropdown-item {{ $isAllActive ? 'selected' : '' }}" data-value="">All Categories</div>
                                     @foreach($allThemes as $key => $t)
                                         <div class="custom-dropdown-item {{ $activeCategory == $key ? 'selected' : '' }}" data-value="{{ $key }}">
                                             {{ $t['emoji'] ?? '✨' }} {{ $t['label'] ?? ucfirst($key) }}
@@ -182,9 +187,10 @@
                     
                     $categoriesList = [];
                     
-                    // First item: All Services
+                    // First item: All Services — its own page, streamed the same
+                    // way every category page is.
                     $categoriesList[] = [
-                        'key' => '',
+                        'key' => $allSlug,
                         'label' => 'All',
                         'sub' => 'Services',
                         'emoji' => '⭐',
@@ -207,7 +213,7 @@
                     
                     // Find active index
                     $activeIndex = 0;
-                    $currentType = $activeCategory;
+                    $currentType = $activeCategory === '' ? $allSlug : $activeCategory;
                     foreach($categoriesList as $index => $cat) {
                         if ($cat['key'] === $currentType) {
                             $activeIndex = $index;
@@ -235,8 +241,8 @@
                                 @php
                                 [$cr,$cg,$cb] = explode(',', $cat['rgb']);
                                 $iconStyle = "background:linear-gradient(135deg,{$cat['g'][0]},{$cat['g'][1]});";
-                                $isActive = ($cat['key'] === '' && $activeCategory === '') || ($activeCategory === $cat['key']);
-                                $catHref = $cat['key'] === '' ? route('home') : route('category.show', $cat['key']);
+                                $isActive = $cat['key'] === $allSlug ? $isAllActive : $activeCategory === $cat['key'];
+                                $catHref = route('category.show', $cat['key']);
                                 @endphp
                                 <a href="{{ $catHref }}"
                                     class="bv-cat-pill {{ $isActive ? 'active' : '' }}"
@@ -270,8 +276,8 @@
                                 @php
                                 [$cr,$cg,$cb] = explode(',', $cat['rgb']);
                                 $iconStyle = "background:linear-gradient(135deg,{$cat['g'][0]},{$cat['g'][1]});";
-                                $isActive = ($cat['key'] === '' && $activeCategory === '') || ($activeCategory === $cat['key']);
-                                $catHref = $cat['key'] === '' ? route('home') : route('category.show', $cat['key']);
+                                $isActive = $cat['key'] === $allSlug ? $isAllActive : $activeCategory === $cat['key'];
+                                $catHref = route('category.show', $cat['key']);
                                 @endphp
                                 <a href="{{ $catHref }}" 
                                    class="bv-cat-mobile-pill {{ $isActive ? 'active' : '' }}" 
