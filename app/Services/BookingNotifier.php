@@ -119,6 +119,11 @@ class BookingNotifier
         );
     }
 
+    /**
+     * The shop could not serve this customer and passed over them. Same shape
+     * as a cancellation — the booking closes and the queue moves on — but the
+     * customer is told to rebook rather than simply that their slot is free.
+     */
     public function skipped(Booking $booking, string $actor = 'vendor'): void
     {
         $booking = $this->hydrate($booking);
@@ -129,8 +134,8 @@ class BookingNotifier
         $this->notifyOtherSideOfShop(
             $booking,
             $actor,
-            'Token Skipped',
-            $this->label($booking) . " with {$booking->employee?->name} was skipped."
+            'Appointment Skipped',
+            $this->label($booking) . " with {$booking->employee?->name} was skipped for non-availability."
         );
     }
 

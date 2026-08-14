@@ -895,6 +895,23 @@
                                 placeholder="10 Digit Primary Number">
                         </div>
                     </div>
+                    <div class="space-y-2">
+                        <label
+                            class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 shrink-0 text-left block">Email
+                            <span class="text-white/30">(Optional)</span></label>
+                        <div class="relative group">
+                            <span
+                                class="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </span>
+                            <input type="email" x-model="guestEmail" maxlength="255"
+                                class="premium-input w-full h-14 pl-12 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border"
+                                placeholder="you@example.com">
+                        </div>
+                    </div>
                 </div>
 
                 <div
@@ -1025,6 +1042,7 @@
                 slots: @js($slots),
                 loading: false,
                 bookingModal: false,
+                submitting: false,
                 isOffline: {{ $isOffline ? 'true' : 'false' }},
                 isPaused: {{ (isset($isPaused) && $isPaused) ? 'true' : 'false' }},
                 isSubscriptionExpired: {{ $isSubscriptionExpired ? 'true' : 'false' }},
@@ -1039,6 +1057,15 @@
                 selectedSlot: null,
                 guestName: '',
                 guestPhone: '',
+                guestEmail: '',
+
+                /*
+                 * Whether this business collects customer details before a
+                 * booking (Vendor::$require_customer_details). Set shop-wide, so
+                 * it governs every specialist listed here. Off, the details
+                 * modal never opens — picking a slot or token books it outright.
+                 */
+                requireDetails: {{ $vendor->require_customer_details ? 'true' : 'false' }},
                 isTokenEnabled: {{ $vendor->appointment_mode === 'token' ? 'true' : 'false' }},
                 emergencyFee: {{ $vendor->emergency_fee ?: 0 }},
                 totalAmount: 0,
@@ -1134,6 +1161,13 @@
             this.selectedSlot = slot;
             const premiumSlotFee = slot.is_premium ? slot.premium_fee_amount : 0;
             this.totalAmount = this.selectedServiceFee + premiumSlotFee;
+
+            // No details wanted: the tap on the slot IS the booking.
+            if (!this.requireDetails) {
+                this.confirmBooking();
+                return;
+            }
+
             this.bookingModal = true;
         },
 
@@ -1141,12 +1175,19 @@
             if (!this.selectedSlot) {
                 return;
             }
-            if (!this.guestName || this.guestPhone.length < 10) return;
+            if (this.requireDetails && (!this.guestName || this.guestPhone.length < 10)) return;
             this.submitBooking('pay_ext_' + Math.random().toString(36).substr(2, 9));
         },
 
                 async submitBooking(paymentId) {
             if (!this.selectedSlot) return;
+
+            // Without the details modal in the way, a slot books on a single tap
+            // — so a double tap would post twice and meet the server's "you
+            // already have a booking here" refusal.
+            if (this.submitting) return;
+            this.submitting = true;
+
             this.bookingModal = false;
             this.loading = true;
             try {
@@ -1165,6 +1206,7 @@
                         booking_type: this.selectedSlot.is_premium ? 'premium' : 'normal',
                         customer_name: this.guestName,
                         customer_phone: this.guestPhone,
+                        customer_email: this.guestEmail,
                         payment_id: paymentId
                     })
                 });
@@ -1217,10 +1259,18 @@
                      * identified by that number so the token panel replaces the
                      * form, rather than leaving them on an error with no way to
                      * see the booking that caused it.
+                     *
+                     * Nothing to reload by when the shop collects no phone
+                     * number — the guest key in the cookie is what the server
+                     * matched on, so a plain reload surfaces the same booking.
                      */
                     if (data.bookings_url) {
                         setTimeout(() => {
-                            window.location.search = '?phone=' + encodeURIComponent(this.guestPhone);
+                            if (this.guestPhone) {
+                                window.location.search = '?phone=' + encodeURIComponent(this.guestPhone);
+                            } else {
+                                window.location.reload();
+                            }
                         }, 2000);
                     }
                 }
@@ -1229,6 +1279,7 @@
                 window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'SYSTEM ERROR', type: 'error' } }));
             }
             this.loading = false;
+            this.submitting = false;
         },
                 employeeName(id) {
                     return this.employeeNames[id] || 'your specialist';
@@ -1369,7 +1420,7 @@
                     return {
                         completed: 'Appointment Complete',
                         cancelled: 'Booking Cancelled',
-                        skipped:   'Token Skipped',
+                        skipped:   'Appointment Skipped',
                         removed:   'Booking Removed',
                         expired:   'Booking Expired',
                     }[this.closedBooking?.status] ?? 'Booking Closed';
@@ -1379,7 +1430,7 @@
                     return {
                         completed: 'Thanks for visiting. You are free to book here again.',
                         cancelled: 'The business cancelled this booking. You are free to book again.',
-                        skipped:   'Your token was passed over. Please speak to the counter if you are still there.',
+                        skipped:   'The business could not serve you due to non-availability, so your turn has passed. Please book a new appointment or contact the business to reschedule.',
                         removed:   'The business removed this booking. You are free to book again.',
                         expired:   'The shift closed before your turn came up.',
                     }[this.closedBooking?.status] ?? 'You are free to book again.';

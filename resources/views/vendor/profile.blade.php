@@ -271,6 +271,40 @@
                             </div>
                         </div>
 
+                        {{-- Booking intake.
+
+                             Shop-wide by design: it governs every employee of
+                             this business at once, so a customer scanning any
+                             specialist's QR code meets the same flow.
+
+                             The hidden 0 is what makes unticking the box mean
+                             something — an unchecked checkbox posts nothing at
+                             all, which would otherwise be indistinguishable
+                             from a form that never carried the field. --}}
+                        <div class="space-y-4">
+                            <label
+                                class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Booking
+                                Intake</label>
+                            <label
+                                class="flex items-start gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 cursor-pointer transition-all hover:bg-white/[0.07]">
+                                <input type="hidden" name="require_customer_details" value="0">
+                                <input type="checkbox" name="require_customer_details" value="1"
+                                    {{ $vendor->require_customer_details ? 'checked' : '' }}
+                                    class="w-5 h-5 mt-0.5 shrink-0 bg-white/10 border-none rounded text-blue-600 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer">
+                                <span>
+                                    <span
+                                        class="block text-[10px] font-black text-white uppercase italic tracking-widest">Ask
+                                        for customer details before booking</span>
+                                    <span class="block text-[10px] font-medium text-slate-400 mt-1.5 leading-relaxed">
+                                        On — the customer enters their name, phone number and (optionally) email
+                                        before the appointment is confirmed.
+                                        Off — scanning your QR code and tapping "book" creates the appointment
+                                        straight away, with no form. Applies to every employee of this business.
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label

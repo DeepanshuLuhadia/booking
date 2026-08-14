@@ -23,6 +23,17 @@
                 </svg>
                 <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Bookings</span>
             </a>
+            {{-- Reports are a free-trial and Premium feature; the route enforces
+                 that, this only keeps a dead link out of the menu. --}}
+            @if(auth()->user()?->vendor?->hasReportAccess())
+            <a href="{{ route('vendor.reports.index') }}"
+                class="flex items-center gap-4 px-6 py-4 rounded-2xl transition-all {{ request()->routeIs('vendor.reports.*') ? 'bg-white/5 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5/50' }}">
+                <svg class="h-5 w-5 {{ request()->routeIs('vendor.reports.*') ? 'text-white' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Reports</span>
+            </a>
+            @endif
             <a href="{{ route('vendor.reviews.index') }}"
                 class="flex items-center gap-4 px-6 py-4 rounded-2xl transition-all {{ request()->routeIs('vendor.reviews.*') ? 'bg-white/5 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5/50' }}">
                 <svg class="h-5 w-5 {{ request()->routeIs('vendor.reviews.*') ? 'text-white' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,6 +131,14 @@
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Bookings</span>
                     </a>
+
+                    @if($vendor?->hasReportAccess())
+                    <a href="{{ route('vendor.reports.index') }}"
+                        class="flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 {{ request()->routeIs('vendor.reports.*') ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30' : 'text-slate-400 hover:bg-white/5 hover:translate-x-1' }}">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Reports</span>
+                    </a>
+                    @endif
 
                     <a href="{{ route('vendor.reviews.index') }}"
                         class="flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 {{ request()->routeIs('vendor.reviews.*') ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30' : 'text-slate-400 hover:bg-white/5 hover:translate-x-1' }}">

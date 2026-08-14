@@ -30,6 +30,11 @@ class VendorRegistrationController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
             'referral_code' => 'nullable|exists:vendors,referral_code',
+            // The consent tick is enforced here as well as in the browser — the
+            // Business is agreeing to obligations (clause 9) we later rely on.
+            'terms' => 'accepted',
+        ], [
+            'terms.accepted' => 'Please accept the Terms and Conditions and the Privacy Policy to continue.',
         ]);
 
         $referrer = null;

@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\VendorRegistrationController;
 use App\Http\Controllers\Auth\CustomerRegistrationController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\PageController;
 
 // Public customer-facing pages. Employees are kept out (bounced to their panel)
 // so staff accounts can't wander onto the discovery/booking site.
@@ -39,6 +43,20 @@ Route::middleware(['employee.panel.only'])->group(function () {
 Route::get('/vendors/{vendor:slug}/queue-status', [\App\Http\Controllers\CustomerDiscoveryController::class, 'queueStatus'])->name('vendor.queue-status');
 // Latest 5 reviews, optionally filtered by star rating (?rating=N)
 Route::get('/vendors/{vendor:slug}/reviews-list', [\App\Http\Controllers\CustomerDiscoveryController::class, 'reviewsList'])->name('vendor.reviews.list');
+
+/*
+| Public content pages. Deliberately outside the `employee.panel.only` group:
+| the legal pages and the support form have to be reachable by everyone,
+| including staff accounts, and they carry no discovery/booking surface.
+*/
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/terms', [PageController::class, 'terms'])->name('terms');
+Route::get('/privacy', [PageController::class, 'privacy'])->name('privacy');
+
+Route::get('/contact', [ContactController::class, 'show'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store'])
+    ->middleware('throttle:5,10') // 5 enquiries per 10 minutes per IP
+    ->name('contact.store');
 
 // PWA manifest (dynamic so icon URLs are absolute; branded as the project + our icon)
 Route::get('/manifest.webmanifest', [\App\Http\Controllers\ManifestController::class, 'site'])->name('manifest.site');
@@ -80,6 +98,18 @@ Route::middleware(['redirect.role.auth'])->group(function () {
 
     Route::get('/register', [CustomerRegistrationController::class, 'create'])->name('register');
     Route::post('/register', [CustomerRegistrationController::class, 'store']);
+
+    // Password recovery. Throttled because both endpoints send mail and the
+    // request one accepts any address.
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('throttle:5,10')
+        ->name('password.email');
+
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])
+        ->middleware('throttle:5,10')
+        ->name('password.update');
 });
 
 Route::post('/logout', [SessionController::class, 'destroy'])->name('logout');
@@ -105,6 +135,13 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::get('/plans', [\App\Http\Controllers\Vendor\ProfileController::class, 'plans'])->name('vendor.plans');
     Route::post('/status/toggle', [\App\Http\Controllers\Vendor\ProfileController::class, 'toggleStatus'])->name('vendor.status.toggle');
 
+    // Booking reports — on-screen builder plus CSV/Excel download. Free-trial
+    // and Premium shops only; Basic/Standard are bounced to the plans page.
+    Route::middleware('reports.access')->group(function () {
+        Route::get('/reports', [\App\Http\Controllers\Vendor\ReportController::class, 'index'])->name('vendor.reports.index');
+        Route::get('/reports/export', [\App\Http\Controllers\Vendor\ReportController::class, 'export'])->name('vendor.reports.export');
+    });
+
     Route::get('/reviews', [\App\Http\Controllers\Vendor\ReviewController::class, 'index'])->name('vendor.reviews.index');
     Route::post('/reviews/{review}/report', [\App\Http\Controllers\Vendor\ReviewController::class, 'report'])->name('vendor.reviews.report');
 
@@ -114,8 +151,20 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
 });
 
 // Admin Panel
-Route::middleware(['auth'])->prefix('admin')->group(function () {
+// `admin.only` is not optional here: this group ran on bare `auth`, so any
+// signed-in customer or vendor could open vendor management, settlements and
+// the platform booking report simply by typing the URL.
+Route::middleware(['auth', 'admin.only'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
+
+    // Every booking on the platform, paginated and filterable. The tracking
+    // counterpart of /admin/reports, which exists to export rather than browse.
+    Route::get('/bookings', [\App\Http\Controllers\Admin\BookingController::class, 'index'])->name('admin.bookings.index');
+
+    // Platform-wide booking reports, mirroring the vendor panel's.
+    Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('admin.reports.index');
+    Route::get('/reports/export', [\App\Http\Controllers\Admin\ReportController::class, 'export'])->name('admin.reports.export');
+
     Route::resource('/plans', \App\Http\Controllers\Admin\PlanController::class, ['as' => 'admin']);
     Route::resource('/vendors', \App\Http\Controllers\Admin\VendorController::class, ['as' => 'admin'])->only(['index', 'show', 'destroy', 'update']);
     Route::post('/vendors/{vendor}/approve',   [\App\Http\Controllers\Admin\VendorController::class, 'approve'])->name('admin.vendors.approve');
@@ -125,6 +174,20 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('admin.reviews.index');
     Route::delete('/reviews/{review}', [\App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
     Route::post('/reviews/{review}/unreport', [\App\Http\Controllers\Admin\ReviewController::class, 'unreport'])->name('admin.reviews.unreport');
+
+    // Contact-form inbox: read enquiries and reply to the sender by email.
+    Route::get('/contacts', [\App\Http\Controllers\Admin\ContactMessageController::class, 'index'])->name('admin.contacts.index');
+    Route::get('/contacts/{contact}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'show'])->name('admin.contacts.show');
+    Route::post('/contacts/{contact}/reply', [\App\Http\Controllers\Admin\ContactMessageController::class, 'reply'])
+        ->middleware('throttle:20,10')
+        ->name('admin.contacts.reply');
+    Route::patch('/contacts/{contact}/status', [\App\Http\Controllers\Admin\ContactMessageController::class, 'updateStatus'])->name('admin.contacts.status');
+    Route::delete('/contacts/{contact}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'destroy'])->name('admin.contacts.destroy');
+
+    // Content and contact details behind the public About/Contact/legal pages.
+    Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('admin.settings.index');
+    Route::post('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'update'])->name('admin.settings.update');
+    Route::post('/settings/reset', [\App\Http\Controllers\Admin\SettingController::class, 'reset'])->name('admin.settings.reset');
 
     Route::get('/settlements', [\App\Http\Controllers\Admin\SettlementController::class, 'index'])->name('admin.settlements.index');
     Route::get('/settlements/{id}', [\App\Http\Controllers\Admin\SettlementController::class, 'show'])->name('admin.settlements.show');
@@ -136,6 +199,9 @@ Route::middleware(['auth', 'ensure.vendor.active'])->prefix('employee')->name('e
     Route::get('/dashboard', [\App\Http\Controllers\Employee\DashboardController::class, 'index'])->name('dashboard');
     Route::post('/mark-done', [\App\Http\Controllers\Employee\DashboardController::class, 'markDone'])->name('mark-done');
     Route::post('/cancel', [\App\Http\Controllers\Employee\DashboardController::class, 'cancel'])->name('cancel');
+    // Passing over a customer the specialist cannot serve. Same queue mechanics
+    // as cancel; different message to the customer (rebook / call the shop).
+    Route::post('/skip', [\App\Http\Controllers\Employee\DashboardController::class, 'skip'])->name('skip');
     Route::post('/toggle-pause', [\App\Http\Controllers\Employee\DashboardController::class, 'togglePause'])->name('toggle-pause');
 });
 

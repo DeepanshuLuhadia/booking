@@ -131,11 +131,23 @@ class BookingController extends Controller
         return back()->with('success', "{$employee->name} now serving #" . $employee->fresh()->now_serving_token);
     }
 
+    /**
+     * Pass over a customer the shop cannot serve. Closes the booking and moves
+     * the queue on exactly as a cancellation does — the difference is what the
+     * customer hears: skipped for non-availability, please rebook or call us.
+     */
     public function skipToken(Booking $booking)
     {
         $vendor = auth()->user()->vendor;
         if ($booking->vendor_id !== $vendor->id) {
             abort(403);
+        }
+
+        // A booking that has already been completed, cancelled or expired is
+        // done with; skipping it again would re-notify a customer who has long
+        // since left and drag now_serving backwards behind the live queue.
+        if ($booking->status !== 'confirmed' && $booking->status !== 'pending') {
+            return back()->with('error', 'That appointment is already closed.');
         }
 
         $booking->update(['status' => 'skipped']);
@@ -146,7 +158,11 @@ class BookingController extends Controller
         $this->notifier->skipped($booking, 'vendor');
         $this->notifier->queueAdvanced($booking->employee);
 
-        return back()->with('success', 'Token #' . $booking->token_number . ' skipped.');
+        $label = $booking->token_number
+            ? 'Token #' . $booking->token_number
+            : $booking->customer_name . "'s appointment";
+
+        return back()->with('success', $label . ' skipped — the customer has been asked to rebook.');
     }
 
     /**

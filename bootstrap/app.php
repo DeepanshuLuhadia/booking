@@ -36,6 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'redirect.role.auth' => \App\Http\Middleware\RedirectRoleAuthenticated::class,
             'employee.panel.only' => \App\Http\Middleware\RedirectEmployeeToPanel::class,
             'ensure.vendor.active' => \App\Http\Middleware\EnsureVendorActive::class,
+            'admin.only' => \App\Http\Middleware\EnsureAdmin::class,
+            'reports.access' => \App\Http\Middleware\EnsureReportAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

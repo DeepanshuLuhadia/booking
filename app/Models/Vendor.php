@@ -15,7 +15,7 @@ class Vendor extends Model
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
         'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
         'global_opening_time', 'global_closing_time', 'allow_booking_until_closing', 'show_contact_number',
-        'bookings_paused', 'is_verified'
+        'require_customer_details', 'bookings_paused', 'is_verified'
     ];
 
     protected $casts = [
@@ -27,6 +27,7 @@ class Vendor extends Model
         'is_profile_complete' => 'boolean',
         'allow_booking_until_closing' => 'boolean',
         'show_contact_number' => 'boolean',
+        'require_customer_details' => 'boolean',
         'bookings_paused' => 'boolean',
         'is_verified' => 'boolean',
     ];
@@ -222,6 +223,25 @@ class Vendor extends Model
     {
         return $this->subscription_expires_at !== null
             && $this->subscription_expires_at->isFuture();
+    }
+
+    /**
+     * Whether this shop may reach the booking-reports section.
+     *
+     * Reports sit at the two ends of the plan ladder and nowhere in between:
+     * a shop on the free trial gets them (so the feature is visible before
+     * anyone pays for anything), and a shop that bought Premium gets them.
+     * Basic and Standard do not — for those, reporting is the reason to
+     * upgrade, so the section is hidden rather than shown locked.
+     *
+     * A vendor with no plan on file falls through to false; every gate in this
+     * codebase treats a missing plan as no entitlement.
+     */
+    public function hasReportAccess(): bool
+    {
+        $plan = $this->subscriptionPlan;
+
+        return $plan !== null && ($plan->isFree() || $plan->isPremium());
     }
 
     public function isSubscriptionActive()

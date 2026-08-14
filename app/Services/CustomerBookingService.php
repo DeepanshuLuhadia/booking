@@ -23,6 +23,12 @@ use Illuminate\Http\Request;
  * Identity for a guest is the phone number recorded at booking time, which
  * BookingController writes to both the session and a 30-day cookie. Signed-in
  * customers are matched on their user id as well.
+ *
+ * A shop may switch the details form off entirely (Vendor::
+ * $require_customer_details), in which case there is no phone number to
+ * identify anyone by. Every booking therefore also carries a `guest_key` —
+ * an opaque per-device id held in the same session/cookie pair — so an
+ * anonymous booking still belongs to the device that made it.
  */
 class CustomerBookingService
 {
@@ -51,9 +57,14 @@ class CustomerBookingService
     private const REMEMBERED_PHONES = 5;
 
     /**
-     * The identity this request carries: [phones, customerId]. `phones` may be
-     * empty and `customerId` null; when both are, the visitor has no bookings
-     * we can find.
+     * Session/cookie name holding this device's opaque guest id.
+     */
+    private const GUEST_KEY = 'guest_key';
+
+    /**
+     * The identity this request carries: [phones, customerId, guestKey]. Any of
+     * the three may be empty/null; when all are, the visitor has no bookings we
+     * can find.
      *
      * Every number this device has booked with is kept, not just the last one.
      * Storing a single number meant that booking for a second person overwrote
@@ -81,18 +92,81 @@ class CustomerBookingService
             ->merge($this->decodePhones($request->cookie('customer_phones')))
             ->filter(fn ($phone) => filled($phone))
             ->map(fn ($phone) => (string) $phone)
+            /*
+            | Only something shaped like a real phone number may be looked up.
+            |
+            | A booking made at a shop that collects no details is filed under
+            | the literal "Anonymous" so the vendor's sheet reads sensibly — and
+            | ?phone= is accepted from the URL. Without this filter, visiting
+            | ?phone=Anonymous would match every anonymous booking on the
+            | platform. Nothing legitimate is lost: every number that reaches
+            | the session or cookie came through a `digits:10` rule.
+            */
+            ->filter(fn ($phone) => ctype_digit($phone) && strlen($phone) >= 6 && strlen($phone) <= 15)
             ->unique()
             ->values()
             ->all();
 
-        return [$phones, auth()->check() ? auth()->id() : null];
+        return [
+            $phones,
+            auth()->check() ? auth()->id() : null,
+            $this->guestKey($request),
+        ];
     }
 
     public function isIdentified(?Request $request = null, bool $allowQueryPhone = true): bool
     {
-        [$phones, $customerId] = $this->identify($request, $allowQueryPhone);
+        [$phones, $customerId, $guestKey] = $this->identify($request, $allowQueryPhone);
 
-        return $phones !== [] || $customerId !== null;
+        return $phones !== [] || $customerId !== null || $guestKey !== null;
+    }
+
+    /**
+     * This device's guest id, or null if it has never booked.
+     *
+     * Unlike the phone list this is never accepted from the URL — it is the
+     * whole of an anonymous customer's identity, so it may only come from
+     * somewhere the visitor cannot type into.
+     */
+    public function guestKey(?Request $request = null): ?string
+    {
+        $request = $request ?? request();
+
+        $key = $this->sessionFor($request)?->get(self::GUEST_KEY)
+            ?? $request->cookie(self::GUEST_KEY);
+
+        return filled($key) ? (string) $key : null;
+    }
+
+    /**
+     * The guest id to stamp on a booking being made right now, minting one if
+     * this device does not have it yet. Written to the session (this visit) and
+     * a 30-day cookie (the next one), exactly as remember() does for phones.
+     */
+    public function ensureGuestKey(?Request $request = null): string
+    {
+        $request = $request ?? request();
+
+        $key = $this->guestKey($request) ?? (string) \Illuminate\Support\Str::uuid();
+
+        $this->sessionFor($request)?->put(self::GUEST_KEY, $key);
+        \Illuminate\Support\Facades\Cookie::queue(self::GUEST_KEY, $key, 60 * 24 * 30);
+
+        return $key;
+    }
+
+    /**
+     * The session belonging to THIS request, or null if it has none.
+     *
+     * Read through the request rather than the session() helper: the helper
+     * resolves a process-wide singleton, so two requests handled in one process
+     * would share a guest key — and the guest key is the whole of an anonymous
+     * customer's identity, so sharing it would hand one visitor another's
+     * bookings.
+     */
+    private function sessionFor(Request $request): ?\Illuminate\Contracts\Session\Session
+    {
+        return $request->hasSession() ? $request->session() : null;
     }
 
     /**
@@ -270,13 +344,19 @@ class CustomerBookingService
      * Deliberately stricter than the read path: a ?phone= in the URL is never
      * accepted here, so knowing (or guessing) somebody's number cannot be used
      * to cancel their appointment. Only a number this device actually booked
-     * with — or the signed-in customer's own id — counts.
+     * with — its guest id, or the signed-in customer's own id — counts.
      */
     public function owns(Booking $booking, ?Request $request = null): bool
     {
-        [$phones, $customerId] = $this->identify($request, false);
+        [$phones, $customerId, $guestKey] = $this->identify($request, false);
 
         if ($customerId !== null && (int) $booking->customer_id === (int) $customerId) {
+            return true;
+        }
+
+        // The only handle on a booking made without any customer details.
+        if ($guestKey !== null && $booking->guest_key !== null
+            && hash_equals((string) $booking->guest_key, $guestKey)) {
             return true;
         }
 
@@ -379,24 +459,27 @@ class CustomerBookingService
      */
     private function query(array $statuses, ?Request $request = null, bool $allowQueryPhone = true)
     {
-        [$phones, $customerId] = $this->identify($request, $allowQueryPhone);
+        [$phones, $customerId, $guestKey] = $this->identify($request, $allowQueryPhone);
 
         $query = Booking::query()
             ->whereIn('status', $statuses)
             ->where('booking_date', '>=', $this->windowStart())
             ->with(['employee', 'vendor']);
 
-        if ($phones === [] && $customerId === null) {
+        if ($phones === [] && $customerId === null && $guestKey === null) {
             // No identity: match nothing rather than everything.
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function ($q) use ($phones, $customerId) {
+        return $query->where(function ($q) use ($phones, $customerId, $guestKey) {
             if ($phones !== []) {
                 $q->whereIn('customer_phone', $phones);
             }
             if ($customerId !== null) {
                 $q->orWhere('customer_id', $customerId);
+            }
+            if ($guestKey !== null) {
+                $q->orWhere('guest_key', $guestKey);
             }
         });
     }

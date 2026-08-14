@@ -120,11 +120,15 @@
                                     useGPS() {
                                         this.locating = true;
                                         const form = $el.closest('form');
-                                        window.detectLocation()
+                                        /* Asks again even if location was refused before;
+                                           if the browser has stopped prompting, the helper
+                                           opens the how-to-enable modal instead. */
+                                        window.requestLocationWithHelp()
                                             .then(() => form.submit())
                                             .catch((error) => {
                                                 this.locating = false;
                                                 console.warn('Geolocation failed', error);
+                                                if (error && error.handled) return;
                                                 const message = error && error.message === 'unsupported'
                                                     ? 'GPS not supported by this browser.'
                                                     : 'Could not get your location. Please allow access and retry.';

@@ -21,7 +21,9 @@ class SessionController extends Controller
             'password' => ['required'],
         ]);
 
-        if (!Auth::attempt($attributes)) {
+        // The login form has always offered a "Remember" checkbox; it was never
+        // passed through, so the box did nothing.
+        if (!Auth::attempt($attributes, $request->boolean('remember'))) {
             throw ValidationException::withMessages([
                 'email' => 'Your provided credentials could not be verified.'
             ]);

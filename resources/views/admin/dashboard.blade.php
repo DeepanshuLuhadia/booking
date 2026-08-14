@@ -9,19 +9,19 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Total Revenue</p>
-                <h3 class="text-3xl font-black text-slate-950">₹{{ number_format($stats['total_revenue'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">₹{{ number_format($stats['total_revenue'] / 1000, 1) }}k+</h3>
             </div>
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Active Vendors</p>
-                <h3 class="text-3xl font-black text-slate-950">{{ number_format($stats['active_vendors'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">{{ number_format($stats['active_vendors'] / 1000, 1) }}k+</h3>
             </div>
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Total Bookings</p>
-                <h3 class="text-3xl font-black text-slate-950">{{ number_format($stats['total_bookings'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">{{ number_format($stats['total_bookings'] / 1000, 1) }}k+</h3>
             </div>
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Active Users</p>
-                <h3 class="text-3xl font-black text-slate-950">{{ number_format($stats['active_users'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">{{ number_format($stats['active_users'] / 1000, 1) }}k+</h3>
             </div>
         </div>
 

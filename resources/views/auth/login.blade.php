@@ -27,6 +27,14 @@
                 <form method="POST" action="/login" class="p-6 md:p-8 space-y-6 md:space-y-8 rounded-[3rem]">
                     @csrf
 
+                    {{-- Confirmation carried over from a completed password reset --}}
+                    @if(session('status'))
+                        <div class="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex gap-4">
+                            <svg class="w-6 h-6 shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <p class="text-sm font-bold text-emerald-300 leading-relaxed">{{ session('status') }}</p>
+                        </div>
+                    @endif
+
                     <div class="space-y-2">
                         <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-4 md:ml-6">Email
                             Address</label>
@@ -57,7 +65,7 @@
                                 class="w-4 h-4 md:w-5 md:h-5 rounded border-2 border-white/20 bg-white/5 text-orange-500">
                             <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/60">Remember</span>
                         </label>
-                        <a href="#"
+                        <a href="{{ route('password.request') }}"
                             class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Forgot Password</a>
                     </div>
 

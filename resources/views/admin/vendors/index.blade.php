@@ -32,7 +32,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($vendors as $vendor)
+                        @forelse($vendors as $vendor)
                             <tr class="border-b border-white/10 hover:bg-white/5/30 transition-all">
                                 <td class="p-4">
                                     <div class="font-black text-white text-sm">{{ $vendor->business_name }}</div>
@@ -102,10 +102,18 @@
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="5" class="p-12 text-center text-slate-500 font-black uppercase tracking-widest text-xs italic">
+                                    No {{ ($status ?? 'all') === 'all' ? '' : $status . ' ' }}vendors found.
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
+
+            <x-admin-pagination :paginator="$vendors" label="vendors" />
         </div>
     </div>
 </x-admin-layout>

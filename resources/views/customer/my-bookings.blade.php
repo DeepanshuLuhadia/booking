@@ -183,12 +183,24 @@
                                             · {{ $booking['slot_time'] }}
                                         @endif
                                     </p>
+
+                                    {{-- A skip is the one outcome the customer cannot work out
+                                         from the chip alone: their turn went past without being
+                                         served, and rebooking is on them. --}}
+                                    @if($booking['status'] === 'skipped')
+                                        <p class="text-amber-300/70 text-[11px] font-medium mt-2 normal-case tracking-normal">
+                                            Skipped due to non-availability — your turn has passed. Please book again,
+                                            or contact {{ $booking['vendor_name'] }} to reschedule.
+                                        </p>
+                                    @endif
                                 </div>
 
                                 @php
-                                    $tone = $booking['status'] === 'completed'
-                                        ? 'bg-emerald-500/15 text-emerald-300'
-                                        : 'bg-white/5 text-white/40';
+                                    $tone = match($booking['status']) {
+                                        'completed' => 'bg-emerald-500/15 text-emerald-300',
+                                        'skipped'   => 'bg-amber-500/15 text-amber-300',
+                                        default     => 'bg-white/5 text-white/40',
+                                    };
                                 @endphp
                                 <span class="shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest {{ $tone }}">
                                     {{ $booking['status_label'] }}
@@ -353,7 +365,7 @@
 
                         window.Echo.channel(`queue.${id}`)
                             .listen('.queue.updated', (e) => {
-                                let closed = false;
+                                let closed = null;
 
                                 this.bookings = this.bookings.map((booking) => {
                                     if (booking.employee_id !== e.employee_id) return booking;
@@ -362,7 +374,7 @@
                                     // it is no longer live, so drop it from the list.
                                     if (e.changed && e.changed.booking_id === booking.id
                                         && e.changed.status !== 'confirmed' && e.changed.status !== 'pending') {
-                                        closed = true;
+                                        closed = e.changed.status;
                                         return null;
                                     }
 
@@ -384,7 +396,12 @@
                                 }).filter(Boolean);
 
                                 if (closed) {
-                                    window.Realtime.toast('One of your bookings was closed by the business.', 'info');
+                                    // A skip is worth spelling out — the customer is
+                                    // usually still waiting and has to rebook.
+                                    const note = closed === 'skipped'
+                                        ? 'Your appointment was skipped due to non-availability. Please book again or contact the business.'
+                                        : 'One of your bookings was closed by the business.';
+                                    window.Realtime.toast(note, 'info');
                                     // Server-rendered history and the nav badge need
                                     // a round trip to catch up.
                                     setTimeout(() => window.location.reload(), 2500);

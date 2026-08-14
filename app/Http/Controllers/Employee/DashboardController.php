@@ -60,9 +60,20 @@ class DashboardController extends Controller
     }
 
     /**
+     * Pass over a customer the specialist cannot serve right now. Mechanically
+     * identical to a cancellation — the booking closes and the queue moves to
+     * the next person — but the customer is told it was for non-availability
+     * and that they need to rebook, rather than just that it is off.
+     */
+    public function skip(Request $request)
+    {
+        return $this->transition($request, 'skipped', 'Appointment skipped — the customer has been asked to rebook.');
+    }
+
+    /**
      * Move a booking owned by the current employee to the given status and
-     * advance the token queue past it (a completed/cancelled customer frees
-     * the counter for the next one).
+     * advance the token queue past it (a completed/cancelled/skipped customer
+     * frees the counter for the next one).
      */
     private function transition(Request $request, string $status, string $message)
     {
@@ -104,11 +115,11 @@ class DashboardController extends Controller
         */
         $notifier = app(\App\Services\BookingNotifier::class);
 
-        if ($status === 'completed') {
-            $notifier->completed($booking, 'employee');
-        } else {
-            $notifier->cancelledByShop($booking, 'employee');
-        }
+        match ($status) {
+            'completed' => $notifier->completed($booking, 'employee'),
+            'skipped'   => $notifier->skipped($booking, 'employee'),
+            default     => $notifier->cancelledByShop($booking, 'employee'),
+        };
 
         $notifier->queueAdvanced($employee);
 

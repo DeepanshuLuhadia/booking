@@ -289,9 +289,29 @@
 
                 <!-- SUBMIT -->
                 <div class="flex flex-col md:flex-row items-start justify-between gap-8 md:gap-12 pt-0">
-                    <p class="text-white/60 font-medium italic max-w-lg text-center md:text-left text-sm px-2">
-                        By submitting this form, you agree to our terms and conditions.
-                    </p>
+                    {{-- Consent is a hard gate, not a footnote: the box has to be
+                         ticked before the form will submit, and the server checks it
+                         again so a stripped-out attribute cannot get past it. --}}
+                    <div class="max-w-lg px-2 space-y-2">
+                        <label for="terms" class="flex items-start gap-3 cursor-pointer text-white/70 font-medium italic text-sm text-left">
+                            <input type="checkbox"
+                                   name="terms"
+                                   id="terms"
+                                   value="1"
+                                   required
+                                   @checked(old('terms'))
+                                   class="mt-0.5 w-5 h-5 shrink-0 cursor-pointer rounded-md border-2 border-white/30 bg-white/10 text-emerald-500 focus:ring-2 focus:ring-emerald-400/60 focus:ring-offset-0">
+                            <span>
+                                I have read and agree to the
+                                <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="underline decoration-white/30 underline-offset-4 hover:text-white" @click.stop>Terms and Conditions</a>
+                                and the
+                                <a href="{{ route('privacy') }}" target="_blank" rel="noopener" class="underline decoration-white/30 underline-offset-4 hover:text-white" @click.stop>Privacy Policy</a>.
+                            </span>
+                        </label>
+                        @error('terms')
+                            <p class="text-rose-300 font-bold text-xs italic ml-8">{{ $message }}</p>
+                        @enderror
+                    </div>
                     <button type="submit" class="btn-premium mx-auto w-full md:w-auto px-10 md:px-8 !rounded-2xl md:!rounded-[2rem] !text-lg md:!text-xl">
                         Create Business Account
                         <svg class="w-4 h-4 md:w-4 md:h-4 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>

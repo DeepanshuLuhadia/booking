@@ -15,7 +15,9 @@
                         '': { label: 'Matrix: All States', icon: '🌐' },
                         'confirmed': { label: 'State: Confirmed', icon: '✅' },
                         'completed': { label: 'State: Completed', icon: '🏆' },
-                        'cancelled': { label: 'State: Cancelled', icon: '❌' }
+                        'cancelled': { label: 'State: Cancelled', icon: '❌' },
+                        'skipped': { label: 'State: Skipped', icon: '⏭️' },
+                        'expired': { label: 'State: Expired', icon: '⌛' }
                     },
                     get selectedLabel() {
                         return this.options[this.selected]?.label || 'Select State';
@@ -111,6 +113,7 @@
                             'confirmed' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
                             'cancelled' => 'bg-rose-50 text-rose-600 border-rose-100',
                             'completed' => 'bg-blue-50 text-blue-600 border-blue-100',
+                            'skipped' => 'bg-amber-50 text-amber-600 border-amber-100',
                             default => 'bg-white/5 text-slate-300 border-white/10'
                             };
                             @endphp
@@ -121,9 +124,13 @@
                         <td class="px-10 py-8 text-right">
                             <div class="flex items-center justify-end gap-3">
                                 @if($booking->status === 'confirmed')
-                                    <form action="{{ route('vendor.skip-token', $booking) }}" method="POST" class="inline">
+                                    {{-- Skip: closes the booking and moves the queue on, the same
+                                         as a cancel, but tells the customer it was for
+                                         non-availability and that they need to rebook. --}}
+                                    <form action="{{ route('vendor.skip-token', $booking) }}" method="POST" class="inline"
+                                          onsubmit="return confirm('SKIP THIS APPOINTMENT? THE CUSTOMER WILL BE TOLD YOU ARE UNAVAILABLE AND ASKED TO REBOOK.')">
                                         @csrf
-                                        <button type="submit" title="Skip Token" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-amber-600 transition-all border border-amber-100">
+                                        <button type="submit" title="Skip — customer unavailable to be served" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all border border-amber-100">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                         </button>
                                     </form>

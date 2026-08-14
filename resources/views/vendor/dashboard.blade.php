@@ -168,6 +168,7 @@
                                             $color = match($booking->status) {
                                                 'confirmed' => 'bg-emerald-50 text-emerald-600',
                                                 'cancelled' => 'bg-rose-50 text-rose-600',
+                                                'skipped'   => 'bg-amber-50 text-amber-600',
                                                 'completed' => 'bg-white/10 text-slate-400',
                                                 default => 'bg-white/5 text-slate-400'
                                             };
@@ -182,6 +183,15 @@
                                                     @method('PATCH')
                                                     <button type="submit" title="Mark as Complete" class="p-2 border border-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors">
                                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                                    </button>
+                                                </form>
+                                                {{-- Skip: the queue moves on and the customer is told to
+                                                     rebook, rather than the slot silently going away. --}}
+                                                <form action="{{ route('vendor.skip-token', $booking) }}" method="POST" class="inline m-0"
+                                                      onsubmit="return confirm('Skip this appointment? The customer will be told you are unavailable and asked to rebook.')">
+                                                    @csrf
+                                                    <button type="submit" title="Skip — customer unavailable to be served" class="p-2 border border-amber-100 text-amber-600 rounded-lg hover:bg-amber-600 hover:text-white transition-colors">
+                                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                                     </button>
                                                 </form>
                                             @endif

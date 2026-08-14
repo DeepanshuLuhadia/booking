@@ -130,27 +130,40 @@
                         </div>
                     </div>
 
-                    {{-- Complete / Cancel — stacked on mobile, side-by-side on larger screens --}}
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    {{-- Complete / Skip / Cancel — stacked on mobile, side-by-side on larger screens.
+                         Skip is the middle ground between the two: the customer could not be
+                         served, the queue moves on, and they are told to rebook or call the shop. --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <form action="{{ route('employee.mark-done') }}" method="POST">
                             @csrf
                             <input type="hidden" name="booking_id" value="{{ $currentBooking->id }}">
-                            <button type="submit" class="emp-btn-complete group w-full py-4 sm:py-5 px-5 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                            <button type="submit" class="emp-btn-complete group w-full py-4 sm:py-5 px-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5">
                                 <span class="emp-btn-ico w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                                 </span>
-                                <span class="font-black text-sm sm:text-base uppercase tracking-wide whitespace-nowrap">Mark Complete</span>
+                                <span class="font-black text-[13px] sm:text-sm uppercase tracking-wide whitespace-nowrap">Complete</span>
+                            </button>
+                        </form>
+                        <form action="{{ route('employee.skip') }}" method="POST"
+                              onsubmit="return confirm('Skip this appointment? The customer will be told you are unavailable and asked to rebook.');">
+                            @csrf
+                            <input type="hidden" name="booking_id" value="{{ $currentBooking->id }}">
+                            <button type="submit" class="emp-btn-skip group w-full py-4 sm:py-5 px-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5">
+                                <span class="emp-btn-ico w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                </span>
+                                <span class="font-black text-[13px] sm:text-sm uppercase tracking-wide whitespace-nowrap">Skip</span>
                             </button>
                         </form>
                         <form action="{{ route('employee.cancel') }}" method="POST"
                               onsubmit="return confirm('Cancel this appointment? This cannot be undone.');">
                             @csrf
                             <input type="hidden" name="booking_id" value="{{ $currentBooking->id }}">
-                            <button type="submit" class="emp-btn-cancel group w-full py-4 sm:py-5 px-5 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                            <button type="submit" class="emp-btn-cancel group w-full py-4 sm:py-5 px-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2.5">
                                 <span class="emp-btn-ico w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </span>
-                                <span class="font-black text-sm sm:text-base uppercase tracking-wide whitespace-nowrap">Mark Cancel</span>
+                                <span class="font-black text-[13px] sm:text-sm uppercase tracking-wide whitespace-nowrap">Cancel</span>
                             </button>
                         </form>
                     </div>
@@ -220,16 +233,28 @@
                                     <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-3">Token #{{ $booking->token_number }}</p>
                                 @endif
 
-                                {{-- Cancel this upcoming booking (does not touch the token queue) --}}
-                                <form action="{{ route('employee.cancel') }}" method="POST" class="mt-4 pt-4 border-t border-white/10"
-                                      onsubmit="return confirm('Cancel this booking? This cannot be undone.');">
-                                    @csrf
-                                    <input type="hidden" name="booking_id" value="{{ $booking->id }}">
-                                    <button type="submit" class="emp-btn-cancel-soft w-full py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                                        Cancel Booking
-                                    </button>
-                                </form>
+                                {{-- Skip / cancel this upcoming booking. Neither touches the
+                                     token queue — only the head of the queue advances it. --}}
+                                <div class="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-2">
+                                    <form action="{{ route('employee.skip') }}" method="POST"
+                                          onsubmit="return confirm('Skip this booking? The customer will be told you are unavailable and asked to rebook.');">
+                                        @csrf
+                                        <input type="hidden" name="booking_id" value="{{ $booking->id }}">
+                                        <button type="submit" class="emp-btn-skip-soft w-full py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                            Skip
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('employee.cancel') }}" method="POST"
+                                          onsubmit="return confirm('Cancel this booking? This cannot be undone.');">
+                                        @csrf
+                                        <input type="hidden" name="booking_id" value="{{ $booking->id }}">
+                                        <button type="submit" class="emp-btn-cancel-soft w-full py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                            Cancel
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         @endforeach
                     </div>
@@ -256,6 +281,10 @@
         .emp-btn-cancel:hover { background: linear-gradient(135deg, #fda4af 0%, #f87171 50%, #e11d48 100%) !important; }
         .emp-btn-cancel-soft { background: linear-gradient(135deg, rgba(251,113,133,0.20), rgba(190,18,60,0.12)) !important; border: 1px solid rgba(251,113,133,0.40); color: #fecaca !important; }
         .emp-btn-cancel-soft:hover { background: linear-gradient(135deg, rgba(251,113,133,0.32), rgba(190,18,60,0.22)) !important; color: #fff !important; }
+        .emp-btn-skip { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 55%, #d97706 100%) !important; color: #fff !important; box-shadow: 0 14px 30px -14px rgba(245,158,11,0.65); }
+        .emp-btn-skip:hover { background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 55%, #f59e0b 100%) !important; }
+        .emp-btn-skip-soft { background: linear-gradient(135deg, rgba(251,191,36,0.20), rgba(217,119,6,0.12)) !important; border: 1px solid rgba(251,191,36,0.40); color: #fde68a !important; }
+        .emp-btn-skip-soft:hover { background: linear-gradient(135deg, rgba(251,191,36,0.32), rgba(217,119,6,0.22)) !important; color: #fff !important; }
         .emp-btn-pause { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 55%, #ea580c 100%) !important; color: #fff !important; box-shadow: 0 14px 30px -14px rgba(245,158,11,0.6); }
         .emp-btn-pause:hover { background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 55%, #f97316 100%) !important; }
         .emp-btn-resume { background: linear-gradient(135deg, #34d399 0%, #059669 55%, #047857 100%) !important; color: #fff !important; box-shadow: 0 14px 30px -14px rgba(16,185,129,0.65); }
@@ -316,6 +345,9 @@
                     const messages = {
                         created:   `New booking — ${who}${e.booking?.token_number ? ' (token #' + e.booking.token_number + ')' : ''}`,
                         cancelled: e.actor === 'customer' ? `${who} cancelled their booking` : null,
+                        // A skip performed at the counter, not by this specialist —
+                        // their own skips already show a flash message.
+                        skipped:   e.actor === 'employee' ? null : `${who} was skipped by the shop`,
                         expired:   null,
                     };
 

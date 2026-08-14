@@ -271,6 +271,10 @@
                         <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block mb-1">Phone Number</label>
                         <input type="tel" x-model="guestPhone" maxlength="10" @input="guestPhone = guestPhone.replace(/[^0-9]/g, '')" class="premium-input w-full h-14 px-5 bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border" placeholder="10 Digit Phone Number">
                     </div>
+                    <div>
+                        <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block mb-1">Email <span class="text-white/30">(Optional)</span></label>
+                        <input type="email" x-model="guestEmail" maxlength="255" class="premium-input w-full h-14 px-5 bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border" placeholder="you@example.com">
+                    </div>
                 </div>
 
                 <div class="bg-black/40 rounded-[2rem] p-6 text-white mb-8 border border-white/5 flex justify-between items-center">
@@ -404,12 +408,22 @@
         function employeeBookingSystem() {
             return {
                 bookingModal: false,
+                submitting: false,
                 successModal: false,
                 confirmedToken: null,
                 confirmedTime: null,
                 selectedSlot: null,
                 guestName: '',
                 guestPhone: '{{ session('customer_phone') ?? request()->cookie('customer_phone') }}',
+                guestEmail: '',
+
+                /*
+                 * Does this business want to know who is booking? The choice is
+                 * the shop's, not this specialist's — see
+                 * Vendor::$require_customer_details. Off, the details modal is
+                 * skipped entirely and tapping a slot books it.
+                 */
+                requireDetails: {{ $vendor->require_customer_details ? 'true' : 'false' }},
 
                 // Set by the realtime listener when the shop closes out this
                 // customer's booking. Drives the outcome overlay above.
@@ -419,7 +433,7 @@
                     return {
                         completed: 'Appointment Complete',
                         cancelled: 'Booking Cancelled',
-                        skipped:   'Token Skipped',
+                        skipped:   'Appointment Skipped',
                         removed:   'Booking Removed',
                         expired:   'Booking Expired',
                     }[this.closedBooking?.status] ?? 'Booking Closed';
@@ -429,7 +443,7 @@
                     return {
                         completed: 'Thanks for visiting. You are free to book here again.',
                         cancelled: 'The business cancelled this booking. You are free to book again.',
-                        skipped:   'Your token was passed over. Please speak to the counter if you are still there.',
+                        skipped:   'The business could not serve you due to non-availability, so your turn has passed. Please book a new appointment or contact the business to reschedule.',
                         removed:   'The business removed this booking. You are free to book again.',
                         expired:   'The shift closed before your turn came up.',
                     }[this.closedBooking?.status] ?? 'You are free to book again.';
@@ -437,14 +451,28 @@
 
                 initiateBooking(slot) {
                     this.selectedSlot = slot;
+
+                    // No details wanted: the tap on the slot IS the booking.
+                    if (!this.requireDetails) {
+                        this.confirmBooking();
+                        return;
+                    }
+
                     this.bookingModal = true;
                 },
 
                 async confirmBooking() {
-                    if (!this.guestName || !this.guestPhone || this.guestPhone.length < 10) {
+                    if (this.requireDetails
+                        && (!this.guestName || !this.guestPhone || this.guestPhone.length < 10)) {
                         alert('Please fill out a valid name and 10-digit phone number.');
                         return;
                     }
+
+                    // Without the details modal in the way, the button books on a
+                    // single tap — so a double tap would post twice and meet the
+                    // server's "you already have a booking here" refusal.
+                    if (this.submitting) return;
+                    this.submitting = true;
 
                     try {
                         const response = await fetch('{{ route('bookings.store') }}', {
@@ -461,6 +489,7 @@
                                 booking_type: (this.selectedSlot && this.selectedSlot.is_premium) ? 'premium' : 'normal',
                                 customer_name: this.guestName,
                                 customer_phone: this.guestPhone,
+                                customer_email: this.guestEmail,
                                 fcm_token: window.fcmToken || null
                             })
                         });
@@ -491,13 +520,24 @@
                              * showing — the phone just entered is not the one it
                              * was remembered by. Reload identified by that number
                              * so the booking behind the refusal becomes visible.
+                             *
+                             * With no phone to reload by, the plain reload does
+                             * the same job: the guest key in the cookie is what
+                             * the server matched on, so the booking is already
+                             * ours to see.
                              */
                             if (result.bookings_url) {
-                                window.location.search = '?phone=' + encodeURIComponent(this.guestPhone);
+                                if (this.guestPhone) {
+                                    window.location.search = '?phone=' + encodeURIComponent(this.guestPhone);
+                                } else {
+                                    window.location.reload();
+                                }
                             }
                         }
                     } catch (e) {
                         alert('Error submitting booking.');
+                    } finally {
+                        this.submitting = false;
                     }
                 }
             };

@@ -192,12 +192,30 @@ class NotificationService
         );
     }
 
+    /**
+     * The shop passed this customer over because it could not serve them —
+     * the queue has already moved on to whoever was behind them.
+     *
+     * This has to say more than "you were skipped": the customer is usually
+     * sitting there waiting, and what they need to know is that the turn is
+     * gone, why, and that rebooking is on them. So it names the reason
+     * (unavailability), and gives both ways forward — book a fresh slot, or
+     * call the shop — including the number when the shop publishes one.
+     */
     public function notifyCustomerBookingSkipped($booking): void
     {
+        $shop  = $booking->vendor?->business_name ?? 'The business';
+        $phone = $booking->vendor?->show_contact_number ? $booking->vendor?->contact_number : null;
+
+        $contact = $phone
+            ? "contact {$shop} on {$phone}"
+            : "contact {$shop}";
+
         $this->notifyCustomer(
             $booking,
-            "Token Skipped",
-            "Token #{$booking->token_number} was skipped at {$booking->vendor?->business_name}. Please speak to the counter if you are still waiting.",
+            "Appointment Skipped",
+            "{$shop} has skipped your " . $this->bookingLabel($booking)
+                . " due to non-availability, so your turn has passed. Please book a new appointment or {$contact} to reschedule.",
             ['type' => 'booking_skipped']
         );
     }

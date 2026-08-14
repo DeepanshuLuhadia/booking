@@ -9,7 +9,8 @@ class Booking extends Model
 {
     protected $fillable = [
         'vendor_id', 'employee_id', 'customer_id', 'customer_name',
-        'customer_phone', 'booking_date', 'slot_start_time', 'slot_end_time',
+        'customer_phone', 'customer_email', 'guest_key',
+        'booking_date', 'slot_start_time', 'slot_end_time',
         'booking_type', 'token_required', 'token_number', 'token_amount', 'emergency_fee',
         'online_paid_amount', 'status', 'payment_id', 'razorpay_order_id',
         'razorpay_payment_id', 'vendor_booked', 'notes',

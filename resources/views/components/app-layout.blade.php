@@ -471,8 +471,8 @@
          * visitor and a suburb-level location.
          *
          * Nothing here can trap the visitor — every failure path (unsupported,
-         * denied, timed out) rejects, and the caller falls back to the manual
-         * picker exactly as before.
+         * denied, timed out) rejects, and the caller falls back to the retry
+         * screen, which can always be skipped.
          */
         window.detectLocation = function (options) {
             options = options || {};
@@ -505,6 +505,111 @@
             return navigator.permissions.query({ name: 'geolocation' })
                 .then(function (status) { return status.state; })
                 .catch(function () { return 'prompt'; });
+        };
+
+        /*
+         * How this device re-enables a location permission the visitor has
+         * already refused. Nothing on the page can undo a block — it lives in
+         * browser/OS settings — so all we can do is name the exact taps.
+         */
+        window.locationHelpSteps = function () {
+            var ua = navigator.userAgent || '';
+            var isIOS = /iPad|iPhone|iPod/.test(ua) ||
+                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            var isAndroid = /Android/.test(ua);
+            var isFirefox = /Firefox|FxiOS/.test(ua);
+            // CriOS/FxiOS are Chrome/Firefox on iOS — still Safari's engine, but
+            // their own permission entry, so they are named separately above.
+            var isSafari = /Safari/.test(ua) && !/Chrome|CriOS|Chromium|Edg|OPR/.test(ua);
+
+            if (isIOS) {
+                var iosBrowser = /CriOS/.test(ua) ? 'Chrome' : (/FxiOS/.test(ua) ? 'Firefox' : 'Safari');
+                return {
+                    device: 'iPhone / iPad',
+                    steps: [
+                        'Open the <b>Settings</b> app on your device.',
+                        'Go to <b>Privacy &amp; Security → Location Services</b> and turn it on.',
+                        'In the same list, tap <b>' + iosBrowser + '</b> and choose <b>While Using the App</b>.',
+                        'Return here and tap <b>Try Again</b> below.'
+                    ]
+                };
+            }
+
+            if (isAndroid) {
+                return {
+                    device: 'Android',
+                    steps: [
+                        'Tap the <b>lock</b> (or <b>⚙</b>) icon on the left of the address bar.',
+                        'Tap <b>Permissions → Location</b> and set it to <b>Allow</b>.',
+                        'If location is off for the whole phone, switch it on in <b>Settings → Location</b>.',
+                        'Return here and tap <b>Try Again</b> below.'
+                    ]
+                };
+            }
+
+            if (isFirefox) {
+                return {
+                    device: 'Firefox',
+                    steps: [
+                        'Click the <b>lock</b> icon on the left of the address bar.',
+                        'Find <b>Access Your Location — Blocked</b> and click the <b>✕</b> beside it.',
+                        'Reload the page, then allow location when Firefox asks.'
+                    ]
+                };
+            }
+
+            if (isSafari) {
+                return {
+                    device: 'Safari',
+                    steps: [
+                        'Open <b>Safari → Settings → Websites → Location</b>.',
+                        'Find this site in the list and set it to <b>Allow</b>.',
+                        'Return here and tap <b>Try Again</b> below.'
+                    ]
+                };
+            }
+
+            return {
+                device: 'Chrome / Edge',
+                steps: [
+                    'Click the <b>lock</b> (or <b>sliders</b>) icon on the left of the address bar.',
+                    'Set <b>Location</b> to <b>Allow</b>.',
+                    'Return here and click <b>Try Again</b> below.'
+                ]
+            };
+        };
+
+        /*
+         * What every location icon on the site runs when tapped.
+         *
+         * A refusal is not treated as a permanent answer: we call
+         * getCurrentPosition again regardless, so any browser still willing to
+         * prompt does so. Where the block is sticky (Chrome and Safari never
+         * re-prompt once denied) the call rejects with PERMISSION_DENIED
+         * without a prompt ever appearing — indistinguishable from a fresh
+         * refusal, and in both cases the only way forward is browser settings,
+         * so we raise the how-to-enable steps.
+         *
+         * Rejections carry `handled` when the steps were shown, so callers can
+         * skip their own error toast.
+         */
+        window.requestLocationWithHelp = function (options) {
+            return window.detectLocation(options).catch(function (error) {
+                // Only a permission block is fixable in settings; a timeout or
+                // a browser with no geolocation at all is left to the caller's
+                // toast, which says something truthful about those.
+                if (!error || error.code !== 1) throw error;
+
+                window.dispatchEvent(new CustomEvent('location-help'));
+
+                // Rethrown as our own error rather than tagging the browser's
+                // GeolocationPositionError, which is a host object we have no
+                // business adding properties to.
+                var handled = new Error(error.message || 'permission denied');
+                handled.code = error.code;
+                handled.handled = true;
+                throw handled;
+            });
         };
 
         /*
@@ -543,18 +648,10 @@
              showLocationModal: true,
              loading: false,
              /* 'detecting' is the opening state: we ask the device straight
-                away rather than making the visitor choose a city from a list
-                first. It falls back to 'gps' (retry) and then 'manual'. */
+                away rather than making the visitor choose anything. It falls
+                back to 'gps' (retry), which is the only other state — the
+                manual city picker is gone, so it's GPS or skip. */
              mode: 'detecting',
-             state: '',
-             city: '',
-             states: {
-                 'Delhi': ['New Delhi', 'South Delhi', 'North Delhi'],
-                 'Maharashtra': ['Mumbai', 'Pune', 'Nagpur'],
-                 'Karnataka': ['Bangalore', 'Mysore', 'Hubli'],
-                 'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai'],
-                 'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara']
-             },
              init() {
                  if (localStorage.getItem('location_granted') || document.cookie.includes('location_granted')) {
                      this.showLocationModal = false;
@@ -563,10 +660,10 @@
 
                  window.locationPermissionState().then((state) => {
                      /* Already refused at the OS level — re-asking would be a
-                        no-op prompt the browser never shows, so go straight to
-                        the manual picker. */
+                        no-op prompt the browser never shows, so land on the
+                        retry screen instead of spinning on 'detecting'. */
                      if (state === 'denied') {
-                         this.mode = 'manual';
+                         this.mode = 'gps';
                          return;
                      }
 
@@ -588,20 +685,18 @@
                          this.mode = 'gps';
                      });
              },
+             /* Retry from the 'gps' screen. Goes through the shared helper so a
+                visitor whose browser has stopped prompting gets the settings
+                steps instead of a button that silently does nothing. */
              requestLocation() {
                  this.loading = true;
-                 window.detectLocation()
+                 window.requestLocationWithHelp()
                      .then(() => window.location.reload())
                      .catch((error) => {
                          console.warn('Geolocation failed', error);
-                         this.mode = 'manual';
+                         this.mode = 'gps';
                          this.loading = false;
                      });
-             },
-             saveManualLocation() {
-                 if(!this.state || !this.city) return;
-                 this.loading = true;
-                 this.saveLocation('', '', this.state, this.city);
              },
              saveLocation(lat, lng, state, city, suburb) {
                  window.writeLocationCookies(lat, lng, state, city, suburb ?? city);
@@ -629,10 +724,7 @@
                 Detecting your area so we can show the professionals closest to you. Allow location access if your browser asks.
             </p>
             <p class="text-sm text-white/60 mb-8 relative z-10 leading-relaxed" x-show="mode === 'gps'" x-cloak>
-                To discover verified experts near you, please share your location. You can also manually select your city if you prefer.
-            </p>
-            <p class="text-sm text-white/60 mb-6 relative z-10 leading-relaxed" x-show="mode === 'manual'" x-cloak>
-                Please select your state and city to continue.
+                To discover verified experts near you, please share your location.
             </p>
 
             {{-- Auto-detection in flight. No button to press: the only prompt
@@ -645,12 +737,6 @@
                     </svg>
                     Detecting…
                 </div>
-                <button
-                    @click="mode = 'manual'; loading = false"
-                    class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/50 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all hover:bg-white/10 hover:text-white/80 active:scale-95"
-                >
-                    Choose city manually instead
-                </button>
             </div>
 
             <div x-show="mode === 'gps'" x-cloak class="w-full space-y-3 relative z-10">
@@ -671,60 +757,118 @@
                         Locating...
                     </span>
                 </button>
-                <button 
-                    @click="mode = 'manual'" 
+                {{-- The only way past a failed/denied GPS attempt now that the
+                     manual city picker is gone — without it the modal would
+                     trap the visitor on a permission they can't grant. --}}
+                <button
+                    @click="saveLocation('', '', '', '')"
                     :disabled="loading"
-                    class="w-full h-14 rounded-xl bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:bg-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="w-full h-12 text-blue-400 hover:text-blue-300 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Select Manually
+                    Browse Globally (Skip)
                 </button>
-            </div>
-
-            <div x-show="mode === 'manual'" x-cloak class="w-full space-y-4 relative z-10">
-                <select x-model="state" @change="city = ''" class="w-full h-14 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-sm focus:outline-none focus:border-blue-500">
-                    <option value="" class="bg-slate-900">Select State</option>
-                    <template x-for="(cities, stateName) in states" :key="stateName">
-                        <option :value="stateName" x-text="stateName" class="bg-slate-900"></option>
-                    </template>
-                </select>
-                
-                <select x-model="city" :disabled="!state" class="w-full h-14 bg-white/5 border border-white/10 rounded-xl px-4 text-white text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50">
-                    <option value="" class="bg-slate-900">Select City</option>
-                    <template x-if="state">
-                        <template x-for="cityName in states[state]" :key="cityName">
-                            <option :value="cityName" x-text="cityName" class="bg-slate-900"></option>
-                        </template>
-                    </template>
-                </select>
-
-                <button 
-                    @click="saveManualLocation()" 
-                    :disabled="!city || loading"
-                    class="w-full h-14 rounded-xl theme-gradient-bg text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                >
-                    <span x-show="!loading">Confirm Location</span>
-                    <span x-show="loading">Saving...</span>
-                </button>
-                <div class="flex items-center justify-between mt-2">
-                    <button 
-                        @click="mode = 'gps'" 
-                        :disabled="loading"
-                        class="w-auto h-12 text-white/40 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
-                    >
-                        Back to GPS
-                    </button>
-                    <button 
-                        @click="saveLocation('', '', '', '')" 
-                        :disabled="loading"
-                        class="w-auto h-12 text-blue-400 hover:text-blue-300 text-xs font-bold uppercase tracking-widest transition-colors"
-                    >
-                        Browse Globally (Skip)
-                    </button>
-                </div>
             </div>
         </div>
     </div>
     @endif
+
+    {{--
+        "Location is blocked" steps.
+
+        Raised by requestLocationWithHelp whenever a location request comes back
+        PERMISSION_DENIED — the case where the browser has stopped showing its
+        own prompt, so tapping the pin again would do nothing visible forever.
+        Rendered on every page (not just when location is unset): a visitor who
+        allowed location once can revoke it later and still tap the pin.
+    --}}
+    <div x-data="{
+             open: false,
+             loading: false,
+             retried: false,
+             device: '',
+             steps: [],
+             show() {
+                 const help = window.locationHelpSteps();
+                 this.device = help.device;
+                 this.steps = help.steps;
+                 this.retried = false;
+                 this.open = true;
+             },
+             /* Settings changes take effect immediately, so a retry from here
+                succeeds as soon as the visitor has flipped the switch. */
+             retry() {
+                 this.loading = true;
+                 window.detectLocation()
+                     .then(() => window.location.reload())
+                     .catch(() => {
+                         this.loading = false;
+                         this.retried = true;
+                     });
+             }
+         }"
+         @location-help.window="show()"
+         x-show="open"
+         x-cloak
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2147483647; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(10, 15, 44, 0.98); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
+    >
+        <div style="background-color: #0a0f2c !important; position: relative !important;" class="max-w-md w-full border border-white/10 rounded-3xl p-8 shadow-2xl overflow-hidden">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10 flex flex-col items-center text-center">
+                <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                    <svg class="w-10 h-10 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-width="2" d="M4 4l16 16" />
+                    </svg>
+                </div>
+
+                <h2 class="text-2xl font-black text-white tracking-tight mb-3">Location Is Blocked</h2>
+                <p class="text-sm text-white/60 mb-6 leading-relaxed">
+                    Your browser is no longer asking for permission, so it has to be turned back on in settings.
+                    Here's how on <span class="text-white/90 font-bold" x-text="device"></span>:
+                </p>
+            </div>
+
+            <ol class="relative z-10 w-full space-y-3 text-left mb-6">
+                <template x-for="(step, index) in steps" :key="index">
+                    <li class="flex items-start gap-3 text-sm text-white/75 leading-relaxed">
+                        <span class="shrink-0 w-6 h-6 rounded-full bg-white/5 border border-white/10 text-[11px] font-black text-white/70 flex items-center justify-center"
+                              x-text="index + 1"></span>
+                        <span x-html="step"></span>
+                    </li>
+                </template>
+            </ol>
+
+            <p x-show="retried" x-cloak class="relative z-10 text-xs text-rose-300/80 text-center mb-4 leading-relaxed">
+                Still blocked. Check the steps above once more — on some phones the page needs a full reload afterwards.
+            </p>
+
+            <div class="relative z-10 space-y-3">
+                <button
+                    @click="retry()"
+                    :disabled="loading"
+                    class="w-full h-14 rounded-xl theme-gradient-bg text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!loading">Try Again</span>
+                    <span x-show="loading" x-cloak class="flex items-center gap-2">
+                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Checking…
+                    </span>
+                </button>
+                <button
+                    @click="open = false"
+                    :disabled="loading"
+                    class="w-full h-12 text-white/40 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
+                >
+                    Not Now
+                </button>
+            </div>
+        </div>
+    </div>
 
     {{--
         Notification consent.
@@ -1050,6 +1194,11 @@
                 <div class="flex items-center gap-10">
                     {{--  <a href="{{ route('home') }}" class="text-xs font-black uppercase tracking-widest text-white/70 hover:text-[var(--theme-primary)] transition-colors">Explore</a> --}}
 
+                    @if(!$panelType)
+                        <a href="{{ route('about') }}" class="text-xs font-black uppercase tracking-widest {{ request()->routeIs('about') ? 'text-[var(--theme-primary)]' : 'text-white/70 hover:text-[var(--theme-primary)]' }} transition-colors">About</a>
+                        <a href="{{ route('contact') }}" class="text-xs font-black uppercase tracking-widest {{ request()->routeIs('contact') ? 'text-[var(--theme-primary)]' : 'text-white/70 hover:text-[var(--theme-primary)]' }} transition-colors">Contact</a>
+                    @endif
+
                     {{-- Live bookings the visitor is holding, at any business. Shown
                          only once they hold one, so a first-time visitor is not
                          offered an empty page. --}}
@@ -1092,8 +1241,7 @@
                     @php
                         // Which place the visitor is standing in. GPS now resolves a
                         // suburb-level name (see resolvePlaceName), so the pin reads
-                        // "Koramangala" rather than the old generic "Current Location";
-                        // manual selection still only knows city/state.
+                        // "Koramangala" rather than the old generic "Current Location".
                         // Corrected on display — OSM misspells some suburbs
                         // (see config/place_names.php).
                         $navSuburb = \App\Services\PlaceNameService::correct(request()->cookie('user_suburb'));
@@ -1119,11 +1267,15 @@
                                 locating: false,
                                 useGPS() {
                                     this.locating = true;
-                                    window.detectLocation()
+                                    /* Re-asks even after an earlier refusal; when the
+                                       browser won't prompt any more the helper raises
+                                       the settings steps and flags the error handled. */
+                                    window.requestLocationWithHelp()
                                         .then(() => window.location.reload())
                                         .catch((error) => {
                                             this.locating = false;
                                             console.warn('Geolocation failed', error);
+                                            if (error && error.handled) return;
                                             const message = error && error.message === 'unsupported'
                                                 ? 'GPS not supported by this browser.'
                                                 : 'Could not get your location. Please allow access and retry.';
@@ -1216,6 +1368,16 @@
                                         <span class="ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full theme-gradient-bg text-white text-[10px] font-black flex items-center justify-center not-italic">{{ $myBookingCount }}</span>
                                     </a>
                                 @endif
+
+                                <a href="{{ route('about') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    About Us
+                                </a>
+
+                                <a href="{{ route('contact') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    Contact Us
+                                </a>
 
                                 @auth
                                     @if(auth()->user()->isAdmin())
@@ -1320,9 +1482,10 @@
                         &copy; {{ date('Y') }} {{ strtoupper(config('brand.platform')) }}. ALL RIGHTS RESERVED.
                     </div>
                     <div class="flex flex-wrap justify-center gap-6 text-[9px] font-black uppercase tracking-[0.3em] text-white/30">
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Privacy</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Terms</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Help</a>
+                        <a href="{{ route('privacy') }}" class="hover:text-[var(--theme-primary)] transition-colors">Privacy</a>
+                        <a href="{{ route('terms') }}" class="hover:text-[var(--theme-primary)] transition-colors">Terms</a>
+                        <a href="{{ route('about') }}" class="hover:text-[var(--theme-primary)] transition-colors">About</a>
+                        <a href="{{ route('contact') }}" class="hover:text-[var(--theme-primary)] transition-colors">Contact</a>
                     </div>
                 </div>
             </div>
@@ -1340,10 +1503,10 @@
                     </div>
                     
                     <div class="flex flex-wrap justify-center gap-8 md:gap-10 text-[9px] font-black uppercase tracking-[0.3em] text-white/40">
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Privacy</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Terms</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Help</a>
-                        <a href="#" class="hover:text-[var(--theme-primary)] transition-colors">Contact</a>
+                        <a href="{{ route('about') }}" class="hover:text-[var(--theme-primary)] transition-colors">About Us</a>
+                        <a href="{{ route('contact') }}" class="hover:text-[var(--theme-primary)] transition-colors">Contact</a>
+                        <a href="{{ route('privacy') }}" class="hover:text-[var(--theme-primary)] transition-colors">Privacy</a>
+                        <a href="{{ route('terms') }}" class="hover:text-[var(--theme-primary)] transition-colors">Terms</a>
                     </div>
                 </div>
 
@@ -1351,11 +1514,24 @@
                     <div class="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
                         &copy; {{ date('Y') }} {{ strtoupper(config('brand.platform')) }}. ALL RIGHTS RESERVED.
                     </div>
-                    <div class="flex items-center gap-6">
-                        <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">𝕏</div>
-                        <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">📸</div>
-                        <div class="w-8 h-8 rounded-lg bg-white/5/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer border border-white/10">💼</div>
-                    </div>
+                    {{-- Social handles come from the admin settings screen; a network
+                         with no URL saved is simply not shown. --}}
+                    @php
+                        $footerSocials = array_filter([
+                            '𝕏'  => \App\Models\SiteSetting::get('social_twitter'),
+                            '📸' => \App\Models\SiteSetting::get('social_instagram'),
+                            'f'  => \App\Models\SiteSetting::get('social_facebook'),
+                            '💼' => \App\Models\SiteSetting::get('social_linkedin'),
+                        ]);
+                    @endphp
+                    @if(!empty($footerSocials))
+                        <div class="flex items-center gap-6">
+                            @foreach($footerSocials as $glyph => $url)
+                                <a href="{{ $url }}" target="_blank" rel="noopener"
+                                   class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors border border-white/10">{{ $glyph }}</a>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </div>
         </footer>

@@ -32,18 +32,78 @@ class BookingController extends Controller
                 'slot_start' => 'nullable',
                 'slot_end' => 'nullable',
                 'booking_type' => 'required|in:normal,premium',
-                'customer_name' => 'required|string|max:50',
-                'customer_phone' => 'required|digits:10',
                 'payment_id' => 'nullable|string'
             ]);
 
-            // 1. Phone Throttling (3 bookings per day)
-            $phoneKey = 'booking-phone:' . $request->customer_phone;
-            if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($phoneKey, 3)) {
-                return response()->json(['success' => false, 'error' => 'Booking limit reached for this phone number today.'], 429);
-            }
-
             $vendor = Vendor::with('user')->findOrFail($request->vendor_id);
+
+            /*
+            | Whether this shop asks who is booking.
+            |
+            | The setting is per *vendor*, so it covers every one of its
+            | employees — a customer scanning a specialist's QR code is governed
+            | by the shop's choice, not the specialist's. With it off, the
+            | customer taps "book" and the appointment is made on the spot, so
+            | name and phone must not be required here either; the details form
+            | that would have supplied them was never shown.
+            */
+            $requireDetails = (bool) $vendor->require_customer_details;
+
+            $request->validate([
+                'customer_name'  => ($requireDetails ? 'required' : 'nullable') . '|string|max:50',
+                'customer_phone' => ($requireDetails ? 'required' : 'nullable') . '|digits:10',
+                'customer_email' => 'nullable|email|max:255',
+            ]);
+
+            /*
+            | Fall back to the signed-in customer's own details when the form did
+            | not collect them, so a logged-in visitor booking at a no-details
+            | shop still appears on the vendor's sheet under their real name.
+            |
+            | These are the values everything MATCHES on — the throttle key, both
+            | booking limits, and the phone the device is remembered by. A phone
+            | we do not actually have must stay null here, never a placeholder:
+            | a shared stand-in would make every anonymous customer look like the
+            | same person and lock the second one out of the shop for the day.
+            */
+            $user           = auth()->user();
+            $customerName   = $request->filled('customer_name')  ? $request->customer_name  : ($user?->name ?: null);
+            $customerPhone  = $request->filled('customer_phone') ? $request->customer_phone : ($user?->mobile ?: null);
+            $customerEmail  = $request->filled('customer_email') ? $request->customer_email : ($user?->email ?: null);
+
+            /*
+            | ...and these are the values that get WRITTEN. A shop that collects
+            | nothing still wants a legible row on its sheet and its reports, so
+            | the blanks are filled in with something that says plainly what
+            | happened rather than leaving an empty cell that reads as a bug.
+            */
+            $recordedName  = $customerName  ?: 'Anonymous User';
+            $recordedPhone = $customerPhone ?: 'Anonymous';
+
+            /*
+            | This device's identity, minted on the first booking it ever makes.
+            | Without customer details there is no phone number to recognise the
+            | customer by later, so every booking carries this instead — it is
+            | what makes an anonymous booking visible on "my bookings", countable
+            | against the limits below, and cancellable by whoever made it.
+            */
+            $guestKey = $customerBookings->ensureGuestKey($request);
+
+            // 1. Throttling (3 bookings per day). Keyed on the phone number when
+            // there is one, and on the device otherwise — an anonymous shop must
+            // not become an unthrottled one.
+            $throttleKey = $customerPhone
+                ? 'booking-phone:' . $customerPhone
+                : 'booking-guest:' . $guestKey;
+
+            if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 3)) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => $customerPhone
+                        ? 'Booking limit reached for this phone number today.'
+                        : 'Booking limit reached for this device today.',
+                ], 429);
+            }
 
             /*
             | The shift this booking belongs to, NOT the calendar date. A shop
@@ -53,10 +113,25 @@ class BookingController extends Controller
             */
             $bookingDate = $shifts->businessDate($vendor);
 
+            /*
+            | Everything that identifies the customer making this request. The
+            | phone number is absent at a shop that does not ask for one, so the
+            | device's guest key stands in — matching on the phone alone would
+            | leave anonymous bookings uncounted by both limits below.
+            */
+            $identity = function ($q) use ($customerPhone, $guestKey) {
+                $q->where(function ($inner) use ($customerPhone, $guestKey) {
+                    if ($customerPhone) {
+                        $inner->orWhere('customer_phone', $customerPhone);
+                    }
+                    $inner->orWhere('guest_key', $guestKey);
+                });
+            };
+
             // 2. Cross-Vendor Daily Limit (Max 3 active tokens). Spans the two
             // live business dates so an overnight shift keeps counting the
             // tokens a customer already holds instead of resetting at midnight.
-            $activeBookingsToday = Booking::where('customer_phone', $request->customer_phone)
+            $activeBookingsToday = Booking::where($identity)
                 ->whereIn('booking_date', $shifts->liveBusinessDates())
                 ->whereIn('status', ['confirmed', 'pending'])
                 ->count();
@@ -82,8 +157,11 @@ class BookingController extends Controller
             $duplicate = Booking::where('vendor_id', $vendor->id)
                 ->where('booking_date', $bookingDate)
                 ->whereIn('status', ['confirmed', 'pending'])
-                ->where(function ($q) use ($request) {
-                    $q->where('customer_phone', $request->customer_phone);
+                ->where(function ($q) use ($customerPhone, $guestKey) {
+                    if ($customerPhone) {
+                        $q->orWhere('customer_phone', $customerPhone);
+                    }
+                    $q->orWhere('guest_key', $guestKey);
                     if (auth()->check()) {
                         $q->orWhere('customer_id', auth()->id());
                     }
@@ -140,7 +218,7 @@ class BookingController extends Controller
             $requestedEnd   = $request->slot_end;
 
             // 5 & 6. Transaction & Token Cap
-            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee) {
+            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee, $recordedName, $recordedPhone, $customerEmail, $guestKey) {
                 $tokenNumber = null;
 
                 if ($vendor->appointment_mode === 'token') {
@@ -184,8 +262,11 @@ class BookingController extends Controller
                     'vendor_id'            => $vendor->id,
                     'employee_id'          => $employee->id,
                     'customer_id'          => auth()->id(),
-                    'customer_name'        => $request->customer_name,
-                    'customer_phone'       => $request->customer_phone,
+                    'customer_name'        => $recordedName,
+                    'customer_phone'       => $recordedPhone,
+                    'customer_email'       => $customerEmail,
+                    // Who this device is, for the shops that never ask.
+                    'guest_key'            => $guestKey,
                     /*
                     | The device to ping when this customer's token is called.
                     |
@@ -214,15 +295,21 @@ class BookingController extends Controller
                 ]);
             });
 
-            \Illuminate\Support\Facades\RateLimiter::hit($phoneKey, 86400);
+            \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 86400);
 
             // Remember the guest so every booking page can recognise them on the
             // next visit and show their live token instead of the "book" button.
-            // Guests have no account, so the phone number is the only identity we
-            // hold — and the service keeps *every* number booked from this device,
-            // not just the latest, so booking for a second person no longer hides
-            // the first person's booking.
-            $customerBookings->remember($booking->customer_phone, $request);
+            // The service keeps *every* number booked from this device, not just
+            // the latest, so booking for a second person no longer hides the
+            // first person's booking. A shop that collects no details leaves
+            // nothing to remember here — the guest key stamped on the row above
+            // is already in the session and cookie and carries that case.
+            // $customerPhone, not $booking->customer_phone — the row carries the
+            // "Anonymous" placeholder, and remembering that as a phone number
+            // would make this device match every other anonymous booking.
+            if ($customerPhone) {
+                $customerBookings->remember($customerPhone, $request);
+            }
 
             // Invalidate discovery and slot caches so the next listing/slot request
             // reflects the newly confirmed booking immediately.

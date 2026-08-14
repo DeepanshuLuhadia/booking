@@ -46,6 +46,7 @@ class ProfileController extends Controller
                 'unique:vendors,contact_number,' . $vendor->id,
             ],
             'show_contact_number' => 'nullable|boolean',
+            'require_customer_details' => 'nullable|boolean',
             'address' => 'sometimes|required|string',
             'latitude'  => ['required', 'numeric', 'between:-90,90', $rejectNullIsland],
             'longitude' => ['required', 'numeric', 'between:-180,180', $rejectNullIsland],
@@ -64,7 +65,12 @@ class ProfileController extends Controller
 
         $data = $request->except(['shop_photo', 'token_amount', 'service_fee', 'emergency_fee', 'avg_consultation_time']);
         $data['show_contact_number'] = $request->has('show_contact_number') ? 1 : 0;
-        
+
+        // The form pairs the checkbox with a hidden "0", so an unticked box still
+        // posts a value — read it as a boolean rather than by presence.
+        $data['require_customer_details'] = $request->boolean('require_customer_details') ? 1 : 0;
+
+
         if ($request->hasFile('shop_photo')) {
             if ($vendor->shop_photo) {
                 Storage::disk('public')->delete($vendor->shop_photo);
