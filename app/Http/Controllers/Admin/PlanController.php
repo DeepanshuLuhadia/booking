@@ -28,7 +28,12 @@ class PlanController extends Controller
             'features' => 'required|array',
         ]);
 
-        SubscriptionPlan::create($request->all());
+        // The features repeater posts its empty rows too — drop them so the
+        // stored list holds only real feature lines.
+        $data = $request->all();
+        $data['features'] = array_values(array_filter($request->input('features', []), fn ($f) => filled($f)));
+
+        SubscriptionPlan::create($data);
 
         return redirect()->route('admin.dashboard')->with('success', 'Plan created successfully');
     }
@@ -47,7 +52,10 @@ class PlanController extends Controller
             'features' => 'required|array',
         ]);
 
-        $plan->update($request->all());
+        $data = $request->all();
+        $data['features'] = array_values(array_filter($request->input('features', []), fn ($f) => filled($f)));
+
+        $plan->update($data);
 
         return redirect()->route('admin.dashboard')->with('success', 'Plan updated successfully');
     }

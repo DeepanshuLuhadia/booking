@@ -78,7 +78,8 @@
      ═══════════════════════════════════════════════════════════ --}}
 <div class="bv-desktop-card-wrap">
     <a href="{{ $routeUrl }}" class="bv-dynamic-card bv-card-sports {{ $isOpen ? '' : 'bv-closed pointer-events-none' }}"
-        style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};">
+        style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};"
+        @click="handleVendorClick($event, '{{ $routeUrl }}')">
         <img src="{{ $img }}" alt="{{ $name }}" loading="{{ ($eager ?? false) ? 'eager' : 'lazy' }}">
         @if($vendor->isSubscriptionActive() && ($vendor->reviews_count ?? 0) > 0)
         <div class="bv-rc-rating" title="{{ $vendor->reviews_count }} {{ Str::plural('review', $vendor->reviews_count) }}" style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); padding:4px 10px; border-radius:999px; color:#fff; font-size:12px; font-weight:800; display:flex; gap:5px; border:1px solid rgba(255,255,255,0.15); z-index: 2;">
@@ -161,7 +162,8 @@
      ═══════════════════════════════════════════════════════════ --}}
 <a href="{{ $routeUrl }}"
    class="bv-hcard {{ $isOpen ? '' : 'bv-closed' }}"
-   style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};">
+   style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};"
+   @click="handleVendorClick($event, '{{ $routeUrl }}')">
 
     {{-- LEFT: Image --}}
     <div class="bv-hcard-img">

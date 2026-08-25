@@ -1,4 +1,12 @@
 <x-app-layout :vendor-theme="$theme" :page-title="$employee->name . ' - Employee Booking'">
+    @php
+        /*
+        | Does this shop collect payment before confirming a booking? Fixed for
+        | the page, so the wording that depends only on it is branched here in
+        | Blade rather than hidden with x-show. Mirrors the vendor page.
+        */
+        $takesDirectPayment = $vendor->acceptsDirectAdvance();
+    @endphp
     {{-- @booking-closed.window: the realtime listener lives outside Alpine (it has
          to run through whenRealtimeReady), so it hands the outcome over by event. --}}
     <div x-data="employeeBookingSystem()"
@@ -277,14 +285,48 @@
                     </div>
                 </div>
 
-                <div class="bg-black/40 rounded-[2rem] p-6 text-white mb-8 border border-white/5 flex justify-between items-center">
-                    <span class="text-lg font-black italic uppercase">Total Service Fee</span>
-                    <span class="text-3xl font-black theme-gradient-text">₹{{ number_format($servicePrice) }}</span>
+                {{-- At a shop taking direct UPI payment this has to quote the
+                     figure the customer is about to be asked for in their UPI
+                     app, not the headline service fee — see the same block on
+                     the vendor page. --}}
+                <div class="bg-black/40 rounded-[2rem] p-6 text-white mb-8 border border-white/5 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-black italic uppercase">
+                            {{ $takesDirectPayment ? 'Pay Now' : 'Total Service Fee' }}
+                        </span>
+                        <span class="text-3xl font-black theme-gradient-text" x-text="'₹' + payableNow"></span>
+                    </div>
+                    @if($takesDirectPayment)
+                    <div x-show="payAtVenue > 0" style="display:none;"
+                         class="flex justify-between items-center opacity-50 pt-3 border-t border-white/10">
+                        <span class="text-[9px] font-black uppercase tracking-widest italic">Balance At Venue</span>
+                        <span class="font-black" x-text="'₹' + payAtVenue"></span>
+                    </div>
+                    @endif
                 </div>
 
-                <button @click="confirmBooking()" class="theme-btn w-full h-16 text-lg rounded-3xl flex items-center justify-center gap-3 shadow-lg">
-                    CONFIRM BOOKING
+                {{-- One tap to the payment screen; no "booked!" interlude
+                     claiming a slot that has not been paid for yet. --}}
+                <button @click="confirmBooking()" :disabled="submitting"
+                        class="theme-btn w-full h-16 text-lg rounded-3xl flex items-center justify-center gap-3 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                    @if($takesDirectPayment)
+                        {{-- ₹0 is possible (no advance + free service); the
+                             server confirms those outright, so the label must
+                             not promise a payment step that will not happen. --}}
+                        <span x-show="!submitting" x-text="payableNow > 0 ? ('PAY ₹' + payableNow + ' & BOOK') : 'CONFIRM BOOKING'"></span>
+                        <span x-show="submitting" style="display:none;"
+                              x-text="payableNow > 0 ? 'OPENING PAYMENT…' : 'BOOKING…'"></span>
+                    @else
+                        <span x-show="!submitting">CONFIRM BOOKING</span>
+                        <span x-show="submitting" style="display:none;">BOOKING…</span>
+                    @endif
                 </button>
+
+                @if($takesDirectPayment)
+                <p class="mt-4 text-[9px] font-black uppercase tracking-widest text-white/30 leading-relaxed">
+                    Paid directly to {{ $vendor->business_name }} via UPI
+                </p>
+                @endif
                 <button @click="bookingModal = false" class="mt-4 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">Cancel</button>
             </div>
         </div>
@@ -361,6 +403,71 @@
                     <p class="text-xs text-white/60 font-medium mt-4">Assigned to {{ $employee->name }} at {{ $vendor->business_name }}</p>
                 </div>
 
+                {{--
+                    The shop takes payment directly, so paying is one tap from
+                    this screen — the button below raises the device's own UPI
+                    chooser. Nothing is raised automatically: a payment sheet
+                    that appears over a confirmation the customer has not read
+                    yet is startling, and dismissing it out of surprise is
+                    indistinguishable from refusing to pay.
+
+                    The booking is confirmed either way. This platform never sees
+                    the transfer and never gates the appointment on it, which is
+                    why the pay button sits next to a confirmation rather than in
+                    front of one.
+                --}}
+                <template x-if="payment">
+                    <div class="mb-8 space-y-4">
+                        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 text-left">
+                            <div class="flex items-center justify-between gap-4 mb-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Pay The Business</span>
+                                <span class="text-xl font-black italic text-white" x-text="'₹' + payment.amount"></span>
+                            </div>
+                            <p class="text-xs text-white/60 font-medium leading-relaxed">
+                                Paid straight to <span class="text-white font-bold" x-text="payment.payee"></span> in your
+                                own UPI app. <span x-show="!payment.is_advance">This is the full amount.</span>
+                                <span x-show="payment.is_advance">The balance is settled at the counter.</span>
+                            </p>
+                        </div>
+
+                        {{-- Desktop has no app to hand off to, so the QR is the
+                             only route; on a phone it is the second chance for
+                             somebody who closed the chooser by accident. --}}
+                        <div x-show="showQr" x-cloak class="bg-white rounded-2xl p-5">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 text-center">Scan With Any UPI App</p>
+                            <div class="w-44 mx-auto [&>svg]:w-full [&>svg]:h-auto" x-html="payment.qr_svg"></div>
+                            <p class="mt-3 text-center text-[11px] font-bold text-slate-600 break-all" x-text="payment.vpa"></p>
+                        </div>
+
+                        {{-- Phone only. A real anchor on the upi:// scheme, not
+                             a scripted navigation: a tap on a genuine link is
+                             the form mobile browsers hand to the OS chooser
+                             most reliably. On desktop no handler for the scheme
+                             exists and following it errors, so the button (and
+                             the QR toggle with it) is never shown there — the
+                             QR above is already open and is the only route. --}}
+                        <a x-show="onPhone()" x-cloak
+                           :href="payment.upi_link" @click="payNow($event)"
+                           class="theme-btn w-full h-16 rounded-2xl flex items-center justify-center text-base italic font-black uppercase tracking-widest"
+                           x-text="'Pay ₹' + payment.amount + ' Now'"></a>
+
+                        <button type="button" x-show="onPhone()" x-cloak @click="showQr = !showQr"
+                                class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/60 hover:bg-white/10 transition-all active:scale-95"
+                                x-text="showQr ? 'Hide QR Code' : 'Pay By Scanning A QR Code'"></button>
+
+                        {{-- The one instruction that replaces the whole upload
+                             step: the receipt is shown to a person, not to us. --}}
+                        <div class="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 text-left">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-2">When Your Turn Comes</p>
+                            <p class="text-xs text-white/70 font-medium leading-relaxed">
+                                Show your UPI payment screenshot to
+                                <span class="text-white font-bold">{{ $employee->name }}</span>.
+                                {{ $vendor->business_name }} has already been told to expect it.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
                 <button @click="window.location.reload()" class="theme-btn w-full h-16 text-lg rounded-2xl italic font-black uppercase tracking-widest">
                     GOT IT / DONE
                 </button>
@@ -409,6 +516,14 @@
             return {
                 bookingModal: false,
                 submitting: false,
+                // Set once the payment screen is being navigated to, so the
+                // submit guard is not released mid-redirect.
+                // The direct-payment block on the confirmation modal, or null at
+                // a shop that takes no payment. Set from the booking response.
+                payment: null,
+                // QR visible: forced open on desktop, where there is no UPI app
+                // to hand off to, and toggleable on a phone.
+                showQr: false,
                 successModal: false,
                 confirmedToken: null,
                 confirmedTime: null,
@@ -416,6 +531,40 @@
                 guestName: '',
                 guestPhone: '{{ session('customer_phone') ?? request()->cookie('customer_phone') }}',
                 guestEmail: '',
+
+                /*
+                | Direct-to-vendor UPI payment. Display copies of the server's
+                | configuration so the button can quote the real amount before a
+                | booking exists — BookingController recomputes it server-side,
+                | so tampering here changes the label and nothing that is charged.
+                |
+                | fixedAdvance = 0 means "no deposit set", i.e. the shop wants
+                | the full booking price, not nothing.
+                */
+                directPayment: {{ $vendor->acceptsDirectAdvance() ? 'true' : 'false' }},
+                fixedAdvance: {{ (float) ($vendor->advance_amount ?? 0) }},
+                servicePrice: {{ (float) $servicePrice }},
+
+                /** Mirrors UpiPaymentService::amountDueFor(). */
+                get payableNow() {
+                    const premium = (this.selectedSlot && this.selectedSlot.is_premium)
+                        ? parseFloat(this.selectedSlot.premium_fee_amount || 0)
+                        : 0;
+                    const full = this.servicePrice + premium;
+
+                    if (!this.directPayment) return full;
+
+                    return this.fixedAdvance > 0 ? this.fixedAdvance : full;
+                },
+
+                /** What is left to settle in person — zero in full-payment mode. */
+                get payAtVenue() {
+                    const premium = (this.selectedSlot && this.selectedSlot.is_premium)
+                        ? parseFloat(this.selectedSlot.premium_fee_amount || 0)
+                        : 0;
+
+                    return Math.max((this.servicePrice + premium) - this.payableNow, 0);
+                },
 
                 /*
                  * Does this business want to know who is booking? The choice is
@@ -506,6 +655,21 @@
                             }
                             this.successModal = true;
 
+                            /*
+                             * The shop takes payment directly. The pay button on
+                             * this modal is the whole of the payment flow — one tap
+                             * raises the device's own UPI chooser, and coming back
+                             * out of the app lands on this same confirmed screen
+                             * rather than on a form.
+                             *
+                             * Deliberately not launched for them: the customer
+                             * reads what they booked first, then chooses to pay.
+                             * On desktop, where no UPI app exists, the QR is
+                             * opened up front because there is nothing to tap.
+                             */
+                            this.payment = result.booking?.payment || null;
+                            this.showQr = !!this.payment && !this.onPhone();
+
                             // Ask for notification permission now the booking is
                             // real. This page never asked at all, so a customer who
                             // booked here had no way to be told when their turn came.
@@ -539,6 +703,38 @@
                     } finally {
                         this.submitting = false;
                     }
+                },
+
+                onPhone() {
+                    return /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+                },
+
+                /*
+                 * The customer tapped Pay. Hand the device to whichever UPI apps
+                 * it has installed.
+                 *
+                 * `upi://` is an intent, not a page: following it navigates
+                 * nothing, it raises the OS payment chooser over the page we are
+                 * already on. So the customer comes back out of their UPI app to
+                 * the same confirmed screen — no redirect, no second page and
+                 * nothing to upload.
+                 *
+                 * The anchor is left to do the work rather than assigning
+                 * location: a real link tap is what mobile browsers hand to the
+                 * chooser most reliably. All this does is stop the navigation on
+                 * desktop, where no handler for the scheme exists and following it
+                 * produces either nothing at all or a jarring "no app found"
+                 * dialog — there the QR is the only route.
+                 *
+                 * The QR is revealed on the way out in either case, so a customer
+                 * whose chooser never appeared has somewhere to go next.
+                 */
+                payNow(event) {
+                    if (!this.onPhone()) {
+                        event.preventDefault();
+                    }
+
+                    this.showQr = true;
                 }
             };
         }

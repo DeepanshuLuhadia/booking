@@ -14,7 +14,14 @@
     $allSlug     = \App\Http\Controllers\CustomerDiscoveryController::ALL_CATEGORIES_SLUG;
     $isAllActive = $activeCategory === '' || $activeCategory === $allSlug;
 @endphp
-                <div class="bv-search-wrap">
+                {{-- data-suggest-* drive the search-as-you-type dropdown (see
+                     listing-scripts). The category is the page's own scope:
+                     the landing page sends none and searches everything, a
+                     category page sends its slug and stays inside it. --}}
+                <div class="bv-search-wrap"
+                     data-suggest-url="{{ route('discover.suggestions') }}"
+                     data-suggest-min="{{ \App\Http\Controllers\CustomerDiscoveryController::SUGGEST_MIN_CHARS }}"
+                     data-suggest-category="{{ $activeCategory }}">
                     <div class="bv-search-bar">
                         <form action="{{ $searchAction }}" method="GET" class="bv-search-form">
                             {{-- Category is carried by the "All Categories" dropdown below
@@ -29,7 +36,9 @@
                                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 <input class="bv-search-input" type="text" name="search" value="{{ request('search') }}"
-                                    placeholder="Service or Professional">
+                                    placeholder="Service or Professional"
+                                    autocomplete="off" role="combobox" aria-expanded="false"
+                                    aria-controls="bvSuggestPanel" aria-autocomplete="list">
                                 {{-- Reset sits inside the field, right against the search
                                      icon, rather than adding a button of its own. Shown only
                                      once there is something to clear. --}}
@@ -173,6 +182,14 @@
                             <button class="bv-search-btn" type="submit">Search Services</button>
                         </form>
                     </div>
+
+                    {{-- Live results panel. Empty until the customer types, and
+                         re-parented to <body> on load: the hero clips its own
+                         overflow (the glow orbs depend on it), so a panel left
+                         inside it would be cut off. Positioned under the search
+                         bar by the script instead. --}}
+                    <div class="bv-suggest" id="bvSuggestPanel" role="listbox"
+                         aria-label="Matching businesses" hidden></div>
 
                     {{-- ── Category Pills ── --}}
                     {{-- ── Category Pills ── --}}

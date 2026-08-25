@@ -27,23 +27,28 @@
                         class="glass-card p-6 sm:p-10 space-y-10">
                         <div class="border-b border-slate-50 pb-6">
                             <h3 class="text-xl font-black italic uppercase italic text-white tracking-tight">
-                                Business Intelligence</h3>
+                                Business Information</h3>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label
-                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Institutional
-                                    Class</label>
+                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Business
+                                    Category</label>
+                                @php
+                                    // Same source as the register form: categories from the
+                                    // vendor_categories table, labels/emojis from ThemeService.
+                                    $categoryOptions = $vendorCategories->mapWithKeys(function ($category) {
+                                        $themeConfig = \App\Services\ThemeService::getTheme($category->slug);
+                                        return [$category->slug => [
+                                            'label' => $themeConfig['label'] ?? $category->name,
+                                            'icon'  => $themeConfig['emoji'] ?? '✨',
+                                        ]];
+                                    });
+                                @endphp
                                 <div class="relative" x-data="{
                                     open: false,
                                     selected: '{{ $vendor->vendor_type ?? 'doctor' }}',
-                                    options: {
-                                        'doctor': { label: 'Health', icon: '⚕️' },
-                                        'barber': { label: 'Beauty', icon: '✨' },
-                                        'activity': { label: 'Sports', icon: '🏆' },
-                                        'training': { label: 'Education', icon: '📘' },
-                                        'consultant': { label: 'Consultant', icon: '🖊️' }
-                                    },
+                                    options: {{ Js::from($categoryOptions) }},
                                     get selectedLabel() {
                                         return this.options[this.selected]?.label || 'Select Category';
                                     },
@@ -87,7 +92,7 @@
                             </div>
                             <div class="space-y-4">
                                 <label
-                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Establishment
+                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Business
                                     Name</label>
                                 <input type="text" name="business_name" value="{{ $vendor->business_name }}" required
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
@@ -97,18 +102,18 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label
-                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Principal
-                                    Delegate</label>
+                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Owner
+                                    Name</label>
                                 <input type="text" name="owner_name" value="{{ $vendor->owner_name }}" required
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                             </div>
 
                             <div class="space-y-4 relative">
                                 <label
-                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Contact Number</label>
+                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Mobile Number</label>
                                 <input type="text" name="contact_number" value="{{ $vendor->contact_number }}" required
                                     class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
-                                
+
                                 <div class="flex items-center gap-3 pt-2 ml-4">
                                     <input type="checkbox" name="show_contact_number" value="1" {{ $vendor->show_contact_number ? 'checked' : '' }}
                                         class="w-5 h-5 bg-white/10 border-none rounded text-blue-600 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer">
@@ -262,13 +267,12 @@
                                         }}>Token System</option>
                                 </select>
                             </div>
-                            <div class="space-y-4">
-                                <label
-                                    class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">UPI
-                                    Settlement Link</label>
-                                <input type="text" name="upi_id" value="{{ $vendor->upi_id }}"
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
-                            </div>
+                            {{-- The UPI ID field used to sit here as a loose
+                                 "settlement link". It now lives in the Direct
+                                 UPI Advance card below, alongside the payee
+                                 name and the fee it is collected with — a
+                                 second input of the same name in this form
+                                 would silently overwrite that one. --}}
                         </div>
 
                         {{-- Booking intake.
@@ -324,6 +328,12 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Direct-to-vendor UPI advances. Its own card because it
+                         is the one block of settings that puts a customer in
+                         front of a payment screen, and it carries its own
+                         warnings and live QR preview. --}}
+                    @include('vendor.partials.direct-upi-settings')
                 </div>
 
                 <div class="space-y-12">

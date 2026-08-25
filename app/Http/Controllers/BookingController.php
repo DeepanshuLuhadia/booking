@@ -10,6 +10,7 @@ use App\Services\CustomerBookingService;
 use App\Services\PaymentService;
 use App\Services\NotificationService;
 use App\Services\ShiftService;
+use App\Services\UpiPaymentService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -21,7 +22,8 @@ class BookingController extends Controller
         NotificationService $notificationService,
         ShiftService $shifts,
         CustomerBookingService $customerBookings,
-        BookingNotifier $bookingNotifier
+        BookingNotifier $bookingNotifier,
+        UpiPaymentService $upi
     ) {
         try {
             $request->validate([
@@ -208,6 +210,41 @@ class BookingController extends Controller
             $tokenAmount = ($vendor->appointment_mode === 'token') ? $vendor->token_amount : 0;
             $totalToPay = $tokenAmount + $premiumFee;
 
+            /*
+            | Direct-to-vendor UPI advance.
+            |
+            | The figure is taken from the VENDOR's configuration and nowhere
+            | else. Nothing the customer submits can influence it — there is no
+            | amount field in this request to influence it with — so the amount
+            | on the row, the amount encoded into the UPI deep link, and the
+            | amount the shop verifies against its bank statement are all the
+            | same server-side value. That is the whole of the amount lock; the
+            | `mam` parameter on the link only makes the right amount the
+            | default in the customer's UPI app, it does not enforce anything we
+            | could rely on.
+            |
+            | It is also frozen here rather than read live: a shop that raises
+            | its fee tomorrow must not change what a customer was quoted today.
+            |
+            | How much is due depends on whether the shop named an advance:
+            | with one, that advance; without one, the FULL booking price and
+            | the balance is nothing. `$fullBookingAmount` is deliberately the
+            | same sum the customer was already shown as "Due Now" on the
+            | booking screen (base service fee, plus the premium supplement when
+            | they picked a premium slot) — being asked to transfer a number
+            | larger than the one quoted a moment earlier is how a legitimate
+            | charge comes to look like a scam.
+            |
+            | Note this uses $baseServiceFee, NOT $totalToPay: the latter is
+            | token + premium and excludes the service fee entirely, so on the
+            | many shops with token_amount = 0 it would ask for ₹0 and collect
+            | nothing at all.
+            */
+            $fullBookingAmount = (float) $baseServiceFee + (float) $premiumFee;
+
+            $advanceAmount = $upi->amountDueFor($vendor, $fullBookingAmount);
+            $collectsAdvance = (float) $advanceAmount > 0;
+
             $avgTime = $vendor->avg_consultation_time ?: 15;
 
             // Time-slot mode persists the customer's chosen slot. Token-mode slot
@@ -218,7 +255,7 @@ class BookingController extends Controller
             $requestedEnd   = $request->slot_end;
 
             // 5 & 6. Transaction & Token Cap
-            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee, $recordedName, $recordedPhone, $customerEmail, $guestKey) {
+            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee, $recordedName, $recordedPhone, $customerEmail, $guestKey, $advanceAmount, $collectsAdvance) {
                 $tokenNumber = null;
 
                 if ($vendor->appointment_mode === 'token') {
@@ -288,7 +325,33 @@ class BookingController extends Controller
                     'token_amount'         => $tokenAmount,
                     'emergency_fee'        => $premiumFee,
                     'online_paid_amount'   => $totalToPay,
+                    /*
+                    | Confirmed the moment it is made, advance or not.
+                    |
+                    | The advance is collected directly by the shop, outside
+                    | this platform, and the platform performs no verification
+                    | of it — so there is nothing for the booking to WAIT on.
+                    | Holding the slot as `pending` until somebody ticked a box
+                    | only produced two ways to lose an appointment that had
+                    | already been paid for: a customer who never got round to
+                    | uploading a screenshot, and a shop that never got round to
+                    | looking at one. The shop checks the money at the counter,
+                    | the same way it checks cash.
+                    */
                     'status'               => 'confirmed',
+                    /*
+                    | 'paid' means "the customer was handed to their UPI app for
+                    | this amount", not "the money is confirmed" — nothing on
+                    | this platform can confirm that, because none of it passes
+                    | through us. It is what puts the booking on the shop's
+                    | payments list to be checked against their own UPI app.
+                    */
+                    'payment_status'       => $collectsAdvance ? 'paid' : 'pending',
+                    'payment_submitted_at' => $collectsAdvance ? now() : null,
+                    'payment_method'       => 'direct_upi',
+                    // 0.00 at a shop that takes no advance — and a non-zero
+                    // value here is what marks the booking as part of this flow.
+                    'requested_amount'     => $advanceAmount,
                     'vendor_booked'        => false,
                     'razorpay_payment_id'  => $request->payment_id,
                     'notes'                => "Service Fee: ₹{$baseServiceFee}"
@@ -319,9 +382,30 @@ class BookingController extends Controller
             $booking->setRelation('employee', $employee);
             $booking->setRelation('vendor', $vendor);
 
-            // Announces on both channels at once — the shop's dashboards redraw
-            // live, and the owner and specialist get their push. See BookingNotifier.
+            /*
+            | Every booking is announced here, advance or not.
+            |
+            | This announcement used to be withheld from bookings that owed an
+            | advance and re-fired later, when the customer uploaded a proof —
+            | which meant a shop learned about an appointment only if the
+            | customer completed a second form after paying. The advance is no
+            | longer something the platform waits on, so there is nothing left
+            | to defer: the shop's dashboards redraw, the owner and the
+            | specialist get their push, and the customer is told the booking is
+            | confirmed, all at the moment it is made.
+            */
             $bookingNotifier->created($booking, 'customer');
+
+            /*
+            | ...and, on top of that, the shop is told there is money to look
+            | for. Separate from the booking announcement because it asks for a
+            | different action — open your UPI app and check the credit — and it
+            | is the only thing standing in for the verification step this flow
+            | deliberately no longer has.
+            */
+            if ($collectsAdvance) {
+                $bookingNotifier->directPaymentDue($booking);
+            }
 
             $fcmToken = session('fcm_token');
             if ($fcmToken) {
@@ -357,6 +441,10 @@ class BookingController extends Controller
                 );
             }
 
+            // Built from the booking row's own frozen amount, so the link the
+            // customer taps and the figure the shop looks for cannot disagree.
+            $upiLink = $collectsAdvance ? $upi->deepLinkFor($booking) : null;
+
             $nowServing = $employee->now_serving_token ?? 0;
 
             $queueVelocityService = new \App\Services\QueueVelocityService();
@@ -375,6 +463,32 @@ class BookingController extends Controller
                 'booking' => [
                     'id'              => $booking->id,
                     'token_number'    => $booking->token_number,
+                    /*
+                    | Everything the confirmation screen needs to hand the
+                    | customer straight to their UPI app, sent WITH the
+                    | confirmation rather than as a URL to a second page.
+                    |
+                    | The deep link is what raises the device's own payment
+                    | chooser — whichever UPI apps are installed — when the
+                    | customer taps Pay on the confirmation screen. The QR is the
+                    | desktop equivalent, where there is no app to hand off to.
+                    | `null` when the shop takes no advance, which the caller
+                    | simply falls through on.
+                    */
+                    'payment' => $collectsAdvance ? [
+                        'amount'        => $advanceAmount,
+                        'upi_link'      => $upiLink,
+                        'qr_svg'        => $upi->qrSvg($upiLink, 200),
+                        'payee'         => $upi->payeeName($vendor),
+                        'vpa'           => $vendor->upi_id,
+                        'employee_name' => $employee->name,
+                        // "advance" vs "full amount" — different promises about
+                        // what is left to settle at the counter.
+                        'is_advance'    => $upi->chargesFixedAdvance($vendor),
+                    ] : null,
+                    'payment_required' => $collectsAdvance,
+                    'requested_amount' => $collectsAdvance ? $advanceAmount : null,
+                    'payment_status'   => $booking->payment_status,
                     'vendor_name'     => $vendor->business_name,
                     'now_serving'     => $nowServing,
                     'people_ahead'    => $peopleAhead,

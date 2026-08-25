@@ -108,20 +108,84 @@
                                     Only one active booking per business each day — this one must be completed
                                     before you can book <span class="text-white/70 font-bold" x-text="booking.vendor_name"></span> again.
                                 </p>
+                                {{-- The two actions on the booking itself. The
+                                     payment, which is not an action on the
+                                     booking and not always relevant, is folded
+                                     away below. --}}
                                 <div class="shrink-0 flex items-center gap-3">
                                     <template x-if="booking.vendor_slug">
                                         <a :href="'/vendors/' + booking.vendor_slug"
-                                           class="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all active:scale-95 text-center">
+                                           class="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all active:scale-95 text-center whitespace-nowrap">
                                             View Queue
                                         </a>
                                     </template>
 
                                     <button type="button" @click="cancelTarget = booking"
-                                            class="px-6 py-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-[10px] font-black uppercase tracking-widest text-rose-300 hover:bg-rose-950/50 transition-all active:scale-95">
+                                            class="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-rose-950/30 border border-rose-500/20 text-[10px] font-black uppercase tracking-widest text-rose-300 hover:bg-rose-950/50 transition-all active:scale-95 text-center whitespace-nowrap">
                                         Cancel
                                     </button>
                                 </div>
                             </div>
+
+                            {{--
+                                The payment, folded away behind a question.
+
+                                It used to sit in the action row as a "Paid"
+                                badge with a Pay button beside it, and both
+                                halves were wrong. The badge asserted something
+                                we cannot know — `payment_status` becomes 'paid'
+                                when the customer is handed to their UPI app, not
+                                when money moves, because the platform never sees
+                                the transfer — and a pay button standing next to
+                                the word "Paid" reads as an invitation to pay
+                                twice.
+
+                                Asking the question instead gets both right. The
+                                customer who paid reads it, recognises it does not
+                                apply to them, and moves on; the one who dismissed
+                                the chooser without paying opens it and finds the
+                                link. Nothing claims a payment happened, and the
+                                only people who see a Pay button are the ones who
+                                went looking for it.
+
+                                Gated on `payment_url`, which the server sends
+                                only for shops that collect payment directly —
+                                there is nothing to pay, and no question worth
+                                asking, at any other shop.
+                            --}}
+                            <template x-if="booking.payment_url && booking.payment_status !== 'verified'">
+                                <div class="relative z-10 mt-4" x-data="{ payOpen: false }">
+                                    <button type="button" @click="payOpen = !payOpen"
+                                            class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-300/80 hover:text-amber-300 transition-colors">
+                                        <span>Haven't made the payment yet?</span>
+                                        <svg class="w-3 h-3 transition-transform" :class="payOpen && 'rotate-180'"
+                                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+
+                                    <div x-show="payOpen" x-cloak x-transition
+                                         class="mt-3 rounded-2xl bg-amber-500/5 border border-amber-500/20 p-5 space-y-4">
+                                        <p class="text-xs text-white/60 font-medium leading-relaxed">
+                                            Pay <span class="text-white font-bold" x-text="booking.vendor_name"></span>
+                                            directly in your own UPI app. Your booking is confirmed either way —
+                                            show them the payment receipt when your turn comes.
+                                        </p>
+                                        <a :href="booking.payment_url"
+                                           class="block w-full sm:w-auto sm:inline-block px-6 py-3 rounded-xl bg-amber-500 text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all active:scale-95 text-center whitespace-nowrap"
+                                           x-text="'Pay ₹' + booking.requested_amount + ' Now'"></a>
+                                    </div>
+                                </div>
+                            </template>
+
+                            {{-- The shop has confirmed the credit landed in its
+                                 own account. Stated rather than offered: there is
+                                 nothing left to do, and no question to ask. --}}
+                            <template x-if="booking.payment_status === 'verified'">
+                                <p class="relative z-10 mt-4 text-[10px] font-black uppercase tracking-widest text-emerald-300/80">
+                                    Payment received by <span x-text="booking.vendor_name"></span>
+                                </p>
+                            </template>
                         </div>
                     </template>
                 </div>

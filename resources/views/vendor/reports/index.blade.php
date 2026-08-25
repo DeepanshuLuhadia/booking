@@ -285,74 +285,101 @@
         {{-- Page links carry the whole filter selection (see withQueryString in
              the controller), so paging never changes what is being reported on. --}}
         @if($preview->hasPages())
+            <style>
+                .pagination-container nav [role="navigation"] {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+
+                .pagination-container nav div:first-child {
+                    display: flex;
+                    flex: 1 1 0%;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+
+                .pagination-container nav div:last-child { display: none; }
+
+                @media (min-width: 640px) {
+                    .pagination-container nav div:last-child {
+                        display: flex;
+                        flex: 1 1 0%;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                }
+
+                .pagination-container a,
+                .pagination-container span[aria-current="page"] > span {
+                    padding: 0.5rem 1rem;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 0.75rem;
+                    font-size: 10px;
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .pagination-container a {
+                    background-color: rgba(255, 255, 255, 0.05);
+                    color: rgba(255, 255, 255, 0.7);
+                    text-decoration: none;
+                }
+
+                .pagination-container a:hover {
+                    background-color: rgba(255, 255, 255, 0.15);
+                    color: #ffffff;
+                    border-color: rgba(255, 255, 255, 0.3);
+                }
+
+                .pagination-container span[aria-current="page"] > span {
+                    background-color: #2563EB;
+                    color: #ffffff;
+                    border-color: #3b82f6;
+                }
+
+                .pagination-container svg { width: 1.25rem; height: 1.25rem; }
+            </style>
             <div class="px-6 py-6 border-t border-white/10 pagination-container">
-                {{ $preview->links() }}
+                @php
+                    $previousUrl = $preview->previousPageUrl();
+                    $nextUrl = $preview->nextPageUrl();
+                @endphp
+                <nav role="navigation" aria-label="Pagination Navigation">
+                    <div>
+                        @if($previousUrl)
+                            <a href="{{ $previousUrl }}">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </a>
+                        @endif
+                        <div></div>
+                        @if($nextUrl)
+                            <a href="{{ $nextUrl }}">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        @endif
+                    </div>
+                    <div class="hidden sm:flex items-center gap-1">
+                        @foreach($preview->getUrlRange(1, $preview->lastPage()) as $page => $url)
+                            @if($page == $preview->currentPage())
+                                <span aria-current="page">
+                                    <span class="px-3 py-2">{{ $page }}</span>
+                                </span>
+                            @else
+                                <a href="{{ $url }}" class="px-3 py-2">{{ $page }}</a>
+                            @endif
+                        @endforeach
+                    </div>
+                </nav>
             </div>
         @endif
     </div>
-
-    <style>
-        /* Pagination is styled by hand, as on the bookings list: the prebuilt
-           CSS bundle ships only part of the palette, so the framework's default
-           pagination markup renders unstyled against this panel's dark card. */
-        .pagination-container nav div:first-child {
-            display: flex;
-            flex: 1 1 0%;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        /* Page numbers are noise on a phone — prev/next is enough there. */
-        .pagination-container nav div:last-child { display: none; }
-
-        @media (min-width: 640px) {
-            .pagination-container nav div:last-child {
-                display: flex;
-                flex: 1 1 0%;
-                align-items: center;
-                justify-content: center;
-            }
-        }
-
-        .pagination-container a,
-        .pagination-container span[aria-current="page"] > span,
-        .pagination-container span[aria-disabled="true"] > span {
-            padding: 0.5rem 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.75rem;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .pagination-container a {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-        }
-
-        .pagination-container a:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .pagination-container span[aria-current="page"] > span {
-            background-color: #2563EB;
-            color: #ffffff;
-            border-color: #3b82f6;
-        }
-
-        .pagination-container span[aria-disabled="true"] > span {
-            background-color: rgba(255, 255, 255, 0.02);
-            color: rgba(255, 255, 255, 0.2);
-            cursor: not-allowed;
-        }
-
-        .pagination-container svg { width: 1.25rem; height: 1.25rem; }
-    </style>
 
     <script>
         /**

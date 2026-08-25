@@ -15,7 +15,10 @@ class Vendor extends Model
         'referral_code', 'referred_by_id', 'referral_balance', 'referral_reward_paid',
         'upi_id', 'vendor_type', 'appointment_mode', 'avg_consultation_time',
         'global_opening_time', 'global_closing_time', 'allow_booking_until_closing', 'show_contact_number',
-        'require_customer_details', 'bookings_paused', 'is_verified'
+        'require_customer_details', 'bookings_paused', 'is_verified',
+        // Direct-to-vendor UPI advances. The money never reaches the platform;
+        // these describe the shop's own bank destination. See UpiPaymentService.
+        'is_direct_payment_enabled', 'upi_name', 'advance_amount',
     ];
 
     protected $casts = [
@@ -30,6 +33,8 @@ class Vendor extends Model
         'require_customer_details' => 'boolean',
         'bookings_paused' => 'boolean',
         'is_verified' => 'boolean',
+        'is_direct_payment_enabled' => 'boolean',
+        'advance_amount' => 'decimal:2',
     ];
 
     /**
@@ -215,6 +220,50 @@ class Vendor extends Model
     }
 
     /**
+     * Everything still standing between this shop and the public listing page.
+     *
+     * Mirrors the discovery query in CustomerDiscoveryController::discoverCandidates():
+     * the isProfileComplete() fields, plus map coordinates (unlocated shops sink
+     * below every located competitor and vanish for nearby searches), plus at
+     * least one active specialist with a fee and working hours. Each entry is a
+     * human label and the panel route where the vendor can fix it.
+     */
+    public function getListingBlockers(): array
+    {
+        $blockers = [];
+
+        $profileFields = [
+            'contact_number'      => 'Contact number',
+            'vendor_type'         => 'Business type',
+            'address'             => 'Shop address',
+            'appointment_mode'    => 'Appointment mode',
+            'global_opening_time' => 'Opening time',
+            'global_closing_time' => 'Closing time',
+        ];
+        foreach ($profileFields as $field => $label) {
+            if (empty($this->$field)) {
+                $blockers[] = ['label' => $label, 'route' => 'vendor.profile.edit'];
+            }
+        }
+
+        if (abs((float) $this->latitude) < 0.00001 || abs((float) $this->longitude) < 0.00001) {
+            $blockers[] = ['label' => 'Shop location on map', 'route' => 'vendor.profile.edit'];
+        }
+
+        $hasBookableEmployee = $this->employees()
+            ->where('is_active', true)
+            ->where('service_fee_override', '>', 0)
+            ->whereNotNull('working_start_time')
+            ->whereNotNull('working_end_time')
+            ->exists();
+        if (!$hasBookableEmployee) {
+            $blockers[] = ['label' => 'One active specialist with a service fee & working hours', 'route' => 'vendor.employees.index'];
+        }
+
+        return $blockers;
+    }
+
+    /**
      * Whether the vendor has a paid/valid subscription window, regardless of
      * approval status. Used to gate dashboard access — a 'pending' vendor with
      * a valid window may still set up their shop while awaiting admin approval.
@@ -278,6 +327,20 @@ class Vendor extends Model
     public function getIsCurrentlyOpenAttribute(): bool
     {
         return $this->isEffectivelyOpen();
+    }
+
+    /**
+     * Whether this shop collects a direct-to-vendor UPI advance before an
+     * appointment is confirmed.
+     *
+     * Delegates rather than reimplements: the same three conditions decide
+     * whether a payment screen can be rendered at all, and two copies of that
+     * rule would eventually disagree — leaving a customer on a screen with no
+     * payee or no amount.
+     */
+    public function acceptsDirectAdvance(): bool
+    {
+        return app(\App\Services\UpiPaymentService::class)->isEnabledFor($this);
     }
 
     public function isEffectivelyOpen()

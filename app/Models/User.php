@@ -19,6 +19,10 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        // NOTE: `google_id` and `email_verified_at` are deliberately absent.
+        // They are the identity a Google sign-in is keyed on, and are written
+        // only by Auth\GoogleAuthController via forceFill.
+
         'name',
         'email',
         'mobile',
@@ -96,5 +100,14 @@ class User extends Authenticatable
     public function isEmployee()
     {
         return $this->role === 'employee';
+    }
+
+    /**
+     * Signed in through "Continue with Google" at some point, so the address on
+     * the account has been confirmed by Google rather than just typed in.
+     */
+    public function usesGoogleSignIn(): bool
+    {
+        return filled($this->google_id) && $this->email_verified_at !== null;
     }
 }

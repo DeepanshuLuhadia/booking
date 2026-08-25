@@ -19,6 +19,14 @@ class BookingController extends Controller
     {
         $vendor = auth()->user()->vendor;
         $bookings = Booking::where('vendor_id', $vendor->id)
+            /*
+            | Legacy slots held for a customer who never completed a payment are
+            | not appointments and must not appear on the shop's sheet — seeing
+            | one reads as a booking that has been placed, which is exactly what
+            | it is not. Bookings made under the current flow are confirmed on
+            | arrival and all pass through this filter untouched.
+            */
+            ->visibleToShop()
             // `vendor` is eager-loaded for the appointment_at accessor, which
             // needs the opening hours to place after-midnight slots on the
             // right calendar day.

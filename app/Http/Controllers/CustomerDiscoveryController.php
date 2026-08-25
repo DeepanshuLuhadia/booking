@@ -25,6 +25,26 @@ class CustomerDiscoveryController extends Controller
     private const LISTING_PAGE_SIZE = 12;
 
     /**
+     * Shortest keyword the search-as-you-type dropdown will act on.
+     *
+     * Anything shorter matches most of the catalogue, so the panel would be
+     * noise and every keystroke a full candidate build.
+     */
+    public const SUGGEST_MIN_CHARS = 3;
+
+    /** How many businesses the search dropdown previews before deferring to the results page. */
+    private const SUGGEST_LIMIT = 6;
+
+    /** How many matching professionals the search dropdown lists below the businesses. */
+    private const SUGGEST_EMPLOYEE_LIMIT = 4;
+
+    /** How many matching areas the search dropdown lists below the businesses. */
+    private const SUGGEST_LOCATION_LIMIT = 4;
+
+    /** Radius limit in km for vendor discovery on listing pages. */
+    private const DISCOVERY_RADIUS_KM = 50;
+
+    /**
      * Reserved category slug meaning "every category".
      *
      * Gives the full catalogue a home of its own — same header, same pills,
@@ -140,6 +160,154 @@ public function vendorsFeed(Request $request)
         'has_more'  => $candidates->count() > $page * self::LISTING_PAGE_SIZE,
         'next_page' => $page + 1,
     ]);
+}
+
+/**
+ * Search-as-you-type suggestions for the listing and category search bars.
+ *
+ * Returns the first few matching businesses as pre-rendered mini cards, plus
+ * the true match count so the panel can hand the rest over to the results
+ * page. Scope follows the page the customer is standing on: the category
+ * pages pass their own slug and stay inside it, the landing page passes none
+ * and searches the whole catalogue.
+ *
+ * Built from listingCandidates() — the same list the form submission itself
+ * would produce — so the preview can never disagree with the page it opens.
+ */
+public function suggestions(Request $request)
+{
+    $keyword = trim((string) $request->query('q', ''));
+
+    if (mb_strlen($keyword) < self::SUGGEST_MIN_CHARS) {
+        return response()->json(['html' => '', 'total' => 0, 'shown' => 0]);
+    }
+
+    // The catalogue slug is "every category", i.e. no filter at all.
+    $type = trim((string) $request->query('type', ''));
+    $type = $type === self::ALL_CATEGORIES_SLUG ? '' : $type;
+
+    // listingCandidates() reads the request, so the typed keyword is put
+    // where a submitted form would have left it.
+    $request->merge(['search' => $keyword, 'type' => $type ?: null]);
+
+    $allThemes = Cache::remember(
+        'all_themes',
+        3600,
+        fn() => ThemeService::getAllThemes()
+    );
+
+    $matches = $this->listingCandidates($request);
+    $shown   = $matches->take(self::SUGGEST_LIMIT)->values();
+
+    // The dropdown is not only businesses: professionals matched by name link
+    // straight to their booking page, and matching areas re-run the search
+    // scoped to that address. Both respect the page's category scope.
+    $employees = $this->suggestEmployees($keyword, $type);
+    $locations = $this->suggestLocations($keyword, $type);
+
+    return response()->json([
+        'total' => $matches->count(),
+        'shown' => $shown->count(),
+        'html'  => view('customer.partials.search-suggestions', [
+            'vendors'   => $shown,
+            'employees' => $employees,
+            'locations' => $locations,
+            'allThemes' => $allThemes,
+            'total'     => $matches->count(),
+            'keyword'   => $keyword,
+        ])->render(),
+    ]);
+}
+
+/**
+ * Bookable professionals whose name matches the typed keyword, for the
+ * search dropdown. Same bookability bar as the listing itself (active, has a
+ * fee, has working hours, at a live vendor) so no suggestion leads to an
+ * unbookable page.
+ */
+private function suggestEmployees(string $keyword, string $type): \Illuminate\Support\Collection
+{
+    return Employee::query()
+        ->where('name', 'LIKE', "%{$keyword}%")
+        ->where('is_active', true)
+        ->where('service_fee_override', '>', 0)
+        ->whereNotNull('working_start_time')
+        ->whereNotNull('working_end_time')
+        ->whereHas('vendor', $this->suggestVendorConstraint($type))
+        ->with(['vendor' => function ($q) {
+            $q->select('id', 'business_name', 'address', 'slug');
+        }])
+        ->orderBy('name')
+        ->limit(self::SUGGEST_EMPLOYEE_LIMIT)
+        ->get();
+}
+
+/**
+ * Areas matching the typed keyword, with how many live businesses each
+ * holds. Addresses are free text, so the "area" is the comma-separated
+ * segment of the address the keyword landed in ("35, Surana Street, Indore,
+ * MP" typed as "indore" → "Indore") — which collapses every street in a city
+ * into one row instead of listing each address separately. Picking one
+ * re-submits the search with that segment as the keyword, which the LIKE
+ * filter then narrows on.
+ */
+private function suggestLocations(string $keyword, string $type): \Illuminate\Support\Collection
+{
+    $addresses = Vendor::query()
+        ->tap($this->suggestVendorConstraint($type))
+        ->where('address', 'LIKE', "%{$keyword}%")
+        ->pluck('address');
+
+    $needle = mb_strtolower($keyword);
+    $areas  = [];
+
+    foreach ($addresses as $address) {
+        $segment = collect(explode(',', (string) $address))
+            ->map(fn ($part) => trim($part))
+            ->first(fn ($part) => $part !== '' && str_contains(mb_strtolower($part), $needle));
+
+        // A keyword spanning two segments matches the address but no single
+        // segment; the full-address vendor cards already cover that case.
+        if ($segment === null) {
+            continue;
+        }
+
+        $key = mb_strtolower($segment);
+        $areas[$key] ??= ['address' => $segment, 'vendor_count' => 0];
+        $areas[$key]['vendor_count']++;
+    }
+
+    return collect($areas)
+        ->sortByDesc('vendor_count')
+        ->take(self::SUGGEST_LOCATION_LIMIT)
+        ->values()
+        ->map(fn ($area) => (object) $area);
+}
+
+/**
+ * The "this vendor is live on the platform" bar shared by the employee and
+ * area suggestions — mirrors discoverCandidates() so the dropdown never
+ * offers what the listing would refuse to show. Category scope rides along
+ * so the category pages' suggestions stay inside their own category.
+ */
+private function suggestVendorConstraint(string $type): \Closure
+{
+    return function ($q) use ($type) {
+        $q->where('status', 'active')
+            ->where('is_profile_complete', true)
+            ->whereNotNull('global_opening_time')
+            ->whereNotNull('global_closing_time')
+            ->where(function ($sub) {
+                $sub->whereNull('subscription_expires_at')
+                    ->orWhere('subscription_expires_at', '>=', now());
+            });
+
+        if (filled($type)) {
+            $q->whereHas('category', function ($cat) use ($type) {
+                $cat->where('slug', $type);
+            });
+        }
+    };
 }
 
 /**
@@ -477,12 +645,19 @@ private function discoverCandidates(Request $request, array $filters = []): \Ill
     |--------------------------------------------------------------------------
     */
     if ($isSearch || filled($state)) {
-        $query->where(function ($q) use ($search, $specialty, $location, $state) {
+        $query->where(function ($q) use ($search, $specialty, $location, $state, $activeEmployeeConstraint) {
             if ($search) {
-                $q->where(function ($sub) use ($search) {
+                $q->where(function ($sub) use ($search, $activeEmployeeConstraint) {
                     $sub->where('business_name', 'LIKE', "%{$search}%")
                         ->orWhere('owner_name', 'LIKE', "%{$search}%")
-                        ->orWhere('address', 'LIKE', "%{$search}%");
+                        ->orWhere('address', 'LIKE', "%{$search}%")
+                        // A customer often knows the professional rather than
+                        // the shop, so a bookable employee's name surfaces
+                        // their business too.
+                        ->orWhereHas('employees', function ($emp) use ($search, $activeEmployeeConstraint) {
+                            $activeEmployeeConstraint($emp);
+                            $emp->where('name', 'LIKE', "%{$search}%");
+                        });
                 });
             }
 
@@ -633,6 +808,13 @@ private function discoverCandidates(Request $request, array $filters = []): \Ill
         );
     });
 
+    // Filter vendors beyond the 50 km radius when user has shared location
+    if ($userLat !== null && $userLng !== null) {
+        $candidates = $candidates->filter(function ($vendor) {
+            return $vendor->distance_km === null || $vendor->distance_km <= self::DISCOVERY_RADIUS_KM;
+        });
+    }
+
     // An explicit sort is the customer's choice — leave the SQL ordering alone.
     if ($sort === 'newest') {
         return $candidates->values();
@@ -712,6 +894,39 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
     public function show(Vendor $vendor, SlotGenerationService $slotService, Request $request)
 {
     $vendor->load(['employees', 'category']);
+
+    // Calculate distance from current location if available
+    $userLat = $this->coordinate($request->cookie('user_lat'));
+    $userLng = $this->coordinate($request->cookie('user_lng'));
+
+    $vendor->distance_km = $this->distanceKm(
+        $userLat,
+        $userLng,
+        $this->coordinate($vendor->latitude),
+        $this->coordinate($vendor->longitude)
+    );
+
+    // Check if vendor is beyond 50 km radius - always return JSON response if AJAX request
+    $isAjaxRequest = $request->expectsJson() || $request->has('_check_distance');
+
+    if ($userLat !== null && $userLng !== null && $vendor->distance_km !== null && $vendor->distance_km > self::DISCOVERY_RADIUS_KM) {
+        return response()->json([
+            'distance_warning' => true,
+            'vendor_id' => $vendor->id,
+            'vendor_name' => $vendor->business_name,
+            'distance_km' => $vendor->distance_km,
+            'message' => "This vendor is {$vendor->distance_km} km away from your current location. Are you sure you want to continue?"
+        ]);
+    }
+
+    // For AJAX requests with no distance warning, return minimal JSON
+    if ($isAjaxRequest) {
+        return response()->json([
+            'distance_warning' => false,
+            'vendor_id' => $vendor->id,
+            'proceed' => true
+        ]);
+    }
 
     $isSubscriptionExpired = !$vendor->isSubscriptionActive();
 

@@ -169,6 +169,14 @@ class BookingReportService
     private function baseQuery(array $range, string $status): Builder
     {
         return Booking::query()
+            /*
+            | Legacy slots held for customers who never completed a payment are
+            | not appointments and must not reach a report — they would be
+            | counted, staffed for and charted as business that never happened.
+            | Bookings made under the current flow are confirmed on arrival and
+            | all pass through this filter untouched.
+            */
+            ->visibleToShop()
             // `vendor` is eager-loaded for the appointment_at accessor, which
             // needs the opening hours to place after-midnight slots correctly.
             ->with(['employee', 'vendor'])
@@ -197,6 +205,7 @@ class BookingReportService
     public function summary(Vendor $vendor, array $range, string $status = 'all', array $employeeIds = []): array
     {
         $counts = Booking::query()
+            ->visibleToShop()
             ->where('vendor_id', $vendor->id)
             ->whereBetween('booking_date', [$range['start']->toDateString(), $range['end']->toDateString()])
             ->when($employeeIds !== [], fn (Builder $q) => $q->whereIn('employee_id', $employeeIds))
@@ -220,6 +229,7 @@ class BookingReportService
     public function platformSummary(array $range, string $status = 'all', array $vendorIds = []): array
     {
         $counts = Booking::query()
+            ->visibleToShop()
             ->whereBetween('booking_date', [$range['start']->toDateString(), $range['end']->toDateString()])
             ->when($vendorIds !== [], fn (Builder $q) => $q->whereIn('vendor_id', $vendorIds))
             ->selectRaw('status, COUNT(*) as total')

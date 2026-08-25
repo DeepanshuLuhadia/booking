@@ -19,13 +19,38 @@ class NotificationService
 
     /**
      * Send a web push notification to a user via FCM.
+     *
+     * Every push to a real account is also stored (PushNotice, `database`
+     * channel) so the panel's notification tab can replay what the device may
+     * have missed — FCM alone is fire-and-forget. Ad-hoc recipients built
+     * around a bare device token (guest customers) have no row to hang a
+     * stored copy on, so they only get the push.
+     *
+     * Pass `'store' => false` in $data when the caller stores its own richer
+     * copy (e.g. DirectPaymentDue) so the tab does not show the event twice.
      */
     public function sendWebPush($user, $title, $message, $data = [])
     {
-        if (!$user || !$user->fcm_token) {
+        if (!$user) {
             return false;
         }
-        
+
+        $store = (bool) ($data['store'] ?? true);
+        unset($data['store']);
+
+        if ($store && $user->id) {
+            // A full notifications table must never turn into a failed booking.
+            try {
+                $user->notify(new \App\Notifications\PushNotice($title, $message, $data));
+            } catch (\Throwable $e) {
+                Log::error("Storing notification for user #{$user->id} failed: {$e->getMessage()}");
+            }
+        }
+
+        if (!$user->fcm_token) {
+            return false;
+        }
+
         \App\Jobs\SendFcmNotificationJob::dispatch($user->fcm_token, $title, $message, $data);
         return true;
     }
@@ -40,8 +65,8 @@ class NotificationService
         }
 
         $user = $vendor->user;
-        if (!$user || !$user->fcm_token) {
-            Log::info("Vendor #{$vendor->id} status changed to {$newStatus}, but vendor user has no FCM token; push notification skipped.");
+        if (!$user) {
+            Log::info("Vendor #{$vendor->id} status changed to {$newStatus}, but vendor has no linked user; notification skipped.");
             return false;
         }
 
@@ -84,20 +109,21 @@ class NotificationService
             $message .= " (Priority Fee: ₹{$booking->emergency_fee})";
         }
         
-        // Notify Vendor Owner
-        if ($user && $user->fcm_token) {
+        // Notify Vendor Owner. No fcm_token pre-check: sendWebPush stores the
+        // tab copy either way and only skips the push itself.
+        if ($user) {
             $this->sendWebPush($user, $title, $message, [
                 'booking_id' => $booking->id,
                 'is_premium' => $isPremium,
                 'fee' => $booking->emergency_fee
             ]);
         } else {
-            Log::warning("Vendor #{$vendor->id} has no linked user or FCM token.");
+            Log::warning("Vendor #{$vendor->id} has no linked user.");
         }
 
         // Notify Assigned Employee if they are a different user
         $employeeUser = $booking->employee->user ?? null;
-        if ($employeeUser && $employeeUser->id !== ($user->id ?? 0) && $employeeUser->fcm_token) {
+        if ($employeeUser && $employeeUser->id !== ($user->id ?? 0)) {
             $empTitle = $isPremium ? "🔥 NEW PRIORITY APPOINTMENT" : "New Appointment Assigned";
             $this->sendWebPush($employeeUser, $empTitle, $message, [
                 'booking_id' => $booking->id,
@@ -141,15 +167,17 @@ class NotificationService
 
         $owner = $vendor?->user;
 
-        if ($owner && $owner->fcm_token) {
+        // No fcm_token pre-checks: sendWebPush stores the notification-tab
+        // copy for any real account and only skips the push itself.
+        if ($owner) {
             $this->sendWebPush($owner, $title, $message, $data);
         } elseif ($vendor) {
-            Log::info("Vendor #{$vendor->id} has no linked user or FCM token; shop push skipped.");
+            Log::info("Vendor #{$vendor->id} has no linked user; shop notification skipped.");
         }
 
         $employeeUser = $booking?->employee?->user;
 
-        if ($employeeUser && $employeeUser->id !== ($owner->id ?? 0) && $employeeUser->fcm_token) {
+        if ($employeeUser && $employeeUser->id !== ($owner->id ?? 0)) {
             $this->sendWebPush($employeeUser, $title, $message, $data);
         }
     }

@@ -47,47 +47,6 @@
                     margin-bottom: 20px !important;
                 }
 
-                /* Custom dropdown — matches the customer listing page UI */
-                .reg-dropdown-menu {
-                    position: absolute;
-                    top: calc(100% + 10px);
-                    left: 0;
-                    width: 100%;
-                    max-height: 320px;
-                    overflow-y: auto;
-                    background: rgba(13, 19, 51, 0.98);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 16px;
-                    padding: 8px;
-                    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-                    z-index: 100;
-                }
-                .reg-dropdown-item {
-                    padding: 12px 16px;
-                    color: rgba(255, 255, 255, 0.8);
-                    font-size: 14px;
-                    font-weight: 600;
-                    border-radius: 10px;
-                    cursor: pointer;
-                    transition: background 0.2s, transform 0.2s, color 0.2s;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    white-space: nowrap;
-                }
-                .reg-dropdown-item:hover {
-                    background: rgba(255, 109, 0, 0.15);
-                    color: #fff;
-                    transform: translateX(4px);
-                }
-                .reg-dropdown-item.selected {
-                    background: linear-gradient(135deg, rgba(255, 109, 0, 0.2), rgba(255, 171, 64, 0.2));
-                    border-left: 3px solid #ff6d00;
-                    color: #ffab40;
-                }
-
                 /* ── Mobile refinements (≤600px). Tighter rhythm + smaller radii so the
                       long form reads comfortably on a phone. Desktop is untouched. ── */
                 @media (max-width: 600px) {
@@ -141,42 +100,19 @@
                             <!-- Category -->
                             <div class="space-y-2 group">
                                 <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-6">Business Category</label>
-                                <div class="relative"
-                                    x-data="{
-                                        open: false,
-                                        selected: @js(old('vendor_type')),
-                                        selectedLabel: '',
-                                        options: [
-                                            @foreach($vendorCategories as $category)
-                                                @php $themeConfig = \App\Services\ThemeService::getTheme($category->slug); @endphp
-                                                { value: @js($category->slug), label: @js(($themeConfig['emoji'] ?? '✨') . ' ' . ($themeConfig['label'] ?? $category->name)) },
-                                            @endforeach
-                                        ],
-                                        init() {
-                                            let match = this.options.find(o => o.value === this.selected);
-                                            if (!match) match = this.options[0];
-                                            if (match) { this.selected = match.value; this.selectedLabel = match.label; }
-                                        },
-                                        choose(opt) { this.selected = opt.value; this.selectedLabel = opt.label; this.open = false; }
-                                    }"
-                                    @click.outside="open = false">
-                                    <input type="hidden" name="vendor_type" :value="selected" required>
-                                    <button type="button" @click="open = !open"
-                                        class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white cursor-pointer flex items-center justify-between gap-3 transition-all hover:bg-white/10"
-                                        :class="open ? 'bg-white/10 ring-4 ring-theme-primary/10' : ''">
-                                        <span class="truncate" x-text="selectedLabel"></span>
-                                        <svg class="w-5 h-5 text-white/30 transition-transform shrink-0" :class="open ? 'rotate-180 text-theme-primary' : ''"
-                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                    <div x-show="open" x-cloak x-transition.origin.top class="reg-dropdown-menu">
-                                        <template x-for="opt in options" :key="opt.value">
-                                            <div class="reg-dropdown-item" :class="selected === opt.value ? 'selected' : ''"
-                                                @click="choose(opt)" x-text="opt.label"></div>
-                                        </template>
-                                    </div>
-                                </div>
+                                {{-- A plain <select>: the shared dropdown in
+                                     partials/custom-select turns it into the same
+                                     control used everywhere else on the site,
+                                     including the mobile bottom sheet. --}}
+                                <select name="vendor_type" required
+                                    class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white">
+                                    @foreach($vendorCategories as $category)
+                                        @php $themeConfig = \App\Services\ThemeService::getTheme($category->slug); @endphp
+                                        <option value="{{ $category->slug }}" class="bg-[#0d1333]" @selected(old('vendor_type') === $category->slug)>
+                                            {{ ($themeConfig['emoji'] ?? '✨') . ' ' . ($themeConfig['label'] ?? $category->name) }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <!-- Business Name -->
@@ -267,14 +203,25 @@
                                     </div>
 
                                     <div class="space-y-4 mb-4">
-                                        <div class="flex items-center gap-3">
-                                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                            <span class="text-[10px] font-black uppercase tracking-widest">Up to {{ $plan->max_employees }} Staff Members</span>
-                                        </div>
-                                        <div class="flex items-center gap-3">
-                                            <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                            <span class="text-[10px] font-black uppercase tracking-widest">Online Appointment Booking</span>
-                                        </div>
+                                        {{-- Feature list comes from the admin panel (Plans →
+                                             features[]), same source the admin pages render.
+                                             The two staple lines below are only a fallback for
+                                             a plan saved with no features at all. --}}
+                                        @forelse(array_filter($plan->features ?? []) as $feature)
+                                            <div class="flex items-center gap-3">
+                                                <svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                                <span class="text-[10px] font-black uppercase tracking-widest">{{ $feature }}</span>
+                                            </div>
+                                        @empty
+                                            <div class="flex items-center gap-3">
+                                                <svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                                <span class="text-[10px] font-black uppercase tracking-widest">Up to {{ $plan->max_employees }} Staff Members</span>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                                <span class="text-[10px] font-black uppercase tracking-widest">Online Appointment Booking</span>
+                                            </div>
+                                        @endforelse
                                     </div>
 
                                     <div class="check-icon absolute top-8 right-8 w-10 h-10 rounded-xl bg-theme-primary text-white flex items-center justify-center opacity-0 transition-all transform scale-90 shadow-xl shadow-theme-primary/10">

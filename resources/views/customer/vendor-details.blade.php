@@ -1,6 +1,16 @@
 <x-app-layout :vendor-theme="$theme" :page-title="$vendor->business_name">
     @php
         /*
+        | Does this shop collect payment before confirming a booking?
+        |
+        | Fixed for the whole page, so everything that depends only on it is
+        | branched in Blade rather than with x-show — shipping the paid wording
+        | to shops that do not charge and merely hiding it is how the wrong
+        | label eventually surfaces.
+        */
+        $takesDirectPayment = $vendor->acceptsDirectAdvance();
+
+        /*
         | Map link for the address rows below (one desktop, one mobile).
         |
         | Prefer the coordinates the vendor captured in their panel: a text
@@ -421,9 +431,16 @@
                                 </div>
                                 <div class="flex flex-col gap-2">
                                     <template x-for="(suggestion, index) in activeAiSuggestions" :key="index">
-                                        <button type="button" @click="comment = suggestion" 
-                                            class="text-left px-4 py-3 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 hover:border-sky-500/40 text-sm text-white/80 transition-all italic group">
+                                        <button type="button" @click="applySuggestion(suggestion, index)"
+                                            :class="selectedSuggestion === index
+                                                ? 'border-sky-400 bg-sky-500/20 text-white ring-2 ring-sky-500/40'
+                                                : 'border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 hover:border-sky-500/40 text-white/80'"
+                                            class="relative text-left px-4 py-3 pr-10 rounded-xl border text-sm transition-all italic group">
                                             <span class="text-sky-400 mr-1.5 group-hover:scale-110 transition-transform inline-block">✨</span> <span x-text="suggestion"></span>
+                                            <!-- Tick marks the one now sitting in the review box -->
+                                            <span x-show="selectedSuggestion === index" x-cloak class="absolute top-1/2 right-3 -translate-y-1/2 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shrink-0">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                            </span>
                                         </button>
                                     </template>
                                 </div>
@@ -438,15 +455,18 @@
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Phone <span class="text-white/30 normal-case">(optional)</span></label>
-                                    <input type="tel" x-model="phone" maxlength="10" :readonly="!!googleUser" @input="phone = phone.replace(/[^0-9]/g, '')"
+                                    <input type="tel" x-model="phone" maxlength="10" :readonly="!!(googleUser && account && account.phone)" @input="phone = phone.replace(/[^0-9]/g, '')"
                                         class="premium-input w-full h-14 px-5 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border read-only:opacity-60 read-only:cursor-not-allowed"
                                         placeholder="10 digit number">
                                 </div>
-                                <div class="space-y-2">
+                                <div class="space-y-2" x-ref="commentSection">
                                     <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Review <span class="text-white/30 normal-case">(optional)</span></label>
-                                    <textarea x-model="comment" maxlength="1000" rows="4"
-                                        class="premium-input w-full px-5 py-4 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border resize-none"
+                                    <textarea x-model="comment" maxlength="1000" rows="4" x-ref="commentBox"
+                                        @input="selectedSuggestion = null"
+                                        :class="commentFlash ? 'ring-2 ring-sky-500/60 border-sky-400/60' : ''"
+                                        class="premium-input w-full px-5 py-4 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border resize-none transition-all duration-300"
                                         placeholder="Tell us about your visit..."></textarea>
+                                    <p x-show="selectedSuggestion !== null" x-cloak x-transition class="text-[10px] font-black uppercase tracking-widest text-sky-400 italic ml-2">Suggestion added — edit it however you like.</p>
                                 </div>
 
                                 <!-- Mandatory photo evidence for low (under 2-star) ratings -->
@@ -480,8 +500,8 @@
                                 <span x-show="submitting" style="display:none;">Posting...</span>
                             </button>
 
-                            @if(config('services.google.client_id'))
-                                <!-- Optional: auto-fill name & verify identity with Google -->
+                            @if(config('services.google.client_id') || $reviewAccount)
+                                <!-- Sign in with Google: creates the session, fills in the details -->
                                 <div class="mt-6">
                                     <div class="flex items-center gap-4 mb-4">
                                         <span class="flex-grow h-px bg-white/10"></span>
@@ -490,9 +510,16 @@
                                     </div>
 
                                     <!-- Signed-out: render the Google button -->
-                                    <div x-show="!googleUser">
+                                    <div x-show="!googleUser && !signedIn">
                                         <div x-ref="googleBtn" class="flex justify-center min-h-[44px]"></div>
-                                        <p class="text-center text-white/30 text-[11px] font-medium italic mt-3">Sign in with Google to auto-fill your details and post as a verified reviewer.</p>
+                                        <p class="text-center text-white/30 text-[11px] font-medium italic mt-3">Continue with Google to sign in, auto-fill your details and post as a verified reviewer.</p>
+                                        <p x-show="signingIn" x-cloak class="text-center text-sky-400/80 text-[11px] font-black uppercase tracking-widest mt-3">Signing you in...</p>
+                                    </div>
+
+                                    <!-- Signed in, but posting this one unnamed -->
+                                    <div x-show="!googleUser && signedIn" x-cloak class="text-center">
+                                        <p class="text-white/30 text-[11px] font-medium italic">This review will be posted as <span class="text-white/60">Anonymous</span>.</p>
+                                        <button type="button" @click="useAccountIdentity()" class="mt-2 text-[9px] font-black uppercase tracking-widest text-sky-400 hover:text-sky-300">Use my account instead</button>
                                     </div>
 
                                     <!-- Signed-in chip -->
@@ -504,8 +531,10 @@
                                                 <svg class="w-4 h-4 text-sky-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clip-rule="evenodd"/></svg>
                                             </div>
                                             <span class="text-[10px] font-black uppercase tracking-widest text-sky-400 truncate block" x-text="googleUser?.email"></span>
+                                            <span x-show="signedIn" x-cloak class="text-[9px] font-black uppercase tracking-widest text-emerald-400/80 block mt-0.5">Signed in</span>
                                         </div>
-                                        <button type="button" @click="signOutGoogle()" class="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white shrink-0">Use a name instead</button>
+                                        <button type="button" @click="signOutGoogle()" class="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white shrink-0"
+                                            x-text="signedIn ? 'Post anonymously' : 'Use a name instead'"></button>
                                     </div>
                                 </div>
                             @endif
@@ -928,23 +957,85 @@
                             <span class="text-[9px] font-black uppercase tracking-widest italic">Priority Booking Fee</span>
                             <span class="font-black" x-text="'₹' + selectedSlot?.premium_fee_amount"></span>
                         </div>
+                        {{-- What is actually payable on this screen.
+
+                             At a shop taking direct UPI payment the customer is
+                             about to be sent to a UPI app, so "Due Now" has to
+                             mean the figure that will appear there — the shop's
+                             advance when it set one, otherwise the whole price.
+                             Quoting the full total and then asking for a
+                             different number one tap later is how a legitimate
+                             charge starts to look like a scam. --}}
+                        {{-- Whether this shop takes payment is fixed for the
+                             page, so it is branched in Blade rather than with
+                             x-show — an x-show would ship the paid wording to
+                             every shop that does not charge and merely hide it.
+                             Only the AMOUNT is reactive, because it depends on
+                             which slot was picked. --}}
                         <div class="flex justify-between items-center pt-6 border-t border-white/10">
-                            <span class="text-xl font-black italic uppercase tracking-tighter">Due Now</span>
+                            <span class="text-xl font-black italic uppercase tracking-tighter">
+                                {{ $takesDirectPayment ? 'Pay Now' : 'Due Now' }}
+                            </span>
                             <span
                                 class="text-2xl md:text-4xl font-black theme-gradient-text drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-                                x-text="'₹' + totalAmount"></span>
+                                x-text="'₹' + payableNow"></span>
                         </div>
+
+                        {{-- Only when the advance is a deposit. Says plainly
+                             that the rest is still owed, so the customer is not
+                             surprised at the counter. --}}
+                        @if($takesDirectPayment)
+                        <div x-show="payAtVenue > 0" style="display:none;"
+                             class="flex justify-between items-center opacity-50">
+                            <span class="text-[9px] font-black uppercase tracking-widest italic">Balance At Venue</span>
+                            <span class="font-black" x-text="'₹' + payAtVenue"></span>
+                        </div>
+                        @endif
                     </div>
                 </div>
 
-                <button @click="confirmBooking()" class="theme-btn w-full h-16 md:h-24 px-4 md:px-8 text-base md:text-xl rounded-3xl flex items-center justify-center gap-2 md:gap-3 shadow-lg">
-                    AUTHENTICATE & BOOK
-                    <svg class="w-6 h-6 transform group-hover:translate-x-2 transition-transform" fill="none"
+                {{-- One action, not two.
+
+                     The booking row still has to be written before a payment
+                     screen can exist — it is what holds the slot while the
+                     customer pays, and what the UTR and screenshot are later
+                     attached to. But that is our sequencing problem, not
+                     something to make the customer step through: they tap once
+                     and land on the payment screen, with no "booked!" interlude
+                     claiming a slot that is not paid for yet.
+
+                     So the label names the real next action and the exact
+                     amount, and it matches the "Pay Now" figure directly above
+                     it. --}}
+                <button @click="confirmBooking()" :disabled="submitting"
+                        class="theme-btn w-full h-16 md:h-24 px-4 md:px-8 text-base md:text-xl rounded-3xl flex items-center justify-center gap-2 md:gap-3 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                    @if($takesDirectPayment)
+                        {{-- A shop can have payment enabled and still have
+                             nothing to charge for this slot (no advance, and a
+                             free service). "PAY ₹0 & BOOK" is nonsense, and the
+                             server agrees — it confirms such a booking outright
+                             rather than sending anyone to a payment screen. --}}
+                        <span x-show="!submitting" x-text="payableNow > 0 ? ('PAY ₹' + payableNow + ' & BOOK') : 'CONFIRM BOOKING'"></span>
+                        <span x-show="submitting" style="display:none;"
+                              x-text="payableNow > 0 ? 'OPENING PAYMENT…' : 'BOOKING…'"></span>
+                    @else
+                        <span x-show="!submitting">AUTHENTICATE &amp; BOOK</span>
+                        <span x-show="submitting" style="display:none;">BOOKING…</span>
+                    @endif
+                    <svg x-show="!submitting" class="w-6 h-6 transform group-hover:translate-x-2 transition-transform" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4"
                             d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
                 </button>
+
+                {{-- Said at the moment of handoff: the money never touches this
+                     platform. --}}
+                @if($takesDirectPayment)
+                <p class="mt-5 text-[9px] font-black uppercase tracking-widest text-white/30 text-center leading-relaxed">
+                    Paid directly to {{ $vendor->business_name }} via UPI
+                </p>
+                @endif
                 <button @click="bookingModal = false"
                     class="mt-8 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">Abort
                     Transaction</button>
@@ -1005,6 +1096,71 @@
                     </p>
                 </div>
 
+                {{--
+                    The shop takes payment directly, so paying is one tap from
+                    this screen — the button below raises the device's own UPI
+                    chooser. Nothing is raised automatically: a payment sheet
+                    that appears over a confirmation the customer has not read
+                    yet is startling, and dismissing it out of surprise is
+                    indistinguishable from refusing to pay.
+
+                    The booking is confirmed either way. This platform never sees
+                    the transfer and never gates the appointment on it, which is
+                    why the pay button sits next to a confirmation rather than in
+                    front of one.
+                --}}
+                <template x-if="payment">
+                    <div class="mb-6 space-y-4 text-left">
+                        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5">
+                            <div class="flex items-center justify-between gap-4 mb-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Pay The Business</span>
+                                <span class="text-xl font-black italic text-white" x-text="'₹' + payment.amount"></span>
+                            </div>
+                            <p class="text-xs text-white/60 font-medium leading-relaxed">
+                                Paid straight to <span class="text-white font-bold" x-text="payment.payee"></span> in your
+                                own UPI app. <span x-show="!payment.is_advance">This is the full amount.</span>
+                                <span x-show="payment.is_advance">The balance is settled at the counter.</span>
+                            </p>
+                        </div>
+
+                        {{-- Desktop has no app to hand off to, so the QR is the
+                             only route; on a phone it is the second chance for
+                             somebody who closed the chooser by accident. --}}
+                        <div x-show="showQr" x-cloak class="bg-white rounded-2xl p-5">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 text-center">Scan With Any UPI App</p>
+                            <div class="w-44 mx-auto [&>svg]:w-full [&>svg]:h-auto" x-html="payment.qr_svg"></div>
+                            <p class="mt-3 text-center text-[11px] font-bold text-slate-600 break-all" x-text="payment.vpa"></p>
+                        </div>
+
+                        {{-- Phone only. A real anchor on the upi:// scheme, not
+                             a scripted navigation: a tap on a genuine link is
+                             the form mobile browsers hand to the OS chooser
+                             most reliably. On desktop no handler for the scheme
+                             exists and following it errors, so the button (and
+                             the QR toggle with it) is never shown there — the
+                             QR above is already open and is the only route. --}}
+                        <a x-show="onPhone()" x-cloak
+                           :href="payment.upi_link" @click="payNow($event)"
+                           class="theme-btn w-full h-16 rounded-2xl flex items-center justify-center text-base italic font-black uppercase tracking-widest"
+                           x-text="'Pay ₹' + payment.amount + ' Now'"></a>
+
+                        <button type="button" x-show="onPhone()" x-cloak @click="showQr = !showQr"
+                                class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/60 hover:bg-white/10 transition-all active:scale-95"
+                                x-text="showQr ? 'Hide QR Code' : 'Pay By Scanning A QR Code'"></button>
+
+                        {{-- The one instruction that replaces the whole upload
+                             step: the receipt is shown to a person, not to us. --}}
+                        <div class="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-2">When Your Turn Comes</p>
+                            <p class="text-xs text-white/70 font-medium leading-relaxed">
+                                Show your UPI payment screenshot to
+                                <span class="text-white font-bold" x-text="payment.employee_name"></span>.
+                                {{ $vendor->business_name }} has already been told to expect it.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
                 <button @click="successModal = false"
                     class="theme-btn w-full h-20 text-xl rounded-3xl opacity-100 italic">GOT IT</button>
             </div>
@@ -1047,7 +1203,28 @@
                 isPaused: {{ (isset($isPaused) && $isPaused) ? 'true' : 'false' }},
                 isSubscriptionExpired: {{ $isSubscriptionExpired ? 'true' : 'false' }},
 
+                /*
+                | Direct-to-vendor UPI payment.
+                |
+                | Mirrors the server so the button can quote the real figure
+                | before the booking exists. It is a DISPLAY copy only — the
+                | amount actually charged is recomputed server-side in
+                | BookingController and written to the booking row, so a tampered
+                | value here changes the label and nothing else.
+                |
+                | fixedAdvance = 0 means "no deposit set", which is the shop
+                | asking for the full booking price, NOT for nothing.
+                */
+                directPayment: {{ $vendor->acceptsDirectAdvance() ? 'true' : 'false' }},
+                fixedAdvance: {{ (float) ($vendor->advance_amount ?? 0) }},
+
                 successModal: false,
+                // The direct-payment block on the confirmation modal, or null at
+                // a shop that takes no payment. Set from the booking response.
+                payment: null,
+                // QR visible: forced open on desktop, where there is no UPI app
+                // to hand off to, and toggleable on a phone.
+                showQr: false,
                 successMsg: '',
                 // What the server returned for the booking just made — drives the
                 // token number shown on the confirmation screen.
@@ -1157,6 +1334,25 @@
                     this.loading = false;
                 },
 
+        /**
+         * What the customer pays on the payment screen they are about to be
+         * sent to: the shop's fixed advance if it set one, otherwise the whole
+         * booking price. Mirrors UpiPaymentService::amountDueFor().
+         *
+         * Falls back to the full total at shops not taking direct payment, so
+         * the "Due Now" line keeps its original meaning there.
+         */
+        get payableNow() {
+            if (!this.directPayment) return this.totalAmount;
+
+            return this.fixedAdvance > 0 ? this.fixedAdvance : this.totalAmount;
+        },
+
+        /** What is left to settle in person — zero in full-payment mode. */
+        get payAtVenue() {
+            return Math.max(this.totalAmount - this.payableNow, 0);
+        },
+
         initiateBooking(slot) {
             this.selectedSlot = slot;
             const premiumSlotFee = slot.is_premium ? slot.premium_fee_amount : 0;
@@ -1246,6 +1442,21 @@
                     this.watchQueue(this.selectedEmployee, { pin: true });
 
                     this.successModal = true;
+
+                    /*
+                     * The shop takes payment directly. The pay button on this
+                     * modal is the whole of the payment flow — one tap raises the
+                     * device's own UPI chooser, and coming back out of the app
+                     * lands on this same confirmed screen rather than on a form.
+                     *
+                     * Deliberately not launched for them: the customer reads what
+                     * they booked first, then chooses to pay. On desktop, where no
+                     * UPI app exists, the QR is opened up front because there is
+                     * nothing to tap.
+                     */
+                    this.payment = data.booking?.payment || null;
+                    this.showQr = !!this.payment && !this.onPhone();
+
                     setTimeout(() => {
                         window.dispatchEvent(new Event('trigger-notification-prompt'));
                     }, 500);
@@ -1283,6 +1494,38 @@
         },
                 employeeName(id) {
                     return this.employeeNames[id] || 'your specialist';
+                },
+
+                onPhone() {
+                    return /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+                },
+
+                /*
+                 * The customer tapped Pay. Hand the device to whichever UPI apps
+                 * it has installed.
+                 *
+                 * `upi://` is an intent, not a page: following it navigates
+                 * nothing, it raises the OS payment chooser over the page we are
+                 * already on. So the customer comes back out of their UPI app to
+                 * the same confirmed screen — no redirect, no second page and
+                 * nothing to upload.
+                 *
+                 * The anchor is left to do the work rather than assigning
+                 * location: a real link tap is what mobile browsers hand to the
+                 * chooser most reliably. All this does is stop the navigation on
+                 * desktop, where no handler for the scheme exists and following it
+                 * produces either nothing at all or a jarring "no app found"
+                 * dialog — there the QR is the only route.
+                 *
+                 * The QR is revealed on the way out in either case, so a customer
+                 * whose chooser never appeared has somewhere to go next.
+                 */
+                payNow(event) {
+                    if (!this.onPhone()) {
+                        event.preventDefault();
+                    }
+
+                    this.showQr = true;
                 },
 
                 /*
@@ -1481,6 +1724,27 @@
 
     </script>
 
+    @php
+        /*
+        | The signed-in customer, when there is one, in the shape the review
+        | modal's identity chip renders. Lets a visitor who used "Continue with
+        | Google" on an earlier visit skip the button entirely — their details
+        | are already on the account.
+        |
+        | Customers only: a vendor/admin/employee browsing a shop page is not a
+        | reviewer identity, and the sign-in endpoint refuses those accounts too.
+        */
+        $reviewAccount = auth()->check() && auth()->user()->isCustomer()
+            ? [
+                'name'     => auth()->user()->name,
+                'email'    => auth()->user()->email,
+                'picture'  => auth()->user()->avatar,
+                'phone'    => auth()->user()->mobile,
+                'verified' => auth()->user()->usesGoogleSignIn(),
+            ]
+            : null;
+    @endphp
+
     <script>
         function reviewSystem() {
             return {
@@ -1504,8 +1768,35 @@
                 loadingReviews: false,
                 allAiSuggestions: @js(app(\App\Services\ReviewSuggestionService::class)->getAllForCategory($vendor->category?->slug)),
                 activeAiSuggestions: [],
+                // Index of the suggestion currently sitting in the review box
+                // (null once the reviewer types over it, so the tick never lies).
+                selectedSuggestion: null,
+                commentFlash: false,
+
+                /*
+                | Drop a suggestion into the review box, mark it as the chosen
+                | one, and bring the box into view — the field sits below the
+                | fold on most screens, so without the scroll the tap looks
+                | like nothing happened.
+                */
+                applySuggestion(suggestion, index) {
+                    this.comment = suggestion;
+                    this.selectedSuggestion = index;
+                    this.commentFlash = true;
+                    setTimeout(() => this.commentFlash = false, 1200);
+
+                    this.$nextTick(() => {
+                        const box = this.$refs.commentBox;
+                        if (!box) return;
+                        (this.$refs.commentSection || box).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // preventScroll so focus doesn't fight the smooth scroll.
+                        box.focus({ preventScroll: true });
+                        box.setSelectionRange(box.value.length, box.value.length);
+                    });
+                },
 
                 refreshSuggestions() {
+                    this.selectedSuggestion = null;
                     if (this.rating === 0) {
                         this.activeAiSuggestions = [];
                         return;
@@ -1522,7 +1813,16 @@
 
                 // Optional Google identity
                 googleClientId: @js(config('services.google.client_id')),
-                googleUser: null,
+                // The signed-in customer's details, or null for a guest. Held
+                // separately from `googleUser` so "post anonymously" can drop the
+                // identity from one review without losing the account behind it.
+                account: @js($reviewAccount),
+                googleUser: @js($reviewAccount),
+                signedIn: @js((bool) $reviewAccount),
+                // Set when a signed-in reviewer explicitly chooses to stay
+                // unnamed; sent to the server so it ignores the session identity.
+                postAnonymously: false,
+                signingIn: false,
                 googleCredential: null,
                 googleRendered: false,
 
@@ -1534,7 +1834,8 @@
                 openModal() {
                     this.error = '';
                     this.showModal = true;
-                    if (this.googleClientId) {
+                    // Nothing to sign into when they already are.
+                    if (this.googleClientId && !this.signedIn) {
                         this.$nextTick(() => this.initGoogleButton());
                     }
                 },
@@ -1546,6 +1847,16 @@
                         window.google.accounts.id.initialize({
                             client_id: this.googleClientId,
                             callback: (resp) => this.handleGoogleCredential(resp),
+                            /*
+                            | Fires when Google refuses before any credential
+                            | exists — most often because this page's origin is
+                            | not on the OAuth client's Authorized JavaScript
+                            | origins list. Without it the only sign of trouble
+                            | is a bare popup from accounts.google.com: nothing
+                            | reaches our server, so nothing reaches our logs
+                            | either, and the modal just sits there.
+                            */
+                            error_callback: (err) => this.handleGoogleError(err),
                         });
                         window.google.accounts.id.renderButton(this.$refs.googleBtn, {
                             theme: 'filled_blue', size: 'large', shape: 'pill', text: 'continue_with', width: 280,
@@ -1561,30 +1872,192 @@
                     }, 150);
                 },
 
-                handleGoogleCredential(resp) {
+                /*
+                | Google declined to hand over a credential.
+                |
+                | The reader gets a plain "not available" — the cause is a
+                | server-side configuration matter and means nothing to them,
+                | and they can still post the review unnamed. The precise
+                | diagnosis, including the exact origin to authorise, goes to
+                | the console where whoever is configuring it will look.
+                */
+                handleGoogleError(err) {
+                    const type = err?.type || 'unknown';
+
+                    if (type === 'unregistered_origin') {
+                        console.error(
+                            'GOOGLE SIGN-IN: this origin is not authorised for the OAuth client.\n' +
+                            'Add exactly this to the client\'s "Authorized JavaScript origins":\n  ' +
+                            window.location.origin + '\n' +
+                            'Client ID: ' + this.googleClientId + '\n' +
+                            'Note: scheme, host and port must all match, with no trailing slash, and ' +
+                            'Google only permits http:// for localhost / 127.0.0.1 — every other origin must be https.'
+                        );
+                    } else {
+                        console.error('GOOGLE SIGN-IN: Google declined the request', err);
+                    }
+
+                    this.error = 'Google sign-in is not available here right now. '
+                        + 'You can still post your review with just your name.';
+                    this.signingIn = false;
+                },
+
+                async handleGoogleCredential(resp) {
                     const payload = this.decodeJwt(resp.credential);
                     if (!payload) {
                         this.error = 'Could not read your Google account. Please try again.';
                         return;
                     }
                     this.googleCredential = resp.credential;
+                    // Shape only, never the token itself. A Google ID token is
+                    // always three dot-separated segments; anything else means
+                    // the button handed back something we cannot use.
+                    console.info('GOOGLE SIGN-IN: credential segments =',
+                        String(resp.credential || '').split('.').length);
                     this.googleUser = {
                         name: payload.name || payload.email,
                         email: payload.email,
                         picture: payload.picture,
+                        verified: true,
                     };
                     // Auto-fill the (now read-only) name field from the verified account.
                     this.name = this.googleUser.name;
+                    this.postAnonymously = false;
                     this.error = '';
+
+                    // Spend the same credential on a real session, so they end up
+                    // signed in rather than merely identified for this one review.
+                    await this.signInWithGoogle();
                 },
 
+                /*
+                | Turn the Google credential into a customer session.
+                |
+                | The review is never held hostage to this: if it fails for any
+                | reason the credential still travels with the review and still
+                | verifies server-side, exactly as it did before sign-in existed.
+                */
+                async signInWithGoogle() {
+                    if (!this.googleCredential) return;
+
+                    this.signingIn = true;
+                    try {
+                        const res = await fetch('{{ route('auth.google') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken(),
+                            },
+                            body: JSON.stringify({
+                                credential: this.googleCredential,
+                                // This device's push address, when it already has
+                                // one. Sent so the shop's confirmed / cancelled /
+                                // your-turn notifications reach the new account.
+                                fcm_token: window.__fcmToken || null,
+                            }),
+                        });
+                        /*
+                        | Read the body as text first.
+                        |
+                        | A 419 (expired session) or a 500 comes back as an HTML
+                        | error page, and res.json() throws on it — which used to
+                        | surface as the same vague message as everything else,
+                        | hiding the status code that actually explains it.
+                        */
+                        const raw = await res.text();
+                        let data = null;
+                        try { data = JSON.parse(raw); } catch (e) { /* not JSON — handled below */ }
+
+                        if (!data) {
+                            console.error('GOOGLE SIGN-IN: non-JSON response', res.status, raw.slice(0, 500));
+                            this.error = res.status === 419
+                                ? 'Your session expired. Please refresh the page and try again.'
+                                : 'Sign-in failed (error ' + res.status + '). You can still post this review.';
+                            return;
+                        }
+
+                        if (!res.ok || !data.success) {
+                            console.error('GOOGLE SIGN-IN: rejected', res.status, data);
+                            this.error = data.message
+                                || 'We could not sign you in, but you can still post this review.';
+                            return;
+                        }
+
+                        /*
+                        | Signing in rotates the session id, and Laravel rotates
+                        | the CSRF token with it. The page is still holding the
+                        | old one, so swap it in or the very next POST — this
+                        | review, or a booking — comes back 419 Page Expired.
+                        */
+                        if (data.csrf_token) this.applyCsrfToken(data.csrf_token);
+
+                        this.signedIn = true;
+                        this.account = data.user;
+                        this.googleUser = data.user;
+                        this.name = data.user.name || this.name;
+                        if (data.user.phone) this.phone = data.user.phone;
+                        this.error = '';
+
+                        /*
+                        | Re-run the silent FCM registration against the account
+                        | we just signed into. Covers the case where the token
+                        | had not arrived yet when they clicked: without this it
+                        | would stay parked on the guest session until reload.
+                        */
+                        if (typeof window.__registerFcmTokenSilently === 'function') {
+                            window.__registerFcmTokenSilently();
+                        }
+
+                        window.dispatchEvent(new CustomEvent('toast', {
+                            detail: { message: data.message, type: 'success' }
+                        }));
+                    } catch (e) {
+                        console.error('GOOGLE SIGN-IN ERROR', e);
+                        this.error = 'We could not sign you in, but you can still post this review.';
+                    } finally {
+                        this.signingIn = false;
+                    }
+                },
+
+                /*
+                | Drop the identity from this review only.
+                |
+                | A signed-in reviewer stays signed in — this is not a logout. It
+                | sets the anonymous flag so the server ignores the session
+                | identity it would otherwise stamp on the review.
+                */
                 signOutGoogle() {
-                    this.googleUser = null;
-                    this.googleCredential = null;
-                    this.name = '';
                     if (window.google?.accounts?.id) {
                         window.google.accounts.id.disableAutoSelect();
                     }
+                    if (this.signedIn) {
+                        this.postAnonymously = true;
+                    }
+                    this.googleUser = null;
+                    this.googleCredential = null;
+                    this.name = '';
+                },
+
+                // Undo the above — post as themselves again.
+                useAccountIdentity() {
+                    if (!this.account) return;
+                    this.postAnonymously = false;
+                    this.googleUser = this.account;
+                    this.name = this.account.name || '';
+                    if (this.account.phone) this.phone = this.account.phone;
+                },
+
+                csrfToken() {
+                    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                },
+
+                // Keep every CSRF holder on the page in step with a rotated token:
+                // the meta tag AJAX reads, and the hidden field in every form.
+                applyCsrfToken(token) {
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) meta.setAttribute('content', token);
+                    document.querySelectorAll('input[name="_token"]').forEach(i => { i.value = token; });
                 },
 
                 decodeJwt(token) {
@@ -1621,8 +2094,12 @@
                     this.rating = 0;
                     this.hoverRating = 0;
                     this.comment = '';
+                    this.selectedSuggestion = null;
+                    this.commentFlash = false;
                     if (!this.googleUser) this.name = '';
-                    this.phone = '';
+                    // Keep the number that came off their account; only a typed
+                    // one is cleared.
+                    this.phone = (this.googleUser && this.account?.phone) ? this.account.phone : '';
                     this.previews.forEach(URL.revokeObjectURL);
                     this.images = [];
                     this.previews = [];
@@ -1679,6 +2156,8 @@
                     if (this.phone) form.append('reviewer_phone', this.phone);
                     if (this.comment) form.append('comment', this.comment);
                     if (this.googleCredential) form.append('google_credential', this.googleCredential);
+                    // Signed in, but they chose to stay unnamed on this one.
+                    if (this.postAnonymously) form.append('anonymous', '1');
                     this.images.forEach(file => form.append('images[]', file));
 
                     this.submitting = true;
@@ -1687,7 +2166,8 @@
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                // Read live: signing in rotates this token.
+                                'X-CSRF-TOKEN': this.csrfToken()
                             },
                             body: form
                         });

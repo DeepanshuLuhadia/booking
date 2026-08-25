@@ -18,6 +18,13 @@ Route::middleware(['employee.panel.only'])->group(function () {
     // Batch endpoint the landing listing's infinite scroll pulls from — the
     // search/filter counterpart of category.vendors.
     Route::get('/discover/vendors', [\App\Http\Controllers\CustomerDiscoveryController::class, 'vendorsFeed'])->name('discover.vendors');
+
+    // Search-as-you-type dropdown behind both search bars. Throttled because
+    // it fires while the customer is still typing; the `type` parameter keeps
+    // a category page's suggestions inside its own category.
+    Route::get('/discover/suggestions', [\App\Http\Controllers\CustomerDiscoveryController::class, 'suggestions'])
+        ->middleware('throttle:60,1')
+        ->name('discover.suggestions');
     Route::get('/vendors/{vendor:slug}', [\App\Http\Controllers\CustomerDiscoveryController::class, 'show'])->name('vendor.show');
 
     // Category detail page + the batch endpoint its infinite scroll pulls from
@@ -66,10 +73,41 @@ Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store
     ->middleware('throttle:3,1')
     ->name('bookings.store');
 
+/*
+| Direct-to-vendor UPI payments — the "pay again" fallback.
+|
+| Not part of the booking flow: the customer is handed to their UPI app from
+| the confirmation screen itself and the booking is confirmed either way. This
+| URL exists for the customer who dismissed the payment chooser without paying
+| and wants the QR or the app link back.
+|
+| Guest-accessible on purpose, like booking itself: appointments here are made
+| without an account (a shop can switch the details form off entirely), so
+| requiring a login to pay would lock out most of the people who owe money.
+| Ownership is proved inside the controller through CustomerBookingService::
+| owns() — the phone this device actually booked with, its guest key, or the
+| signed-in customer's id — never by the id in the URL.
+*/
+Route::get('/bookings/{booking}/payment', [\App\Http\Controllers\DirectPaymentController::class, 'show'])
+    ->name('payment.show');
+
 // Guest-accessible vendor reviews (no login required)
 Route::post('/vendors/{vendor:slug}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('vendor.reviews.store');
+
+/*
+| "Continue with Google" — the review modal's sign-in.
+|
+| Deliberately outside the `redirect.role.auth` group: that middleware bounces
+| anyone already authenticated, and this is called by fetch() from a page the
+| visitor stays on. Throttled because it is public and does a network round
+| trip to Google's key endpoint on every call. Customers only — the controller
+| refuses any address belonging to a staff account.
+*/
+Route::post('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('auth.google');
 
 Route::middleware(['auth'])->group(function () {
     // Approval-pending holding screen (must sit OUTSIDE the subscription.active
@@ -130,8 +168,28 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::post('/next-token', [\App\Http\Controllers\Vendor\BookingController::class, 'nextToken'])->name('vendor.next-token');
     Route::post('/skip-token/{booking}', [\App\Http\Controllers\Vendor\BookingController::class, 'skipToken'])->name('vendor.skip-token');
     
+    /*
+    | Direct-to-vendor UPI payments — the shop's own ledger.
+    |
+    | Bookkeeping only: no booking waits on anything here. Inside the vendor
+    | group and re-checked per booking in the controller, because a shop may
+    | only tick off payments made into its own account.
+    */
+    Route::get('/payments', [\App\Http\Controllers\Vendor\PaymentVerificationController::class, 'index'])->name('vendor.payments.index');
+    Route::post('/payments/{booking}/approve', [\App\Http\Controllers\Vendor\PaymentVerificationController::class, 'approve'])->name('vendor.payments.approve');
+
+    // Notification tab: the stored copies of every push the shop was sent
+    // (see NotificationService::sendWebPush), so a switched-off phone loses
+    // nothing.
+    Route::get('/notifications', [\App\Http\Controllers\NotificationCenterController::class, 'index'])->name('vendor.notifications.index');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationCenterController::class, 'readAll'])->name('vendor.notifications.readAll');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationCenterController::class, 'read'])->name('vendor.notifications.read');
+
     Route::get('/profile', [\App\Http\Controllers\Vendor\ProfileController::class, 'edit'])->name('vendor.profile.edit');
     Route::post('/profile', [\App\Http\Controllers\Vendor\ProfileController::class, 'update'])->name('vendor.profile.update');
+    // Live QR preview for the direct-payment settings card, rendered from the
+    // values currently typed into the form rather than the saved ones.
+    Route::get('/profile/upi-qr-preview', [\App\Http\Controllers\Vendor\ProfileController::class, 'upiQrPreview'])->name('vendor.profile.upi-qr');
     Route::get('/plans', [\App\Http\Controllers\Vendor\ProfileController::class, 'plans'])->name('vendor.plans');
     Route::post('/status/toggle', [\App\Http\Controllers\Vendor\ProfileController::class, 'toggleStatus'])->name('vendor.status.toggle');
 
@@ -203,6 +261,11 @@ Route::middleware(['auth', 'ensure.vendor.active'])->prefix('employee')->name('e
     // as cancel; different message to the customer (rebook / call the shop).
     Route::post('/skip', [\App\Http\Controllers\Employee\DashboardController::class, 'skip'])->name('skip');
     Route::post('/toggle-pause', [\App\Http\Controllers\Employee\DashboardController::class, 'togglePause'])->name('toggle-pause');
+
+    // Notification tab — the employee-panel twin of vendor.notifications.*.
+    Route::get('/notifications', [\App\Http\Controllers\NotificationCenterController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationCenterController::class, 'readAll'])->name('notifications.readAll');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationCenterController::class, 'read'])->name('notifications.read');
 });
 
 Route::get('/employee/{employee}', [\App\Http\Controllers\EmployeePublicBookingController::class, 'show'])->name('employee.public.show');

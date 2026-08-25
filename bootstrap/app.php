@@ -41,6 +41,32 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        /*
+        | An upload larger than the SERVER's post_max_size.
+        |
+        | PHP discards the whole request body in this case — no fields, no file,
+        | not even the CSRF token — so without this the customer meets a "page
+        | expired" or a bare 413 for a photo they did attach, and has no idea
+        | the size was the problem. Worst of all it happens on the payment proof
+        | screen, i.e. after they have already sent money.
+        |
+        | Sent back to the same form as an ordinary validation error, naming the
+        | limit and the way out.
+        */
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, $request) {
+            $limit = ini_get('upload_max_filesize') ?: '2M';
+
+            $message = "That file is too large for the server to accept (limit: {$limit}). "
+                . 'Please attach a smaller image, or submit just the transaction ID instead.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'error' => $message], 413);
+            }
+
+            return back()->withInput($request->except('payment_screenshot'))
+                ->withErrors(['payment_screenshot' => $message]);
+        });
+
         // Never leak stack traces / SQL to API clients. Validation and HTTP
         // exceptions keep their native JSON responses; everything else is
         // logged and returned as a generic 500.

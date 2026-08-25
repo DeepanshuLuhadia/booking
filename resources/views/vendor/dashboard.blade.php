@@ -147,6 +147,9 @@
                                     <td class="px-6 py-5">
                                         <div class="font-black text-white text-sm uppercase">{{ $booking->customer_name }}</div>
                                         <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ $booking->customer_phone }}</div>
+                                        <div class="md:hidden mt-3 px-3 py-1.5 bg-blue-500/10 rounded-lg border border-blue-500/30 inline-block">
+                                            <span class="font-black text-blue-400 text-[9px] uppercase italic tracking-wider">{{ $booking->employee->name }}</span>
+                                        </div>
                                     </td>
                                     <td class="px-6 py-5 hidden md:table-cell">
                                         <div class="flex items-center gap-3">
@@ -270,6 +273,71 @@
         </div>
 
         </div>{{-- /#vendor-live --}}
+
+        @if(!empty($listingBlockers))
+        {{-- Listing Setup Modal: reappears on every dashboard visit until every
+             requirement for the public listing page is met (see
+             Vendor::getListingBlockers()). Lives outside #vendor-live so the
+             realtime re-render can't destroy it. --}}
+        <div x-data="{ showListingSetup: true }"
+             x-show="showListingSetup"
+             x-cloak
+             class="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95">
+
+            <div @click="showListingSetup = false" class="absolute inset-0 bg-slate-900/70 backdrop-blur-xl"></div>
+
+            <div class="relative bg-slate-900 border border-white/10 w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] rounded-[2.5rem] text-white p-6 sm:p-8">
+                <button @click="showListingSetup = false" class="absolute top-5 right-5 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50 hover:text-rose-500 hover:bg-rose-500/10 transition-all border border-white/5">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="w-8 h-1 bg-orange-500 rounded-full"></span>
+                    <span class="text-orange-500 font-black text-[9px] uppercase tracking-widest italic">Action Required</span>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-black italic tracking-tighter uppercase mb-3">
+                    Your Shop Is <span class="text-orange-500">Not Visible Yet.</span>
+                </h3>
+                <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-5">
+                    Customers cannot find your business on the listing page until the details below are completed.
+                </p>
+
+                <ul class="space-y-2.5 mb-6">
+                    @foreach($listingBlockers as $blocker)
+                    <li class="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                        <span class="w-7 h-7 shrink-0 bg-rose-500/10 text-rose-400 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v3.75m0 3h.01M4.5 19.5h15L12 4.5l-7.5 15z"/></svg>
+                        </span>
+                        <span class="flex-1 text-xs sm:text-sm font-bold text-white/90">{{ $blocker['label'] }}</span>
+                        <a href="{{ route($blocker['route']) }}" class="text-[9px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors shrink-0">Fix →</a>
+                    </li>
+                    @endforeach
+                </ul>
+
+                <div class="space-y-3">
+                    <a href="{{ route(collect($listingBlockers)->pluck('route')->contains('vendor.profile.edit') ? 'vendor.profile.edit' : 'vendor.employees.index') }}"
+                       class="w-full h-14 rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center transition-all hover:opacity-90">
+                        Complete Setup Now
+                    </a>
+                    <a href="https://youtu.be/Wrj0YvUGD0M" target="_blank" rel="noopener"
+                       class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all">
+                        <svg class="w-4 h-4 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31.3 31.3 0 000 12a31.3 31.3 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31.3 31.3 0 0024 12a31.3 31.3 0 00-.5-5.8zM9.6 15.6V8.4L15.8 12l-6.2 3.6z"/></svg>
+                        Watch Setup Video
+                    </a>
+                    <button @click="showListingSetup = false"
+                            class="w-full text-[10px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-white/60 transition-colors italic py-1">
+                        I'll Do It Later
+                    </button>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Manual Booking Modal -->
         <div x-show="showBookingModal"

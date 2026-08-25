@@ -118,4 +118,54 @@
             </div>
         </div>
     </div>
+
+    @if(!$isEmployee && $status === 'pending' && !request()->cookie('vendor_setup_video_seen'))
+    <!-- Setup Video Modal: shown once (cookie-gated) while approval is pending.
+         Points new vendors at the setup walkthrough — without the profile
+         details it covers, their listing will never appear to customers. -->
+    <div x-data="{
+            showSetupVideo: true,
+            dismissSetupVideo() {
+                document.cookie = 'vendor_setup_video_seen=1; path=/; max-age=31536000; SameSite=Lax';
+                this.showSetupVideo = false;
+            }
+        }"
+        x-show="showSetupVideo"
+        x-cloak
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 scale-95"
+        x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 scale-100"
+        x-transition:leave-end="opacity-0 scale-95"
+        style="position: fixed; top:0; left:0; right:0; bottom:0; z-index: 2147483647; display:flex; align-items:center; justify-content:center; padding:1rem; background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px);">
+
+        <div class="max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar border border-white/10 rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl" style="background-color:#0a0f2c;">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-2xl flex items-center justify-center mb-5">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+
+            <h2 class="text-xl sm:text-2xl font-black text-white italic tracking-tight mb-3">Set Up Your Shop <span class="text-orange-400">The Right Way.</span></h2>
+            <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-5">
+                While your approval is pending, please watch this short video on setting up your business details.
+                <span class="text-orange-400 font-bold">Without these details, your listing will not appear</span> to customers on the platform.
+            </p>
+
+            <div class="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black mb-6">
+                <iframe class="w-full h-full" src="https://www.youtube.com/embed/Wrj0YvUGD0M" title="Vendor Setup Guide"
+                        frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
+            </div>
+
+            <button @click="dismissSetupVideo()"
+                    class="w-full h-14 rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center transition-all hover:opacity-90 mb-3">
+                OK, Got It
+            </button>
+            <button @click="dismissSetupVideo()"
+                    class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 font-black uppercase tracking-widest text-[10px] flex items-center justify-center transition-all">
+                Skip For Now
+            </button>
+        </div>
+    </div>
+    @endif
 </x-app-layout>

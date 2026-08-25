@@ -10,6 +10,14 @@
     $theme     = $vendorTheme ?? \App\Services\ThemeService::getTheme('consultant');
     $bodyClass = 'theme-' . $theme['key'];
     $isDark    = $theme['is_dark'] ?? false;
+    /*
+    | Pages with no vendor theme of their own (landing, listing, about,
+    | contact) run the brand orange in the header rather than the default
+    | consultant blue, so the logo and the location pin match the search
+    | button and the site reads as one palette. A vendor page keeps its own
+    | category colour.
+    */
+    $defaultBrand = $vendorTheme === null;
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -37,7 +45,7 @@
     <meta name="theme-color" content="#0a0f2c">
     {{-- Multiple icon links so every path (native install, favicon, Android
          shortcut, iOS home screen) picks up our app icon rather than a default. --}}
-    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/favicon.ico?v=2" sizes="any">
     <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/pwa/icon-192.png') }}">
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/pwa/icon-512.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/pwa/apple-touch-icon.png') }}">
@@ -69,7 +77,7 @@
         // Uses the same URL the FCM code reuses later, so it dedupes to one registration.
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/firebase-messaging-sw.js?v=6').catch(function () {});
+                navigator.serviceWorker.register('/firebase-messaging-sw.js?v=7').catch(function () {});
             });
         }
     </script>
@@ -125,6 +133,34 @@
         .nav-mobile-toggle {
             display: flex;
         }
+        /* ── Brand orange (same pair as the search button on the search bar) ──
+           Applied to the header logo and the location pin on pages running the
+           default theme, so those two stop rendering in consultant blue. */
+        .brand-default {
+            --brand-accent: #ff6d00;
+            --brand-accent-2: #ffab40;
+        }
+        .brand-default .nav-brand-mark {
+            background: linear-gradient(135deg, var(--brand-accent), var(--brand-accent-2)) !important;
+        }
+        .brand-default .nav-brand-word {
+            background: linear-gradient(135deg, var(--brand-accent), var(--brand-accent-2)) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+        }
+        .brand-default .nav-mobile-nearme,
+        .brand-default .nav-mobile-nearme-chip,
+        .brand-default .nav-mobile-nearme-label {
+            color: var(--brand-accent-2);
+        }
+        .brand-default .nav-mobile-nearme.is-empty {
+            border-color: var(--brand-accent-2);
+            background: rgba(255, 109, 0, .10);
+            box-shadow: 0 0 0 3px rgba(255, 109, 0, .10);
+        }
+
         /* Mobile "Near Me": bare pin icon, no border/background, next to hamburger */
         .nav-mobile-nearme {
             display: inline-flex;
@@ -641,7 +677,7 @@
         });
     </script>
 </head>
-<body class="antialiased {{ $bodyClass }} min-h-screen relative overflow-x-hidden bg-theme-main">
+<body class="antialiased {{ $bodyClass }} {{ $defaultBrand ? 'brand-default' : '' }} min-h-screen relative overflow-x-hidden bg-theme-main">
     @if(!request()->cookie('location_granted'))
     <!-- Step 1: Mandatory Location Consent Modal (custom only — no browser geolocation prompt) -->
     <div x-data="{
@@ -1172,20 +1208,31 @@
     </div>
     @endif
 
-    <div x-data="{ scrolled: false, mobileMenu: false }" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
+    <div x-data="layoutData()" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
         <!-- Navigation (Section 4) -->
         <nav @scroll.window="scrolled = (window.pageYOffset > 50)"
              :class="{ 'bg-[#0a0f2c]/80 backdrop-blur-2xl border-b border-white/5 py-3': scrolled, 'bg-transparent py-5 md:py-6': !scrolled }"
              class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-4 md:px-8 flex items-center justify-between overflow-visible border-0 border-none">
             
+            @php
+                $logoHref = '/';
+                if ($panelType === 'vendor') {
+                    $logoHref = route('vendor.dashboard');
+                } elseif ($panelType === 'employee') {
+                    $logoHref = route('employee.dashboard');
+                } elseif ($panelType === 'admin') {
+                    $logoHref = route('admin.dashboard');
+                }
+            @endphp
             <div class="flex items-center gap-4 md:gap-10 {{ $panelType ? 'lg:hidden' : '' }}">
-                <a href="/" class="group flex items-center gap-2 md:gap-3">
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-xl md:text-2xl font-black theme-glow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
+                <a href="{{ $logoHref }}" class="group flex items-center gap-2 md:gap-3">
+                    {{--  <div class="nav-brand-mark w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-xl md:text-2xl font-black theme-glow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
                         {{ $theme['icon'] ?? 'B' }}
-                    </div>
-                    <span class="text-xl md:text-2xl font-black tracking-tighter text-white whitespace-nowrap">
-                         {{ config('brand.logo_prefix') }}<span class="theme-gradient-text">{{ config('brand.logo_suffix') }}</span>
-                    </span>
+                    </div>--}}
+                    <img src="{{ asset('logo.png') }}?v=2" alt="Logo" class="h-12 sm:h-14 md:h-[75px] w-auto max-w-full object-contain">
+                    {{--<span class="text-xl md:text-2xl font-black tracking-tighter text-white whitespace-nowrap">
+                         {{ config('brand.logo_prefix') }}<span class="nav-brand-word theme-gradient-text">{{ config('brand.logo_suffix') }}</span>
+                    </span>--}}
                 </a>
             </div>
 
@@ -1311,6 +1358,29 @@
                     </button>
                 @endif
 
+                {{-- Notification bell for the vendor/employee panels: on
+                     phones the sidebar (and its Notifications entry) is
+                     hidden behind the hamburger, so the unread count gets a
+                     glanceable spot in the header itself. Desktop already
+                     shows it in the sidebar, hence lg:hidden. --}}
+                @if(in_array($panelType, ['vendor', 'employee']) && auth()->check())
+                    @php
+                        $navUnreadNotifications = auth()->user()->unreadNotifications()->count();
+                    @endphp
+                    <a href="{{ route($panelType . '.notifications.index') }}"
+                       class="relative w-10 h-10 rounded-xl bg-white/5/5 border border-white/10 flex lg:hidden items-center justify-center text-white transition-all hover:bg-white/5/10 active:scale-95"
+                       aria-label="Notifications{{ $navUnreadNotifications > 0 ? ', ' . $navUnreadNotifications . ' unread' : '' }}">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        @if($navUnreadNotifications > 0)
+                            <span class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-blue-500 text-white text-[9px] font-black flex items-center justify-center tabular-nums shadow-[0_0_6px_rgba(59,130,246,0.7)]">
+                                {{ $navUnreadNotifications > 99 ? '99+' : $navUnreadNotifications }}
+                            </span>
+                        @endif
+                    </a>
+                @endif
+
                 <!-- Mobile Menu Toggle -->
                 <button @click="mobileMenu = !mobileMenu" class="nav-mobile-toggle w-10 h-10 rounded-xl bg-white/5/5 border border-white/10 items-center justify-center text-white transition-all hover:bg-white/5/10 active:scale-95">
                     <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -1355,7 +1425,18 @@
                             @endif
 
                             <div class="flex flex-col gap-3">
+                                {{-- Only labelled once there is a link under it —
+                                     with About/Contact living in the footer, a
+                                     signed-out visitor with no bookings would
+                                     otherwise get a heading over nothing but the
+                                     sign-in buttons. --}}
+                                @php
+                                    $hasPlatformLinks = ($myBookingCount ?? 0) > 0
+                                        || (auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isVendor()));
+                                @endphp
+                                @if($hasPlatformLinks)
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Platform</h4>
+                                @endif
                                 {{--  <a href="{{ route('home') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
                                     <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                                     Explore
@@ -1369,15 +1450,11 @@
                                     </a>
                                 @endif
 
-                                <a href="{{ route('about') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
-                                    <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    About Us
-                                </a>
-
-                                <a href="{{ route('contact') }}" class="flex items-center gap-4 px-6 py-4 rounded-2xl bg-white/5 text-white font-black italic uppercase tracking-widest text-[11px] shadow-sm">
-                                    <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                    Contact Us
-                                </a>
+                                {{-- About Us / Contact Us deliberately absent here:
+                                     both sit in the footer, which is on every
+                                     public page on a phone, so repeating them in
+                                     the menu was one route to the same two pages
+                                     twice. The desktop nav still carries them. --}}
 
                                 @auth
                                     @if(auth()->user()->isAdmin())
@@ -1602,6 +1679,11 @@
     @livewireScripts
 
     <script>
+        // This device's FCM registration token, once we have one. Null until the
+        // silent registration below succeeds (it only runs when notification
+        // permission was already granted), so always treat it as optional.
+        window.__fcmToken = window.__fcmToken || null;
+
         // Define permission handler FIRST to guarantee it is available even if FCM fails
         window.__requestNotificationPermission = function() {
             if (!('Notification' in window)) {
@@ -1629,8 +1711,8 @@
             // Firebase initialization
             const firebaseConfig = {
                 apiKey: "{{ env('FIREBASE_API_KEY', 'YOUR_API_KEY') }}",
-                projectId: "ebooking-b2c07",
-                messagingSenderId: "{{ env('FIREBASE_MESSAGING_SENDER_ID', '100739474622') }}",
+                projectId: "apni-baari-6d2b0",
+                messagingSenderId: "{{ env('FIREBASE_MESSAGING_SENDER_ID', '831015537203') }}",
                 appId: "{{ env('FIREBASE_APP_ID', 'YOUR_APP_ID') }}"
             };
 
@@ -1650,7 +1732,7 @@
                 if (!messaging) return;
                 
                 if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=6')
+                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=7')
                         .then((registration) => {
                             messaging.useServiceWorker(registration);
                             return messaging.getToken({ vapidKey: "{{ env('FIREBASE_VAPID_KEY', 'YOUR_VAPID_KEY') }}" });
@@ -1658,6 +1740,11 @@
                         .then((currentToken) => {
                             if (currentToken) {
                                 console.log('FCM Token:', currentToken);
+                                // Published so anything else on the page can send
+                                // the device's push address with its own request —
+                                // the review modal's Google sign-in stamps it onto
+                                // the account it signs the visitor into.
+                                window.__fcmToken = currentToken;
                                 fetch("{{ route('fcm.token.save') }}", {
                                     method: 'POST',
                                     headers: {
@@ -1835,6 +1922,69 @@
                 ? document.addEventListener('DOMContentLoaded', init)
                 : init();
         })();
+    </script>
+
+    {{-- Shared dropdown for every <select> on the site (all panels render
+         through this layout). See the partial for what it fixes. --}}
+    @include('partials.custom-select')
+
+    {{-- Distance warning modal for vendor listings --}}
+    <x-distance-warning-modal />
+
+    <script>
+        function layoutData() {
+            return {
+                scrolled: false,
+                mobileMenu: false,
+                showDistanceWarning: false,
+                distanceWarning: null,
+                pendingVendorUrl: null,
+
+                async handleVendorClick(event, vendorUrl) {
+                    event.preventDefault();
+
+                    try {
+                        // Check if vendor has location enabled (cookie exists)
+                        const userLat = document.cookie.split('; ').find(row => row.startsWith('user_lat'))?.split('=')[1];
+                        const userLng = document.cookie.split('; ').find(row => row.startsWith('user_lng'))?.split('=')[1];
+
+                        // Only check distance if user has shared location
+                        if (userLat && userLng) {
+                            const response = await fetch(vendorUrl, {
+                                headers: {
+                                    'Accept': 'application/json',
+                                },
+                            });
+
+                            const data = await response.json();
+
+                            if (data.distance_warning) {
+                                this.distanceWarning = data;
+                                this.pendingVendorUrl = vendorUrl;
+                                this.showDistanceWarning = true;
+                                return;
+                            }
+                        }
+
+                        // No warning or no location, proceed normally
+                        window.location.href = vendorUrl;
+                    } catch (error) {
+                        console.error('Error checking vendor distance:', error);
+                        // On error, allow navigation
+                        window.location.href = vendorUrl;
+                    }
+                },
+
+                async confirmDistanceWarning() {
+                    if (this.pendingVendorUrl) {
+                        window.location.href = this.pendingVendorUrl;
+                    }
+                    this.showDistanceWarning = false;
+                    this.distanceWarning = null;
+                    this.pendingVendorUrl = null;
+                }
+            };
+        }
     </script>
 </body>
 </html>

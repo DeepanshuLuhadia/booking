@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Cache;
 
 class EmployeePublicBookingController extends Controller
 {
+    /** Radius limit in km for vendor discovery. */
+    private const DISCOVERY_RADIUS_KM = 50;
+
     public function __construct(
         private ShiftService $shifts,
         private CustomerBookingService $customerBookings
@@ -34,6 +37,39 @@ class EmployeePublicBookingController extends Controller
             ->firstOrFail();
 
         $vendor = $employee->vendor;
+
+        // Calculate distance from current location if available
+        $userLat = $this->coordinate($request->cookie('user_lat'));
+        $userLng = $this->coordinate($request->cookie('user_lng'));
+
+        $vendor->distance_km = $this->distanceKm(
+            $userLat,
+            $userLng,
+            $this->coordinate($vendor->latitude),
+            $this->coordinate($vendor->longitude)
+        );
+
+        // Check if vendor is beyond 50 km radius - always return JSON response if AJAX request
+        $isAjaxRequest = $request->expectsJson() || $request->has('_check_distance');
+
+        if ($userLat !== null && $userLng !== null && $vendor->distance_km !== null && $vendor->distance_km > self::DISCOVERY_RADIUS_KM) {
+            return response()->json([
+                'distance_warning' => true,
+                'vendor_id' => $vendor->id,
+                'vendor_name' => $vendor->business_name,
+                'distance_km' => $vendor->distance_km,
+                'message' => "This vendor is {$vendor->distance_km} km away from your current location. Are you sure you want to continue?"
+            ]);
+        }
+
+        // For AJAX requests with no distance warning, return minimal JSON
+        if ($isAjaxRequest) {
+            return response()->json([
+                'distance_warning' => false,
+                'vendor_id' => $vendor->id,
+                'proceed' => true
+            ]);
+        }
         $isSubscriptionExpired = !$vendor->isSubscriptionActive();
 
         $now = Carbon::now();
@@ -136,9 +172,21 @@ class EmployeePublicBookingController extends Controller
         $theme = $allThemes[$vendor->category?->slug]
             ?? ThemeService::getTheme('consultant');
 
+        /*
+        | `service_fee`, not `base_service_fee` — there is no such column, so
+        | this read was always null and the page quoted ₹0 to every customer of
+        | a shop that had not set a per-employee override.
+        |
+        | Cosmetic until direct UPI payment landed; now load-bearing. In
+        | full-payment mode the booking button quotes this figure and the server
+        | charges the real service fee, so a null here would show "PAY ₹0 &
+        | BOOK" and then ask for ₹500 on the next screen.
+        |
+        | Matches BookingController, which prices bookings the same way.
+        */
         $servicePrice = $employee->service_fee_override > 0
             ? $employee->service_fee_override
-            : $vendor->base_service_fee;
+            : $vendor->service_fee;
 
         return view('customer.employee-show', compact(
             'employee',
@@ -177,5 +225,39 @@ class EmployeePublicBookingController extends Controller
         Vendor $vendor
     ): array {
         return $this->shifts->clampToVendorWindow($shiftDate, $empStart, $empEnd, $vendor);
+    }
+
+    /**
+     * Cast a coordinate to a usable float, or null.
+     */
+    private function coordinate($value): ?float
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        $float = (float) $value;
+
+        return abs($float) < 0.00001 ? null : $float;
+    }
+
+    /**
+     * Great-circle distance in kilometres, or null when either point is unknown.
+     */
+    private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $lng2): ?float
+    {
+        if ($lat1 === null || $lng1 === null || $lat2 === null || $lng2 === null) {
+            return null;
+        }
+
+        $earthRadius = 6371;
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
+        return round($earthRadius * 2 * asin(min(1.0, sqrt($a))), 2);
     }
 }

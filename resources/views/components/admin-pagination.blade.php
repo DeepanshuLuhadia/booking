@@ -7,16 +7,52 @@
         </p>
 
         @if($paginator->hasPages())
-            <div class="pagination-links">{{ $paginator->onEachSide(1)->links() }}</div>
+            @php
+                $previousUrl = $paginator->previousPageUrl();
+                $nextUrl = $paginator->nextPageUrl();
+            @endphp
+            <nav role="navigation" aria-label="Pagination Navigation" class="pagination-links">
+                <div>
+                    @if($previousUrl)
+                        <a href="{{ $previousUrl }}">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </a>
+                    @endif
+                    <div></div>
+                    @if($nextUrl)
+                        <a href="{{ $nextUrl }}">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    @endif
+                </div>
+                <div class="hidden sm:flex items-center gap-1">
+                    @foreach($paginator->getUrlRange(1, $paginator->lastPage()) as $page => $url)
+                        @if($page == $paginator->currentPage())
+                            <span aria-current="page">
+                                <span class="px-3 py-2">{{ $page }}</span>
+                            </span>
+                        @else
+                            <a href="{{ $url }}" class="px-3 py-2">{{ $page }}</a>
+                        @endif
+                    @endforeach
+                </div>
+            </nav>
         @endif
     </div>
 
     {{-- Emitted once per page however many tables it carries. --}}
     @once
         <style>
-            /* Hand-styled for the same reason as the vendor panel's: the prebuilt
-               CSS bundle ships only part of the palette, so the framework's default
-               pagination markup renders unstyled against these dark cards. */
+            .pagination-container nav [role="navigation"] {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
             .pagination-container nav div:first-child {
                 display: flex;
                 flex: 1 1 0%;
@@ -36,15 +72,10 @@
                     align-items: center;
                     justify-content: flex-end;
                 }
-
-                /* The framework prints its own "showing x to y" copy in that
-                   second block; ours already sits to the left of the links. */
-                .pagination-container nav div:last-child > div:first-child { display: none; }
             }
 
             .pagination-container a,
-            .pagination-container span[aria-current="page"] > span,
-            .pagination-container span[aria-disabled="true"] > span {
+            .pagination-container span[aria-current="page"] > span {
                 padding: 0.5rem 1rem;
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 0.75rem;
@@ -73,14 +104,7 @@
                 border-color: #3b82f6;
             }
 
-            .pagination-container span[aria-disabled="true"] > span {
-                background-color: rgba(255, 255, 255, 0.02);
-                color: rgba(255, 255, 255, 0.2);
-                cursor: not-allowed;
-            }
-
             .pagination-container nav span[aria-current="page"],
-            .pagination-container nav span[aria-disabled="true"],
             .pagination-container nav a { margin: 0 0.15rem; }
 
             .pagination-container svg { width: 1.25rem; height: 1.25rem; }

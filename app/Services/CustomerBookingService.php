@@ -447,6 +447,24 @@ class CustomerBookingService
             'status'        => $booking->status,
             'status_label'  => ucfirst($booking->status),
             'is_live'       => in_array($booking->status, self::LIVE_STATUSES, true),
+
+            /*
+            | Direct-to-vendor UPI payment, if this shop takes one.
+            |
+            | Carried on every booking payload so My Bookings can say whether
+            | the money went out, and — for the customer who dismissed the
+            | payment chooser without paying — offer the way back to it. None of
+            | it affects the appointment, which is confirmed either way. Null
+            | for shops that take no payment.
+            */
+            'payment_status'   => $booking->collectsAdvance() ? $booking->payment_status : null,
+            'requested_amount' => $booking->collectsAdvance()
+                ? number_format((float) $booking->requested_amount, 2, '.', '')
+                : null,
+            'payment_due'      => $booking->awaitsAdvancePayment(),
+            'payment_url'      => $booking->collectsAdvance()
+                ? route('payment.show', $booking)
+                : null,
         ];
     }
 

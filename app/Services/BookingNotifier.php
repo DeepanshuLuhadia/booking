@@ -8,6 +8,7 @@ use App\Events\ShopStatusChanged;
 use App\Models\Booking;
 use App\Models\Employee;
 use App\Models\Vendor;
+use App\Notifications\DirectPaymentDue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -178,6 +179,78 @@ class BookingNotifier
             $this->announce($booking, 'expired', 'system');
             $this->notifications->notifyCustomerBookingExpired($booking);
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Direct-to-vendor UPI payments
+    |--------------------------------------------------------------------------
+    | The platform is not in the money path and does not verify it. The customer
+    | pays the shop's own UPI id from their own app; the shop reads its own app
+    | to see the credit. All this class does is make sure the shop knows there
+    | is a credit to look for, and knows which appointment it belongs to.
+    */
+
+    /**
+     * The customer was handed to their UPI app to pay this shop directly.
+     *
+     * Fired alongside — not instead of — `created()`. The booking is already a
+     * real, confirmed appointment by the time this runs; what this adds is the
+     * one thing the booking announcement cannot say, which is that ₹X should be
+     * arriving in the shop's account against it and nobody but the shop can
+     * confirm that it did.
+     *
+     * Sent on three channels for the reason the money justifies: the FCM push
+     * is the fast one, the stored notification is the one that survives a phone
+     * being switched off, and the email reaches an owner who does not open the
+     * dashboard daily.
+     */
+    public function directPaymentDue(Booking $booking): void
+    {
+        $booking = $this->hydrate($booking);
+
+        $amount = number_format((float) $booking->requested_amount, 2);
+
+        $this->notifications->notifyShop(
+            $booking->vendor,
+            $booking,
+            'Online Payment — Please Check',
+            "{$booking->customer_name} paid ₹{$amount} online for booking #{$booking->id}. "
+                . 'Check your UPI app for the credit and confirm it with them at the counter.',
+            ['type' => 'direct_payment_due', 'booking_id' => $booking->id]
+        );
+
+        // Never let a mail or database failure surface as a booking failure —
+        // the appointment is already made and the money is already sent.
+        try {
+            $booking->vendor?->user?->notify(new DirectPaymentDue($booking));
+        } catch (\Throwable $e) {
+            Log::error('Direct payment notification failed for booking ' . $booking->id . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * The shop found the credit in its UPI app and ticked it off.
+     *
+     * Bookkeeping, not a gate: the appointment was confirmed when it was made
+     * and nothing about it changes here. The customer is told anyway, because
+     * having paid a stranger's UPI id and heard nothing back is the single most
+     * uncomfortable moment in this flow.
+     */
+    public function paymentAcknowledged(Booking $booking): void
+    {
+        $booking = $this->hydrate($booking);
+
+        $this->announce($booking, 'payment_verified', 'vendor');
+
+        $this->notifications->notifyCustomer(
+            $booking,
+            'Payment Received',
+            "{$booking->vendor?->business_name} has confirmed receiving your ₹"
+                . number_format((float) $booking->requested_amount, 2)
+                . ' payment.',
+            ['type' => 'payment_verified', 'booking_id' => $booking->id]
+        );
     }
 
     /*

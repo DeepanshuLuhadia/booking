@@ -2443,4 +2443,327 @@
             .bv-stats-mobile > div:nth-child(3) { transform: rotate(-4deg); }
             .bv-stats-mobile > div:nth-child(4) { transform: rotate(4deg); }
         }
+
+        /* ══════════════════════════════════════════════════════════════
+           SEARCH-AS-YOU-TYPE PANEL
+           Live matches under the search bar, shown from the 3rd character.
+           The cards are the listing card shrunk to dropdown scale — same
+           order of information, roughly a third of the height.
+
+           Fixed rather than absolute: .bv-hero clips its overflow (its glow
+           orbs rely on that), so an in-flow dropdown would be cut off. The
+           script re-parents the panel to <body> and anchors it to the search
+           bar's rect, which also keeps it clear of the hero's stacking order.
+           ══════════════════════════════════════════════════════════════ */
+        .bv-suggest {
+            position: fixed;
+            z-index: 250;
+            display: none;
+            text-align: left;
+            padding: 8px;
+            border-radius: 18px;
+            background: rgba(13, 19, 51, .98);
+            border: 1px solid rgba(255, 255, 255, .1);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .bv-suggest.is-open {
+            display: block;
+        }
+
+        .bv-sg-head {
+            padding: 6px 12px 10px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .18em;
+            color: rgba(255, 255, 255, .35);
+        }
+
+        /* ── One suggestion (mini vendor card) ───────────────────────── */
+        .bv-sg-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 14px;
+            text-decoration: none;
+            border: 1px solid transparent;
+            transition: background .18s ease, border-color .18s ease;
+        }
+
+        .bv-sg-card:hover,
+        .bv-sg-card.is-active {
+            background: rgba(255, 255, 255, .06);
+            border-color: rgba(var(--sgc), .35);
+        }
+
+        .bv-sg-card + .bv-sg-card {
+            margin-top: 2px;
+        }
+
+        .bv-sg-closed {
+            opacity: .62;
+        }
+
+        .bv-sg-img {
+            position: relative;
+            flex-shrink: 0;
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, .05);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+        }
+
+        .bv-sg-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .bv-sg-body {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .bv-sg-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bv-sg-cat {
+            font-size: 9px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .16em;
+            color: rgb(var(--sgc));
+            filter: brightness(1.35);
+        }
+
+        .bv-sg-open,
+        .bv-sg-shut {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+        }
+
+        .bv-sg-open {
+            color: #4ade80;
+        }
+
+        .bv-sg-shut {
+            color: #ffab40;
+        }
+
+        .bv-sg-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 6px #4ade80;
+        }
+
+        .bv-sg-name {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bv-sg-meta {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-width: 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, .45);
+        }
+
+        .bv-sg-addr {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bv-sg-dist {
+            flex-shrink: 0;
+            font-weight: 800;
+            color: rgba(var(--sgc), .95);
+            filter: brightness(1.4);
+        }
+
+        .bv-sg-side {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 3px;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .bv-sg-rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .bv-sg-price {
+            font-size: 14px;
+            font-weight: 900;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        /* ── Professional & area rows ───────────────────────────────── */
+        .bv-sg-sec {
+            margin-top: 8px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, .07);
+        }
+
+        /* Area rows are buttons (they replay the search instead of linking),
+           so the card look has to survive the native button styling. */
+        button.bv-sg-card {
+            width: 100%;
+            background: transparent;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+            color: inherit;
+        }
+
+        button.bv-sg-card:hover,
+        button.bv-sg-card.is-active {
+            background: rgba(255, 255, 255, .06);
+        }
+
+        .bv-sg-emp-av {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .bv-sg-emp-initial {
+            font-size: 20px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, .85);
+            background: linear-gradient(135deg, rgba(41, 121, 255, .5), rgba(0, 176, 255, .35));
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .bv-sg-loc-ic {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4ade80;
+            background: rgba(0, 200, 83, .1);
+        }
+
+        /* ── Panel furniture ─────────────────────────────────────────── */
+        .bv-sg-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 6px;
+            padding: 12px;
+            border: 0;
+            border-radius: 12px;
+            background: rgba(255, 109, 0, .14);
+            color: #ffab40;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+            cursor: pointer;
+            transition: background .2s ease;
+        }
+
+        .bv-sg-more:hover {
+            background: rgba(255, 109, 0, .24);
+        }
+
+        .bv-sg-empty,
+        .bv-sg-loading {
+            padding: 26px 16px;
+            text-align: center;
+        }
+
+        .bv-sg-empty-icon {
+            font-size: 1.8rem;
+            opacity: .35;
+        }
+
+        .bv-sg-empty-title {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .bv-sg-empty-sub {
+            margin-top: 4px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, .4);
+        }
+
+        .bv-sg-loading {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .22em;
+            color: rgba(255, 255, 255, .35);
+        }
+
+        @media (max-width: 600px) {
+            .bv-suggest {
+                padding: 6px;
+                border-radius: 16px;
+            }
+
+            .bv-sg-img {
+                width: 48px;
+                height: 48px;
+                border-radius: 10px;
+            }
+
+            .bv-sg-name {
+                font-size: 13px;
+            }
+
+            .bv-sg-price {
+                font-size: 13px;
+            }
+        }
     </style>
