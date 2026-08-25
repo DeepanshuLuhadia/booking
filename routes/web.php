@@ -68,6 +68,9 @@ Route::post('/contact', [ContactController::class, 'store'])
 // PWA manifest (dynamic so icon URLs are absolute; branded as the project + our icon)
 Route::get('/manifest.webmanifest', [\App\Http\Controllers\ManifestController::class, 'site'])->name('manifest.site');
 
+// PWA manifest (dynamic so icon URLs are absolute; branded as the project + our icon)
+Route::get('/manifest.webmanifest', [\App\Http\Controllers\ManifestController::class, 'site'])->name('manifest.site');
+
 // Guest-accessible booking (no login required)
 Route::post('/bookings', [\App\Http\Controllers\BookingController::class, 'store'])
     ->middleware('throttle:3,1')

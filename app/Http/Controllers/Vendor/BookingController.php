@@ -91,6 +91,7 @@ class BookingController extends Controller
 
         $booking->update(['status' => 'completed']);
         $this->advanceNowServing($booking);
+        app(\App\Services\NotificationService::class)->notifyTokenQueue($booking->employee);
 
         // Tells the customer their appointment is done, redraws both dashboards,
         // and pings whoever is now at the front of the queue.
