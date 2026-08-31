@@ -36,6 +36,11 @@ class NewPasswordController extends Controller
             function ($user) use ($request) {
                 $user->forceFill([
                     'password'       => $request->password,
+                    // The account now has a password its owner chose. This is
+                    // the other way a Google-only vendor can pick one up, so
+                    // the settings screen must stop treating them as having
+                    // none (see User::hasPassword()).
+                    'password_set_at' => now(),
                     'remember_token' => Str::random(60),
                 ])->save();
 

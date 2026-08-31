@@ -285,7 +285,12 @@
 
         <!-- Main Workspace (Center Content Always Full Width) -->
         <main class="flex-1 lg:pl-72 flex flex-col w-full min-w-0">
-            <div class="w-full h-full pt-32 pb-20 px-4 sm:px-6 md:px-10 lg:px-16">
+            {{-- `panel-main` carries the top-bar clearance (see the inline
+                 stylesheet in app-layout). It is a plain class rather than
+                 Tailwind utilities because the bar's height changes at two
+                 breakpoints and an unbuilt utility here means the page heading
+                 lands underneath the header. --}}
+            <div class="panel-main w-full h-full pb-20 px-4 sm:px-6 md:px-10 lg:px-16">
                 {{-- @if(session('success'))
                     <div class="bg-emerald-500 text-white p-6 rounded-[2rem] text-xs font-black uppercase tracking-widest italic mb-10 shadow-xl shadow-emerald-500/10">
                         {{ session('success') }}
@@ -302,4 +307,62 @@
             </div>
         </main>
     </div>
+
+    @if(session('business_live'))
+    @php $liveVendor = auth()->user()->vendor; @endphp
+    {{-- The moment of going live — shown exactly once, ever.
+
+         Fired by whichever save cleared the last listing blocker (see
+         EmployeeController::store / ProfileController::update); the once is
+         `vendors.live_celebrated_at`, stamped before this flash was set, so a
+         refresh, another device or a later edit can never replay it. In the
+         layout rather than a page because the two completing steps land on
+         different pages. --}}
+    <div x-data="{ showLive: true }"
+         x-show="showLive"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="app-modal">
+
+        <div @click="showLive = false" class="app-modal__backdrop bg-slate-900/70 backdrop-blur-xl"></div>
+
+        <div class="app-modal__panel max-w-lg custom-scrollbar border border-emerald-500/30 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl text-white text-center" style="background-color:#0a0f2c;">
+            <div class="text-5xl mb-4">🎉</div>
+
+            <div class="flex items-center justify-center gap-3 mb-2">
+                <span class="w-8 h-1 bg-emerald-500 rounded-full"></span>
+                <span class="text-emerald-400 font-black text-[9px] uppercase tracking-widest italic">Setup Complete</span>
+                <span class="w-8 h-1 bg-emerald-500 rounded-full"></span>
+            </div>
+
+            <h3 class="text-2xl sm:text-3xl font-black italic tracking-tighter uppercase mb-3">
+                Your Business Is <span class="text-emerald-400">Live!</span>
+            </h3>
+            <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-7">
+                Congratulations{{ $liveVendor?->business_name ? ', ' . $liveVendor->business_name : '' }} — everything
+                customers need is in place. Your business now appears on the listing page, and people can book
+                appointments with you right away.
+            </p>
+
+            <div class="space-y-3">
+                @if($liveVendor)
+                <a href="{{ route('vendor.show', $liveVendor->slug) }}" target="_blank" rel="noopener"
+                   class="w-full h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all hover:opacity-90">
+                    See Your Public Page
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+                @endif
+                <button @click="showLive = false"
+                        class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 font-black uppercase tracking-widest text-[10px] flex items-center justify-center transition-all">
+                    Continue To Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </x-app-layout>

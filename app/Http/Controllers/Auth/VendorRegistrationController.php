@@ -25,8 +25,17 @@ class VendorRegistrationController extends Controller
             'vendor_type' => 'required|exists:vendor_categories,slug',
             'business_name' => 'required|string|min:5|max:255',
             'owner_name' => 'required|string|min:5|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'mobile' => 'required|string|max:10|min:10|unique:users',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            /*
+            | One address, one account; one phone number, one business.
+            |
+            | Both columns are checked, not just users.mobile: `contact_number`
+            | carries its own unique index (see the vendors migration), and a
+            | shop that got past this rule would meet a constraint violation
+            | instead of a sentence — or, worse, be unable to save its own
+            | settings later, where the same pair of rules already applies.
+            */
+            'mobile' => 'required|string|max:10|min:10|unique:users,mobile|unique:vendors,contact_number',
             'password' => 'required|string|min:8|confirmed',
             'subscription_plan_id' => 'required|exists:subscription_plans,id',
             'referral_code' => 'nullable|exists:vendors,referral_code',
@@ -35,6 +44,8 @@ class VendorRegistrationController extends Controller
             'terms' => 'accepted',
         ], [
             'terms.accepted' => 'Please accept the Terms and Conditions and the Privacy Policy to continue.',
+            'email.unique'   => 'That email address is already registered. Please sign in instead.',
+            'mobile.unique'  => 'That mobile number is already registered with us.',
         ]);
 
         $referrer = null;
@@ -56,6 +67,10 @@ class VendorRegistrationController extends Controller
             'status' => 'active',
             'fcm_token' => session('fcm_token'),
         ]);
+
+        // They typed this password themselves, so the settings screen may ask
+        // for it before letting them change it (see User::hasPassword()).
+        $user->forceFill(['password_set_at' => now()])->save();
 
         // ALL vendors require admin approval before going live (pending).
         // Free plans still get a subscription window so they can reach their
@@ -79,7 +94,16 @@ class VendorRegistrationController extends Controller
         // Or for this demo, I'll award immediately if activated, but usually it's on subscription update.
         // Let's create a hook or add it where activation happens.
 
-        Auth::login($user);
+        // Tell the admins somebody is waiting on them. Wrapped because the
+        // registration is already saved: a failure to announce it must never
+        // undo it, or cost this vendor their account.
+        try {
+            app(\App\Services\NotificationService::class)->notifyAdminsNewVendor($vendor);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('New-vendor admin alert failed: ' . $e->getMessage());
+        }
+
+        Auth::login($user, true);
 
         // When OTP is disabled, skip the mobile verification gate entirely:
         // mark the mobile as verified. Admin approval now stands in for OTP as

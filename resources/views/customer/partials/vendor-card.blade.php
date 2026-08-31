@@ -51,7 +51,16 @@
     $routeUrl   = route('vendor.show', $vendor->slug);
     $priceStr   = '₹' . number_format($vendor->starting_fee);
     $name       = $vendor->business_name;
-    $address    = trim((string) $vendor->address);
+    /*
+    | The location line.
+    |
+    | `locationLabel()` is the address when the shop typed one and "Go to Map"
+    | when it only pinned itself — the address box is optional now, so a blank
+    | one is a complete profile rather than missing data. Plain text here, not
+    | a link: the whole card is already an <a> to the shop's page, and that page
+    | carries the real Google Maps link.
+    */
+    $address    = $vendor->locationLabel();
     $catLabel   = $vTheme['label'] ?? ucfirst($vType);
 
     $priceLabel = match($catCode) {

@@ -102,6 +102,37 @@
         inline script on the page regardless of load order.
     -->
     <script>
+        /*
+        | Deep links into forms: #field-<name> anchors.
+        |
+        | The setup banners and "action required" modals link to the exact
+        | input a vendor still has to fill, not just to the page it is on.
+        | Handles both arriving with the hash already set and clicking an
+        | anchor on the page itself (hashchange).
+        */
+        (function () {
+            var goToField = function () {
+                if (!location.hash || location.hash.indexOf('#field-') !== 0) return;
+                var el = document.getElementById(location.hash.slice(1));
+                if (!el) return;
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                var input = el.matches('input, select, textarea')
+                    ? el
+                    : el.querySelector('input:not([type=hidden]), select, textarea');
+                if (input) {
+                    setTimeout(function () {
+                        try { input.focus({ preventScroll: true }); } catch (e) { /* focus is best-effort */ }
+                    }, 350);
+                }
+            };
+            window.addEventListener('hashchange', goToField);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', goToField, { once: true });
+            } else {
+                goToField();
+            }
+        })();
+
         window.whenRealtimeReady = function (callback) {
             var start = function () {
                 // No Echo means the bundle failed or Reverb is unreachable. Pages
@@ -123,6 +154,71 @@
 
     <style>
         {!! \App\Services\ThemeService::getCssVars($theme) !!}
+
+        /*
+        | ── Layout primitives that must not depend on a CSS rebuild ──────────
+        |
+        | Everything in this block was previously expressed with Tailwind
+        | utilities and quietly broke when public/build was not regenerated:
+        | an arbitrary value like z-[2147483000] simply does not exist in a
+        | stale stylesheet, so the element fell back to `z-index: auto` and the
+        | z-[100] top bar painted straight over it. These three rules decide
+        | whether content is READABLE rather than how it looks, so they live
+        | here, in the inline stylesheet every page already ships.
+        */
+
+        /*
+        | Clearance for the fixed top bar in the admin/vendor/employee panels.
+        |
+        | The bar is not one height: the logo it carries is 48px on a phone,
+        | 56px from sm and 75px from md — where the bar reaches 123px. It is
+        | hidden again from lg, where the sidebar carries the logo and the bar
+        | is only 64px tall.
+        */
+        .panel-main { padding-top: 9rem; }                                  /* 144px vs an 88px bar  */
+        @media (min-width: 768px)  { .panel-main { padding-top: 11rem; } }  /* 176px vs a 123px bar  */
+        @media (min-width: 1024px) { .panel-main { padding-top: 8rem; } }   /* 128px vs a 64px bar   */
+
+        /*
+        | Full-screen informational modals (setup prompts, sign-up details).
+        |
+        | Top-aligned with a header's worth of padding rather than centred: a
+        | tall panel centred in a phone viewport puts its own heading behind
+        | the fixed bar, which is what made the modal text and the site header
+        | read as one mixed-up block. Centred again from lg, where there is
+        | room for it. The z-index sits above the bar (100) and the desktop
+        | sidebar (150) so nothing can paint over it.
+        */
+        .app-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 2147483000;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 8rem 1rem 2rem;                                        /* 128px top: clears the bar + a gap */
+            -webkit-overflow-scrolling: touch;
+        }
+        @media (min-width: 768px)  { .app-modal { padding-top: 10rem; } }
+        @media (min-width: 1024px) { .app-modal { align-items: center; padding: 2rem 1.5rem; } }
+        .app-modal__backdrop { position: fixed; inset: 0; }
+        .app-modal__panel {
+            position: relative;
+            width: 100%;
+            max-height: none;                                               /* the overlay scrolls, not the panel */
+        }
+        @media (min-width: 1024px) { .app-modal__panel { max-height: 90vh; overflow-y: auto; } }
+
+        /* Elements addressed by a #field-* anchor land clear of the fixed
+           header instead of underneath it. */
+        .field-anchor { scroll-margin-top: 10rem; }
+
+        /* A password field with a show/hide eye: room on the right for the
+           button, and the button itself parked inside that room. */
+        .pw-field { padding-right: 3.25rem !important; }
+        .pw-toggle { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); }
+
         .theme-nav { background-color: var(--theme-nav-bg) !important; color: var(--theme-nav-text) !important; }
         .nav-link { color: var(--theme-nav-text) !important; }
         /* Desktop nav menu: hidden by default, flex on lg+ */
@@ -1358,12 +1454,12 @@
                     </button>
                 @endif
 
-                {{-- Notification bell for the vendor/employee panels: on
+                {{-- Notification bell for the admin/vendor/employee panels: on
                      phones the sidebar (and its Notifications entry) is
                      hidden behind the hamburger, so the unread count gets a
                      glanceable spot in the header itself. Desktop already
                      shows it in the sidebar, hence lg:hidden. --}}
-                @if(in_array($panelType, ['vendor', 'employee']) && auth()->check())
+                @if(in_array($panelType, ['admin', 'vendor', 'employee']) && auth()->check())
                     @php
                         $navUnreadNotifications = auth()->user()->unreadNotifications()->count();
                     @endphp

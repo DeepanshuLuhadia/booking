@@ -71,6 +71,34 @@
             <div class="glass-card overflow-hidden shadow-2xl rounded-2xl sm:rounded-3xl border border-white/10">
                 <div class="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6 md:space-y-8">
 
+                    {{-- What actually happens next.
+
+                         The number is the one the business gave us at sign-up —
+                         typed into the form, or into the modal after signing up
+                         with Google, which is the only place a Google account
+                         can supply one. Saying so here is the difference between
+                         "we are reviewing you" and a vendor who knows to keep
+                         their phone to hand. --}}
+                    @if(!$isEmployee && $status === 'pending' && $vendor?->contact_number)
+                    <div class="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-orange-500/10 border border-orange-500/30">
+                        <span class="w-10 h-10 sm:w-11 sm:h-11 shrink-0 bg-orange-500/10 text-orange-400 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                        </span>
+                        <div class="min-w-0 text-left">
+                            <span class="block text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-orange-400 italic mb-1">What Happens Next</span>
+                            <p class="text-xs sm:text-sm font-bold text-white leading-relaxed">
+                                Our admin team will contact you on
+                                <span class="text-orange-400">{{ $vendor->contact_number }}</span>
+                                to verify your business before approving your account.
+                            </p>
+                            <p class="text-[10px] sm:text-xs font-medium text-white/50 italic leading-relaxed mt-1.5">
+                                Please keep this number reachable. Once approved, you'll be taken straight to your
+                                settings to finish setting up your shop.
+                            </p>
+                        </div>
+                    </div>
+                    @endif
+
                     <div class="text-center">
                         <p class="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-white/50 leading-loose">
                             Need help? Contact Admin
@@ -138,9 +166,10 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
-        style="position: fixed; top:0; left:0; right:0; bottom:0; z-index: 2147483647; display:flex; align-items:center; justify-content:center; padding:1rem; background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px);">
+        class="app-modal"
+        style="background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px);">
 
-        <div class="max-w-lg w-full max-h-[90vh] overflow-y-auto custom-scrollbar border border-white/10 rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl" style="background-color:#0a0f2c;">
+        <div class="app-modal__panel max-w-lg custom-scrollbar border border-white/10 rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl" style="background-color:#0a0f2c;">
             <div class="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-2xl flex items-center justify-center mb-5">
                 <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>

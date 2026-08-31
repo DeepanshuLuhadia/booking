@@ -55,6 +55,103 @@ class NotificationService
         return true;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Platform alerts — the admin panel
+    |--------------------------------------------------------------------------
+    |
+    | Everything below reaches every active admin rather than one account. The
+    | admin panel used to be entirely pull-based: a business could register and
+    | sit unapproved for days because nothing anywhere said it had. These are
+    | the events where somebody is waiting on an admin, so each one carries a
+    | `url` — the notification tab turns that into a link straight to the queue.
+    |
+    | Never allowed to break the thing that triggered them: a registration, an
+    | enquiry or a report is already saved by the time we get here, and a
+    | failure to announce it must not undo it.
+    */
+
+    /**
+     * Fan one alert out to every active admin.
+     *
+     * @return int how many admins were reached
+     */
+    public function notifyAdmins(string $title, string $message, array $data = []): int
+    {
+        $sent = 0;
+
+        try {
+            foreach (app(\App\Services\AdminBadgeService::class)->recipients() as $admin) {
+                $this->sendWebPush($admin, $title, $message, $data);
+                $sent++;
+            }
+        } catch (\Throwable $e) {
+            Log::error('Notifying admins failed: ' . $e->getMessage(), ['title' => $title]);
+        }
+
+        return $sent;
+    }
+
+    /**
+     * A new business has registered and is waiting for approval — however they
+     * signed up, through the form or through Google.
+     */
+    public function notifyAdminsNewVendor($vendor): int
+    {
+        if (!$vendor) {
+            return 0;
+        }
+
+        return $this->notifyAdmins(
+            '🏪 New Vendor Registration',
+            "'{$vendor->business_name}' has registered and is waiting for approval. "
+                . "Contact: {$vendor->contact_number}",
+            [
+                'type'      => 'vendor_registered',
+                'vendor_id' => $vendor->id,
+                'url'       => route('admin.vendors.show', $vendor->id),
+            ]
+        );
+    }
+
+    /** Somebody used the public contact form. */
+    public function notifyAdminsNewEnquiry($contact): int
+    {
+        if (!$contact) {
+            return 0;
+        }
+
+        return $this->notifyAdmins(
+            '✉️ New Enquiry',
+            "{$contact->name}: {$contact->subject}",
+            [
+                'type'       => 'contact_received',
+                'contact_id' => $contact->id,
+                'url'        => route('admin.contacts.show', $contact->id),
+            ]
+        );
+    }
+
+    /** A shop has flagged a review and wants it looked at. */
+    public function notifyAdminsReviewReported($review): int
+    {
+        if (!$review) {
+            return 0;
+        }
+
+        $shop = $review->vendor?->business_name ?? 'A business';
+
+        return $this->notifyAdmins(
+            '🚩 Review Reported',
+            "{$shop} reported a {$review->rating}-star review for moderation.",
+            [
+                'type'      => 'review_reported',
+                'review_id' => $review->id,
+                'url'       => route('admin.reviews.index', ['filter' => 'reported']),
+            ]
+        );
+    }
+
     /**
      * Notify vendor owner when their account status changes (approved, rejected, suspended, reinstated).
      */

@@ -19,7 +19,11 @@
                 Notifi<span class="text-blue-600">cations.</span>
             </h1>
             <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">
-                Every Alert Sent To This Account &middot; Nothing Lost To A Missed Push
+                @if($routePrefix === 'admin')
+                    Everything Waiting On An Admin &middot; Nothing Lost To A Closed Tab
+                @else
+                    Every Alert Sent To This Account &middot; Nothing Lost To A Missed Push
+                @endif
             </p>
         </div>
 
@@ -46,7 +50,12 @@
             <div class="text-4xl opacity-40 mb-4">🔔</div>
             <p class="text-sm font-black uppercase tracking-widest italic text-white">No notifications yet</p>
             <p class="text-[10px] font-black uppercase tracking-widest italic text-slate-400 mt-2">
-                New bookings, cancellations and payments will land here
+                {{-- The admin panel's alerts are platform events, not bookings. --}}
+                @if($routePrefix === 'admin')
+                    New vendor registrations, enquiries and reported reviews will land here
+                @else
+                    New bookings, cancellations and payments will land here
+                @endif
             </p>
         </div>
     @else

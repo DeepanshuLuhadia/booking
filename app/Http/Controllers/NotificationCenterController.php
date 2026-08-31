@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 /**
- * The notification tab on the vendor and employee panels.
+ * The notification tab on the admin, vendor and employee panels.
  *
- * One controller for both: notifications hang off the signed-in user, so the
- * only thing that differs between the panels is which layout wraps the page
+ * One controller for all three: notifications hang off the signed-in user, so
+ * the only thing that differs between the panels is which layout wraps the page
  * and which route names the buttons post back to. That is derived from the
- * route name prefix rather than duplicated into two controllers.
+ * route name prefix rather than duplicated into three controllers.
  */
 class NotificationCenterController extends Controller
 {
@@ -55,11 +55,19 @@ class NotificationCenterController extends Controller
         return back();
     }
 
-    /** 'vendor' or 'employee', read off the route name the request came in on. */
+    /**
+     * 'admin', 'employee' or 'vendor', read off the route name the request came
+     * in on. Vendor is the fallback because its routes are the ones without a
+     * matching prefix (vendor.notifications.index, but also plain /vendor/...).
+     */
     private function panel(Request $request): string
     {
-        return str_starts_with((string) $request->route()?->getName(), 'employee.')
-            ? 'employee'
-            : 'vendor';
+        $name = (string) $request->route()?->getName();
+
+        return match (true) {
+            str_starts_with($name, 'admin.')    => 'admin',
+            str_starts_with($name, 'employee.') => 'employee',
+            default                             => 'vendor',
+        };
     }
 }

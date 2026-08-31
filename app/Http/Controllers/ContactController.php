@@ -55,6 +55,14 @@ class ContactController extends Controller
             'user_agent' => substr((string) $request->userAgent(), 0, 512),
         ]);
 
+        // In-panel alert, alongside the mail below. The mailbox it is sent to
+        // may not be one anybody watches; the panel always is.
+        try {
+            app(\App\Services\NotificationService::class)->notifyAdminsNewEnquiry($message);
+        } catch (\Throwable $e) {
+            Log::error('New-enquiry admin alert failed', ['error' => $e->getMessage()]);
+        }
+
         // The enquiry is already safely stored, so a mail failure must not cost
         // the visitor their message or show them an error.
         try {

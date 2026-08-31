@@ -112,6 +112,29 @@ Route::post('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::cl
     ->middleware('throttle:10,1')
     ->name('auth.google');
 
+/*
+| "Continue with Google" for BUSINESS accounts — the vendor login and vendor
+| register pages.
+|
+| Outside `redirect.role.auth` for the same reason as the customer endpoint
+| above: that middleware bounces anyone already authenticated, and these are
+| called by fetch() from a page the visitor is still sitting on. Throttled
+| because they are public and verify the credential against Google's key
+| endpoint on every call.
+|
+| Vendors only, in both directions: the login action refuses an address that is
+| not a registered business (no customer or guest may open a panel this way),
+| and the register action refuses an address already registered as anything
+| else. See Auth\VendorGoogleController.
+*/
+Route::post('/auth/google/vendor/login', [\App\Http\Controllers\Auth\VendorGoogleController::class, 'login'])
+    ->middleware('throttle:10,1')
+    ->name('auth.google.vendor.login');
+
+Route::post('/auth/google/vendor/register', [\App\Http\Controllers\Auth\VendorGoogleController::class, 'register'])
+    ->middleware('throttle:10,1')
+    ->name('auth.google.vendor.register');
+
 Route::middleware(['auth'])->group(function () {
     // Approval-pending holding screen (must sit OUTSIDE the subscription.active
     // vendor group so a pending vendor can reach it without a redirect loop).
@@ -193,6 +216,19 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     // Live QR preview for the direct-payment settings card, rendered from the
     // values currently typed into the form rather than the saved ones.
     Route::get('/profile/upi-qr-preview', [\App\Http\Controllers\Vendor\ProfileController::class, 'upiQrPreview'])->name('vendor.profile.upi-qr');
+
+    /*
+    | Setting or changing the panel password.
+    |
+    | Its own route rather than part of the profile save: the profile form is a
+    | multipart post of business details, and a password must never ride along
+    | with one. This is the vendor's half of the two-way login — a shop that
+    | signed up with Google chooses a password here and can from then on sign
+    | in either way.
+    */
+    Route::post('/profile/password', [\App\Http\Controllers\Vendor\ProfileController::class, 'updatePassword'])
+        ->middleware('throttle:10,1')
+        ->name('vendor.profile.password');
     Route::get('/plans', [\App\Http\Controllers\Vendor\ProfileController::class, 'plans'])->name('vendor.plans');
     Route::post('/status/toggle', [\App\Http\Controllers\Vendor\ProfileController::class, 'toggleStatus'])->name('vendor.status.toggle');
 
@@ -217,6 +253,18 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
 // the platform booking report simply by typing the URL.
 Route::middleware(['auth', 'admin.only'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
+
+    /*
+    | Notification tab — the admin-panel twin of vendor.notifications.*.
+    |
+    | Same controller as the other two panels: notifications hang off the
+    | signed-in user, so the only thing that differs is which layout wraps the
+    | page. This is where a new vendor registration, a new enquiry and a
+    | reported review land (see NotificationService's platform alerts).
+    */
+    Route::get('/notifications', [\App\Http\Controllers\NotificationCenterController::class, 'index'])->name('admin.notifications.index');
+    Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationCenterController::class, 'readAll'])->name('admin.notifications.readAll');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationCenterController::class, 'read'])->name('admin.notifications.read');
 
     // Every booking on the platform, paginated and filterable. The tracking
     // counterpart of /admin/reports, which exists to export rather than browse.

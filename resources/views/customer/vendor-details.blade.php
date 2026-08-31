@@ -11,32 +11,24 @@
         $takesDirectPayment = $vendor->acceptsDirectAdvance();
 
         /*
-        | Map link for the address rows below (one desktop, one mobile).
+        | The location row (one desktop, one mobile).
         |
-        | Prefer the coordinates the vendor captured in their panel: a text
-        | search on the address string lands wherever Google decides to
-        | interpret it, which for a shop on an unnamed lane is often the wrong
-        | end of the neighbourhood. `query=lat,lng` drops the pin on the exact
-        | point instead — the same figures the "N km away" chip is measured from.
+        | All three values come from the model so the two rows here, the listing
+        | cards and anything added later cannot drift apart on what "where is
+        | this shop" means. Vendor::mapUrl() prefers the coordinates the vendor
+        | pinned in their panel over the address string — a text search lands
+        | wherever Google decides to interpret it, which for a shop on an
+        | unnamed lane is often the wrong end of the neighbourhood.
         |
-        | The address search stays as the fallback for vendors registered before
-        | coordinates became mandatory. A stored 0 counts as unset, matching
-        | CustomerDiscoveryController::coordinate().
+        | The label is the address when there is one and "Go to Map" when there
+        | is not: the address box is optional now, so a shop that pinned itself
+        | and typed nothing gets the row as the action it really is rather than
+        | a blank line. `$mapUrl` is null only when the shop has neither, and
+        | then the row is dropped instead of linking nowhere.
         */
-        $mapLat = is_numeric($vendor->latitude) && abs((float) $vendor->latitude) >= 0.00001
-            ? (float) $vendor->latitude : null;
-        $mapLng = is_numeric($vendor->longitude) && abs((float) $vendor->longitude) >= 0.00001
-            ? (float) $vendor->longitude : null;
-
-        $addressLabel = $vendor->address ?? 'Professional District';
-
-        $mapUrl = 'https://www.google.com/maps/search/?api=1&query=' . urlencode(
-            $mapLat !== null && $mapLng !== null
-                ? $mapLat . ',' . $mapLng
-                : $addressLabel
-        );
-
-        $mapIsExact = $mapLat !== null && $mapLng !== null;
+        $mapUrl       = $vendor->mapUrl();
+        $addressLabel = $vendor->locationLabel();
+        $mapIsExact   = $vendor->hasMapCoordinates();
     @endphp
     <div x-data="bookingSystem()"
         class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['label'] ?? 'default')) }}">
@@ -86,6 +78,10 @@
                     </h1>
 
                     <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 md:gap-8 mb-6 md:mb-10">
+                        {{-- Dropped entirely for a shop with neither a pin nor an
+                             address: a location row that leads nowhere is worse
+                             than no row. --}}
+                        @if($mapUrl)
                         <a href="{{ $mapUrl }}"
                             target="_blank" rel="noopener noreferrer"
                             title="{{ $mapIsExact ? 'Open the shop\'s exact location in Google Maps' : 'Search this address in Google Maps' }}"
@@ -101,6 +97,7 @@
                                 class="text-base font-bold text-white/60 italic group-hover/address:text-white transition-colors underline underline-offset-4">{{
     $addressLabel }}</span>
                         </a>
+                        @endif
                         <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
                                 class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 shrink-0">
@@ -155,7 +152,8 @@
                     @endif
                 </h1>
 
-                {{-- Address row --}}
+                {{-- Address row. Same guard as the desktop one above. --}}
+                @if($mapUrl)
                 <a href="{{ $mapUrl }}"
                     target="_blank" rel="noopener noreferrer"
                     title="{{ $mapIsExact ? 'Open the shop\'s exact location in Google Maps' : 'Search this address in Google Maps' }}"
@@ -168,6 +166,7 @@
                     </div>
                     <span style="font-size:17px; font-weight:500; color:rgba(255,255,255,0.9); line-height:1.4;">{{ $addressLabel }}</span>
                 </a>
+                @endif
 
                 {{-- Fee row --}}
                 <div style="width:100%; display:flex; align-items:center; gap:16px; text-align:left;">

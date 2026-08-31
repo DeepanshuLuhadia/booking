@@ -82,7 +82,47 @@
                 }
             </style>
 
-            <form method="POST" action="/register/vendor" class="reg-form space-y-16 animate-reveal delay-100">
+            @php
+                // Google sign-up is optional: with no client id configured the
+                // tab is not offered and this page is the form it has always
+                // been. The modal starts on the first category for the same
+                // reason the form's <select> does.
+                $googleClientId  = config('services.google.client_id');
+                $defaultCategory = $vendorCategories->first()?->slug;
+            @endphp
+
+            {{-- The Alpine component only exists when Google does — see the
+                 same note on the login page. --}}
+            <div @if($googleClientId)
+                 x-data="vendorGoogleAuth({
+                    mode: 'register',
+                    clientId: @js($googleClientId),
+                    endpoint: @js(route('auth.google.vendor.register')),
+                    defaultCategory: @js($defaultCategory),
+                    referral: @js(request('ref')),
+                 })"
+                 @endif>
+
+            @if($googleClientId)
+            <div class="max-w-xl mx-auto mb-12 md:mb-16">
+                <div class="flex gap-2 p-2 bg-white/5 border border-white/10 rounded-2xl">
+                    <button type="button" @click="tab = 'email'"
+                        class="flex-1 h-12 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all"
+                        :class="tab === 'email' ? 'bg-white/15 text-white shadow-lg' : 'text-white/40 hover:text-white/70'">
+                        Register With Email
+                    </button>
+                    <button type="button" @click="tab = 'google'"
+                        class="flex-1 h-12 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        :class="tab === 'google' ? 'bg-white/15 text-white shadow-lg' : 'text-white/40 hover:text-white/70'">
+                        <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.4l-6.2-5.2C29.9 34.9 27.1 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.2 5.5l6.2 5.2C36.9 40.2 44 35 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+                        Sign Up With Google
+                    </button>
+                </div>
+            </div>
+            @endif
+
+            <form @if($googleClientId) x-show="tab === 'email'" @endif
+                  method="POST" action="/register/vendor" class="reg-form space-y-16 animate-reveal delay-100">
                 @csrf
 
                 <!-- STEP 1: IDENTITY -->
@@ -155,20 +195,25 @@
                                     placeholder="Enter Referral Code (Optional)">
                             </div>
 
+                            {{-- Password fields carry a show/hide eye. `pr-14`
+                                 rather than `px-6` on the right: the toggle sits
+                                 inside the field, and without the extra room a
+                                 long password types straight under it. --}}
                             <!-- Password -->
                             <div class="space-y-2">
                                 <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Password</label>
-                                <input type="password" name="password" required
-                                    class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="Create Password">
+                                <x-password-input name="password" required autocomplete="new-password"
+                                    class="pw-field premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
+                                    placeholder="Create Password" />
                             </div>
 
                             <!-- Confirm -->
                             <div class="space-y-2">
                                 <label class="text-xs font-black uppercase tracking-[0.2em] text-white/60 ml-6">Confirm Password</label>
-                                <input type="password" name="password_confirmation" required
-                                    class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
-                                    placeholder="Re-Enter Your Password">
+                                <x-password-input name="password_confirmation" required autocomplete="new-password"
+                                    toggle-label="confirmed password"
+                                    class="pw-field premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl focus:ring-4 focus:ring-theme-primary/10 font-bold text-base text-white placeholder:text-white/30 transition-all focus:bg-white/10"
+                                    placeholder="Re-Enter Your Password" />
                             </div>
                         </div>
                     </div>
@@ -265,6 +310,182 @@
                     </button>
                 </div>
             </form>
+
+            @if($googleClientId)
+            {{-- Google sign-up panel.
+
+                 Deliberately short. Google hands over a confirmed email, a name
+                 and a picture; the one thing it cannot give us is a phone
+                 number, and that is the detail an admin needs to call the
+                 business back. So the button collects the identity and the
+                 modal below collects the phone. Everything else about the shop
+                 is asked for on the settings screen the moment the account is
+                 approved. --}}
+            <div x-show="tab === 'google'" x-cloak class="max-w-xl mx-auto glass-card overflow-hidden shadow-2xl">
+                <div class="reg-card-inner p-6 md:p-12 rounded-[3rem] space-y-8">
+
+                    <div class="text-center space-y-3">
+                        <h3 class="text-2xl md:text-3xl font-black italic tracking-tight uppercase text-white">One-Tap Signup</h3>
+                        <p class="text-sm font-medium text-white/50 italic leading-relaxed">
+                            Register with your Google account. We'll ask for your mobile number,
+                            then our admin team reviews your business.
+                        </p>
+                    </div>
+
+                    <div x-show="!busy" class="flex justify-center min-h-[44px]">
+                        <div x-ref="googleBtn"></div>
+                    </div>
+
+                    <div x-show="busy" x-cloak class="flex items-center justify-center gap-3 h-11">
+                        <svg class="w-5 h-5 animate-spin text-white/60" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-white/60">Creating your account…</span>
+                    </div>
+
+                    {{-- Errors raised before the modal opens (Google itself
+                         refusing). Anything raised while the modal is open is
+                         shown inside it instead, next to the fields. --}}
+                    <div x-show="error && !showDetails" x-cloak class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                        <p class="text-xs font-bold text-rose-300 leading-relaxed" x-text="error"></p>
+                    </div>
+
+                    <div class="pt-6 border-t border-white/10 space-y-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-center leading-loose">
+                            Starts on the free trial — upgrade any time from Settings.
+                        </p>
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-center leading-loose">
+                            Already registered?
+                            <a href="{{ route('login') }}" class="text-white/70 hover:text-white ml-1 underline decoration-2 underline-offset-4 italic">Sign in</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- "One last thing" — the phone number, asked for before the
+                 account is created rather than after, because an admin cannot
+                 approve a business they have no way of calling. --}}
+            <div x-show="showDetails" x-cloak
+                 class="app-modal"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+
+                <div class="app-modal__backdrop" style="background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px);"></div>
+
+                <form @submit.prevent="submit()"
+                      class="app-modal__panel max-w-lg border border-white/10 rounded-[2rem] p-6 sm:p-8 shadow-2xl space-y-6"
+                      style="background-color:#0a0f2c;">
+
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-1 bg-orange-500 rounded-full"></span>
+                            <span class="text-orange-400 font-black text-[9px] uppercase tracking-widest italic">Almost There</span>
+                        </div>
+                        <h3 class="text-2xl font-black italic tracking-tight uppercase text-white">Your Business Details</h3>
+                    </div>
+
+                    {{-- Which Google account this is being created for. --}}
+                    <template x-if="account">
+                        <div class="flex items-center gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 p-3">
+                            <img :src="account?.picture" x-show="account?.picture" referrerpolicy="no-referrer" class="w-10 h-10 rounded-full border border-white/10 shrink-0" alt="">
+                            <div class="min-w-0">
+                                <span class="block text-sm font-black text-white truncate" x-text="account?.name"></span>
+                                <span class="block text-[10px] font-black uppercase tracking-widest text-sky-400 truncate" x-text="account?.email"></span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-2">Business Name</label>
+                        <input type="text" x-model="details.business_name" maxlength="255" required
+                            class="premium-input w-full h-14 px-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white placeholder:text-white/30"
+                            placeholder="Enter Business Name">
+                        <p x-show="fieldError('business_name')" x-cloak x-text="fieldError('business_name')"
+                           class="text-rose-300 text-[10px] font-black uppercase tracking-widest ml-2"></p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-2">Business Category</label>
+                        <select x-model="details.vendor_type" required
+                            class="premium-input w-full h-14 px-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white">
+                            @foreach($vendorCategories as $category)
+                                @php $themeConfig = \App\Services\ThemeService::getTheme($category->slug); @endphp
+                                <option value="{{ $category->slug }}" class="bg-[#0d1333]">
+                                    {{ ($themeConfig['emoji'] ?? '✨') . ' ' . ($themeConfig['label'] ?? $category->name) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p x-show="fieldError('vendor_type')" x-cloak x-text="fieldError('vendor_type')"
+                           class="text-rose-300 text-[10px] font-black uppercase tracking-widest ml-2"></p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-2">Mobile Number</label>
+                        <input type="tel" x-ref="mobileInput" x-model="details.mobile" required
+                               maxlength="10" inputmode="numeric"
+                               @input="details.mobile = details.mobile.replace(/[^0-9]/g, '')"
+                            class="premium-input w-full h-14 px-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white placeholder:text-white/30"
+                            placeholder="Enter 10-digit mobile number">
+                        <p x-show="fieldError('mobile')" x-cloak x-text="fieldError('mobile')"
+                           class="text-rose-300 text-[10px] font-black uppercase tracking-widest ml-2"></p>
+                        <p class="text-[11px] font-medium text-orange-400 italic leading-relaxed ml-2">
+                            Our admin team will contact you on this number to verify your business before approval — please
+                            make sure it is reachable.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase tracking-[0.2em] text-white/60 ml-2">Referral Code</label>
+                        <input type="text" x-model="details.referral_code" maxlength="60"
+                            class="premium-input w-full h-14 px-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white placeholder:text-white/30"
+                            placeholder="Enter Referral Code (Optional)">
+                        <p x-show="fieldError('referral_code')" x-cloak x-text="fieldError('referral_code')"
+                           class="text-rose-300 text-[10px] font-black uppercase tracking-widest ml-2"></p>
+                    </div>
+
+                    {{-- The same consent gate the form registration carries; the
+                         server checks it again. --}}
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-3 cursor-pointer text-white/70 font-medium italic text-sm text-left">
+                            <input type="checkbox" x-model="details.terms" required
+                                   class="mt-0.5 w-5 h-5 shrink-0 cursor-pointer rounded-md border-2 border-white/30 bg-white/10 text-emerald-500 focus:ring-2 focus:ring-emerald-400/60">
+                            <span>
+                                I have read and agree to the
+                                <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="underline decoration-white/30 underline-offset-4 hover:text-white">Terms and Conditions</a>
+                                and the
+                                <a href="{{ route('privacy') }}" target="_blank" rel="noopener" class="underline decoration-white/30 underline-offset-4 hover:text-white">Privacy Policy</a>.
+                            </span>
+                        </label>
+                        <p x-show="fieldError('terms')" x-cloak x-text="fieldError('terms')"
+                           class="text-rose-300 text-[10px] font-black uppercase tracking-widest ml-8"></p>
+                    </div>
+
+                    <div x-show="error" x-cloak class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                        <p class="text-xs font-bold text-rose-300 leading-relaxed" x-text="error"></p>
+                    </div>
+
+                    <div class="space-y-3 pt-2">
+                        <button type="submit" :disabled="busy"
+                            class="w-full h-14 rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <svg x-show="busy" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>
+                            <span x-text="busy ? 'Creating Account…' : 'Create Business Account'"></span>
+                        </button>
+                        <button type="button" @click="cancelDetails()" :disabled="busy"
+                            class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 font-black uppercase tracking-widest text-[10px] flex items-center justify-center transition-all disabled:opacity-40">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+            @endif
+
+            </div>
         </div>
     </div>
+
+    @if(config('services.google.client_id'))
+        @include('partials.vendor-google-auth')
+    @endif
 </x-app-layout>

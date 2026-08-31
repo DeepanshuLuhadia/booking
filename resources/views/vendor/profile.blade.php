@@ -19,6 +19,146 @@
                 REGISTRY SETTINGS</p>
         </div>
 
+        {{-- Stage one: why an approved vendor is sitting on this page.
+
+             EnsureSubscriptionActive holds every newly approved shop here until
+             the fields below are filled in — the same ones the public listing,
+             the slot generator and the booking flow all read. Without a line
+             saying so, the redirect looks like a bug.
+
+             $setupBlockers is this page's own half of the setup (business
+             details + map pin). The specialist requirement is deliberately not
+             in it: there is no staff section on this form, so listing it here
+             asked for something the vendor could not do without leaving. It
+             becomes the whole of the banner below once this stage is saved. --}}
+        @if($profileIncomplete)
+        <div class="mb-12 p-6 sm:p-8 rounded-[2rem] bg-orange-500/10 border border-orange-500/30">
+            <div class="flex items-start gap-4">
+                <span class="w-12 h-12 shrink-0 bg-orange-500/10 text-orange-400 rounded-2xl flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v3.75m0 3h.01M4.5 19.5h15L12 4.5l-7.5 15z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <h2 class="text-lg sm:text-xl font-black italic uppercase tracking-tight text-white mb-2">
+                        Your Account Is Approved — Finish Your Setup
+                    </h2>
+                    <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-4">
+                        Complete the details below and save them to unlock your dashboard. Customers cannot find or
+                        book your business until this is done.
+                    </p>
+                    {{-- Each chip is the shortcut to its own field: clicking
+                         scrolls to and focuses the exact input (the #field-*
+                         handler in app-layout), and the chip disappears the
+                         moment that input is filled in — so what is left in
+                         this list is always exactly what is left to do.
+
+                         Every chip here belongs to an input on this page, which
+                         is the point of the split: all of them can be cleared
+                         without leaving the form. --}}
+                    <ul id="setup-chips" class="flex flex-wrap gap-2">
+                        @foreach($setupBlockers as $blocker)
+                            @php
+                                // The map is one chip over two inputs; everything
+                                // else watches the single field it names.
+                                $chipWatch = $blocker['field'] === 'map'
+                                    ? 'latitude,longitude'
+                                    : $blocker['field'];
+                            @endphp
+                            <li data-watch="{{ $chipWatch }}">
+                                <a href="#field-{{ $blocker['field'] }}"
+                                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white hover:bg-white/10 transition-all">
+                                    {{ $blocker['label'] }}
+                                    <svg class="w-3 h-3 shrink-0 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    <script>
+                        /*
+                        | Live chip hiding.
+                        |
+                        | Each chip watches the form inputs named in data-watch
+                        | and hides itself once ALL of them hold a real value
+                        | (for the map pair, a coordinate the listing would not
+                        | treat as unset). Display only — the saved truth is
+                        | still recomputed server-side on submit, so a chip
+                        | hidden here and then emptied again simply comes back
+                        | on the next page load.
+                        */
+                        (function () {
+                            var chips = document.querySelectorAll('#setup-chips [data-watch]');
+                            if (!chips.length) return;
+
+                            var filled = function (name) {
+                                var el = document.querySelector('[name="' + name + '"]');
+                                if (!el) return false;
+                                var v = (el.value || '').trim();
+                                if (name === 'latitude' || name === 'longitude') {
+                                    return v !== '' && !isNaN(v) && Math.abs(parseFloat(v)) >= 0.00001;
+                                }
+                                return v !== '';
+                            };
+
+                            var refresh = function () {
+                                chips.forEach(function (chip) {
+                                    var done = chip.dataset.watch.split(',').every(filled);
+                                    chip.style.display = done ? 'none' : '';
+                                });
+                            };
+
+                            // input covers typing; change covers selects, the
+                            // time pickers and "Use My Location" filling the
+                            // coordinate boxes programmatically.
+                            document.addEventListener('input', refresh, true);
+                            document.addEventListener('change', refresh, true);
+                            refresh();
+                        })();
+                    </script>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        {{-- Stage two: the settings are saved, and one thing is left.
+
+             This is the banner the vendor meets on the reload after their first
+             successful save. It replaces the checklist above rather than sitting
+             alongside it — the point of staging the setup is that the panel asks
+             for one thing at a time.
+
+             The modal at the foot of this page makes the same request the moment
+             the save lands; this is the standing blocker that outlives dismissing
+             it, so the requirement cannot be closed away and forgotten. Both
+             point at the staff section, because that is where it can be done.
+
+             Wider than the modal on purpose: a shop whose only specialist is off
+             duty or unpriced still has nothing bookable, and still belongs here.
+             The link says "add" only when there is genuinely nobody yet. --}}
+        @if($employeeBlocker)
+        <div class="mb-12 p-6 sm:p-8 rounded-[2rem] bg-orange-500/10 border border-orange-500/30">
+            <div class="flex items-start gap-4">
+                <span class="w-12 h-12 shrink-0 bg-orange-500/10 text-orange-400 rounded-2xl flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v3.75m0 3h.01M4.5 19.5h15L12 4.5l-7.5 15z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <h2 class="text-lg sm:text-xl font-black italic uppercase tracking-tight text-white mb-2">
+                        Business Details Saved — One Step Left
+                    </h2>
+                    <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-4">
+                        Customers book a <span class="text-white font-bold">person</span>, not a shop. You need at least
+                        one active specialist with their working hours and service fee — until then there are no slots to
+                        book and your business stays hidden from the listing.
+                    </p>
+                    <a href="{{ $needsFirstEmployee ? route('vendor.employees.create') : route('vendor.employees.index') }}"
+                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white hover:bg-white/10 transition-all">
+                        {{ $needsFirstEmployee ? 'Add Your First Specialist' : 'Finish Your Specialist Setup' }}
+                        <svg class="w-3 h-3 shrink-0 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <form action="{{ route('vendor.profile.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -45,7 +185,7 @@
                                         ]];
                                     });
                                 @endphp
-                                <div class="relative" x-data="{
+                                <div id="field-vendor_type" class="relative field-anchor" x-data="{
                                     open: false,
                                     selected: '{{ $vendor->vendor_type ?? 'doctor' }}',
                                     options: {{ Js::from($categoryOptions) }},
@@ -111,8 +251,8 @@
                             <div class="space-y-4 relative">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Mobile Number</label>
-                                <input type="text" name="contact_number" value="{{ $vendor->contact_number }}" required
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <input type="text" id="field-contact_number" name="contact_number" value="{{ $vendor->contact_number }}" required
+                                    class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
 
                                 <div class="flex items-center gap-3 pt-2 ml-4">
                                     <input type="checkbox" name="show_contact_number" value="1" {{ $vendor->show_contact_number ? 'checked' : '' }}
@@ -138,9 +278,14 @@
                         <div class="space-y-4">
                             <label
                                 class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Physical
-                                Coordinates / Address</label>
-                            <textarea name="address" rows="3" required
+                                Coordinates / Address <span class="text-slate-400 normal-case">(optional)</span></label>
+                            <textarea name="address" rows="3"
+                                placeholder="Optional if you set the map location below"
                                 class="glass-input w-full rounded-2xl p-4 font-medium">{{ $vendor->address }}</textarea>
+                            <p class="text-[8px] font-black text-slate-200 uppercase tracking-widest ml-4 mt-1 italic">
+                                Optional — the map location below is what customers are actually sent to.
+                                Leave this blank and your page shows a "Go to Map" link instead.
+                            </p>
                         </div>
 
                         {{-- Coordinates. These drive the "N km away" chip on the
@@ -172,6 +317,11 @@
                                             // 7dp matches the decimal(10,7) columns exactly.
                                             this.$refs.lat.value = pos.coords.latitude.toFixed(7);
                                             this.$refs.lng.value = pos.coords.longitude.toFixed(7);
+                                            // A programmatic .value writes no event, and the setup
+                                            // banner's chips only re-check on input/change — announce
+                                            // the fill so the 'Shop location on map' chip clears.
+                                            this.$refs.lat.dispatchEvent(new Event('change', { bubbles: true }));
+                                            this.$refs.lng.dispatchEvent(new Event('change', { bubbles: true }));
                                             this.$refs.lat.dispatchEvent(new Event('input'));
                                             this.$refs.lng.dispatchEvent(new Event('input'));
                                             this.locating = false;
@@ -196,9 +346,9 @@
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Latitude
                                     Reference <span class="text-amber-400">*</span></label>
-                                <input type="text" name="latitude" x-ref="lat" value="{{ old('latitude', $vendor->latitude) }}"
+                                <input type="text" id="field-map" name="latitude" x-ref="lat" value="{{ old('latitude', $vendor->latitude) }}"
                                     required inputmode="decimal" placeholder="e.g. 26.9124000"
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                    class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                                 @error('latitude')
                                     <p class="text-[9px] font-black uppercase italic tracking-widest ml-4 text-rose-400">{{ $message }}</p>
                                 @enderror
@@ -259,8 +409,8 @@
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Appointment
                                     Mode</label>
-                                <select name="appointment_mode"
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium appearance-none cursor-pointer">
+                                <select id="field-appointment_mode" name="appointment_mode"
+                                    class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium appearance-none cursor-pointer">
                                     <option value="time_slot" {{ $vendor->appointment_mode == 'time_slot' ? 'selected' :
                                         '' }}>Time Slot System</option>
                                     <option value="token" {{ $vendor->appointment_mode == 'token' ? 'selected' : ''
@@ -314,17 +464,17 @@
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Global
                                     Opening Time</label>
-                                <input type="time" name="global_opening_time"
+                                <input type="time" id="field-global_opening_time" name="global_opening_time"
                                     value="{{ $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '' }}"
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium uppercase">
+                                    class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium uppercase">
                             </div>
                             <div class="space-y-4">
                                 <label
                                     class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Global
                                     Closing Time</label>
-                                <input type="time" name="global_closing_time"
+                                <input type="time" id="field-global_closing_time" name="global_closing_time"
                                     value="{{ $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '' }}"
-                                    class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium uppercase">
+                                    class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium uppercase">
                             </div>
                         </div>
                     </div>
@@ -452,5 +602,190 @@
                 </div>
             </div>
         </form>
+
+        {{-- Login & Security.
+
+             Its own <form>, outside the profile one — a form cannot be nested,
+             and a password must never ride along with a multipart post of
+             business details anyway.
+
+             This is the vendor's half of the two-way login: a shop that signed
+             up with Google sets its first password here (nothing to prove — the
+             random one on the row was never shown to anybody), and can from then
+             on sign in either way. Everyone else has to prove the current
+             password first, so a borrowed session cannot take the account over.
+        --}}
+        <div class="mt-12 glass-card p-6 sm:p-10" x-data="{ showPasswordForm: {{ $errors->has('password') || $errors->has('current_password') ? 'true' : 'false' }} }">
+            <div class="border-b border-slate-50 pb-6 mb-8">
+                <h3 class="text-xl font-black italic uppercase text-white tracking-tight">Login &amp; Security</h3>
+                <p class="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 italic">HOW YOU SIGN IN TO THIS PANEL</p>
+            </div>
+
+            {{-- What is switched on today, so the vendor can see what setting a
+                 password would actually buy them. --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                <div class="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/10">
+                    <span class="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center {{ $user->usesGoogleSignIn() ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/30' }}">
+                        <svg class="w-5 h-5" viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="text-[9px] font-black uppercase tracking-widest text-slate-300 italic">Google Sign-In</div>
+                        <div class="text-sm font-black text-white truncate">
+                            {{ $user->usesGoogleSignIn() ? 'Enabled' : 'Not linked' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/10">
+                    <span class="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center {{ $user->hasPassword() ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400' }}">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="text-[9px] font-black uppercase tracking-widest text-slate-300 italic">Email &amp; Password</div>
+                        <div class="text-sm font-black text-white truncate">
+                            {{ $user->hasPassword() ? 'Enabled' : 'Not set yet' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @unless($user->hasPassword())
+            <div class="mb-8 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                <p class="text-xs sm:text-sm font-bold text-amber-300 leading-relaxed">
+                    You signed up with Google, so this account has no password yet. Set one below and you'll be able to
+                    sign in <span class="text-white">either</span> with Google <span class="text-white">or</span> with
+                    <span class="text-white">{{ $user->email }}</span> and your new password.
+                </p>
+            </div>
+            @endunless
+
+            <button type="button" x-show="!showPasswordForm" @click="showPasswordForm = true"
+                class="btn-outline h-14 px-8 justify-center">
+                {{ $user->hasPassword() ? 'Change Password' : 'Set A Password' }}
+            </button>
+
+            <form x-show="showPasswordForm" x-cloak method="POST" action="{{ route('vendor.profile.password') }}"
+                  class="space-y-8 max-w-xl">
+                @csrf
+
+                @if($user->hasPassword())
+                <div class="space-y-4">
+                    <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Current Password</label>
+                    <input type="password" name="current_password" required autocomplete="current-password"
+                        class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white placeholder:text-white/30"
+                        placeholder="••••••••">
+                    @error('current_password')
+                        <p class="text-rose-400 text-[10px] font-black uppercase tracking-widest ml-4">{{ $message }}</p>
+                    @enderror
+                </div>
+                @endif
+
+                <div class="space-y-4">
+                    <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">New Password</label>
+                    <input type="password" name="password" required minlength="8" autocomplete="new-password"
+                        class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white placeholder:text-white/30"
+                        placeholder="At least 8 characters">
+                    @error('password')
+                        <p class="text-rose-400 text-[10px] font-black uppercase tracking-widest ml-4">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="space-y-4">
+                    <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Confirm New Password</label>
+                    <input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password"
+                        class="premium-input w-full h-14 px-6 bg-white/5 border border-white/10 rounded-2xl font-bold text-base text-white placeholder:text-white/30"
+                        placeholder="Re-enter the new password">
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button type="submit" class="btn-primary h-14 px-10 justify-center">
+                        {{ $user->hasPassword() ? 'Update Password' : 'Save Password' }}
+                    </button>
+                    <button type="button" @click="showPasswordForm = false"
+                        class="h-14 px-8 rounded-2xl border-2 border-white/10 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/5 transition-all italic">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
+
+    {{-- The step straight after the business details: at least one specialist.
+
+         A shop with no staff has no working hours, no fee and no slots, so
+         nothing on it can be booked — it is the last thing standing between an
+         approved vendor and a listing customers can actually use. Shown on
+         every visit to this page (including the reload after a successful save)
+         until a specialist exists, which is exactly when it stops mattering.
+
+         Outside the settings <div> so the profile form's Alpine scope has
+         nothing to do with it. --}}
+    @if($needsFirstEmployee)
+    <div x-data="{ showEmployeePrompt: true }"
+         x-show="showEmployeePrompt"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="app-modal">
+
+        <div @click="showEmployeePrompt = false" class="app-modal__backdrop bg-slate-900/70 backdrop-blur-xl"></div>
+
+        <div class="app-modal__panel custom-scrollbar max-w-lg border border-white/10 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl text-white" style="background-color:#0a0f2c;">
+            <button @click="showEmployeePrompt = false" class="absolute top-5 right-5 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/50 hover:text-rose-500 hover:bg-rose-500/10 transition-all border border-white/5">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+
+            <div class="flex items-center gap-3 mb-2 pr-10">
+                <span class="w-8 h-1 bg-orange-500 rounded-full"></span>
+                <span class="text-orange-500 font-black text-[9px] uppercase tracking-widest italic">One Last Step</span>
+            </div>
+
+            <h3 class="text-2xl sm:text-3xl font-black italic tracking-tighter uppercase mb-3">
+                Add At Least <span class="text-orange-500">One Employee.</span>
+            </h3>
+            <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-6">
+                Your business details are saved. Customers book a <span class="text-white font-bold">person</span>, not
+                a shop — so until you add one specialist with their working hours and service fee, there are no slots to
+                book and your business stays hidden from the listing.
+            </p>
+
+            {{-- Each row opens the employee form at exactly that field —
+                 same #field-* anchors as the settings banner. --}}
+            <ul class="space-y-2.5 mb-7">
+                @foreach([
+                    'Name of the specialist'    => 'name',
+                    'Working start & end time'  => 'working_start_time',
+                    'Service fee'               => 'service_fee_override',
+                    'Slot duration'             => 'slot_duration',
+                ] as $needed => $field)
+                <li>
+                    <a href="{{ route('vendor.employees.create') }}#field-{{ $field }}"
+                       class="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all group">
+                        <span class="w-7 h-7 shrink-0 bg-orange-500/10 text-orange-400 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                        <span class="flex-1 text-xs sm:text-sm font-bold text-white/90">{{ $needed }}</span>
+                        <svg class="w-4 h-4 shrink-0 text-white/20 group-hover:text-orange-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                </li>
+                @endforeach
+            </ul>
+
+            <div class="space-y-3">
+                <a href="{{ route('vendor.employees.create') }}"
+                   class="w-full h-14 rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center transition-all hover:opacity-90">
+                    Add Employee Now
+                </a>
+                <button @click="showEmployeePrompt = false"
+                        class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 font-black uppercase tracking-widest text-[10px] flex items-center justify-center transition-all">
+                    I'll Do It Later
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </x-vendor-layout>

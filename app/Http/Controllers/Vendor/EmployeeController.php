@@ -42,11 +42,26 @@ class EmployeeController extends Controller
 
         $this->normalizeWorkingTimes($request);
 
+        $messages = [
+            'slot_duration.min' => 'Slot duration must be at least 1 minute.',
+            'slot_duration.max' => 'Slot duration cannot be longer than 480 minutes (a full working day).',
+        ];
+
         $request->validate([
             'name' => 'required|string|max:255',
             'working_start_time' => 'required|date_format:H:i',
             'working_end_time' => 'required|date_format:H:i',
-            'slot_duration' => 'required|integer|min:15|max:120',
+            /*
+            | Any whole number of minutes the shop likes, as long as a slot is
+            | a real amount of time. It used to be locked to 15–120 in steps of
+            | 15, which shut out real cadences (a 10-minute OPD queue, a
+            | 3-hour turf session). The floor matters mechanically as well as
+            | commercially: SlotGenerationService steps through the shift by
+            | this figure, and a zero would walk in place forever. The ceiling
+            | is a sanity bound — one slot can fill a whole working day, but a
+            | five-digit typo should not save.
+            */
+            'slot_duration' => 'required|integer|min:1|max:480',
             'photo' => 'nullable|image|max:1024',
             'service_fee_override' => 'nullable|numeric|min:0',
             'premium_fee' => 'nullable|numeric|min:0',
@@ -54,7 +69,7 @@ class EmployeeController extends Controller
             'max_daily_tokens' => 'nullable|integer|min:1|max:500',
             'email' => 'nullable|email|unique:users,email',
             'password' => 'nullable|string|min:8',
-        ]);
+        ], $messages);
 
         if ($vendor->global_opening_time) {
             $globalStart = \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i');
@@ -85,6 +100,7 @@ class EmployeeController extends Controller
                 'role' => 'employee',
                 'status' => 'active'
             ]);
+            $user->forceFill(['password_set_at' => now()])->save();
             $data['user_id'] = $user->id;
 
             Mail::to($request->email)->send(new EmployeeCredentialsMail(
@@ -97,6 +113,24 @@ class EmployeeController extends Controller
 
         $employee = Employee::create($data);
         app(\App\Services\QRCodeService::class)->generateForEmployee($employee);
+
+        /*
+        | Did this employee just take the shop live?
+        |
+        | The onboarding prompts walk a new vendor here as their last step, so
+        | the moment the listing has nothing left to block on, the panel says
+        | so out loud — once. `live_celebrated_at` is the once: it survives
+        | log-outs and devices, and the pre-live vendors that existed before it
+        | were backfilled, so nobody established is congratulated for nothing.
+        */
+        $vendor->refresh();
+        if (! $vendor->live_celebrated_at && empty($vendor->getListingBlockers())) {
+            $vendor->forceFill(['live_celebrated_at' => now()])->save();
+
+            return redirect()->route('vendor.employees.index')
+                ->with('business_live', true)
+                ->with('success', 'Employee added successfully!');
+        }
 
         return redirect()->route('vendor.employees.index')->with('success', 'Employee added successfully!');
     }
@@ -113,11 +147,26 @@ class EmployeeController extends Controller
 
         $this->normalizeWorkingTimes($request);
 
+        $messages = [
+            'slot_duration.min' => 'Slot duration must be at least 1 minute.',
+            'slot_duration.max' => 'Slot duration cannot be longer than 480 minutes (a full working day).',
+        ];
+
         $request->validate([
             'name' => 'required|string|max:255',
             'working_start_time' => 'required|date_format:H:i',
             'working_end_time' => 'required|date_format:H:i',
-            'slot_duration' => 'required|integer|min:15|max:120',
+            /*
+            | Any whole number of minutes the shop likes, as long as a slot is
+            | a real amount of time. It used to be locked to 15–120 in steps of
+            | 15, which shut out real cadences (a 10-minute OPD queue, a
+            | 3-hour turf session). The floor matters mechanically as well as
+            | commercially: SlotGenerationService steps through the shift by
+            | this figure, and a zero would walk in place forever. The ceiling
+            | is a sanity bound — one slot can fill a whole working day, but a
+            | five-digit typo should not save.
+            */
+            'slot_duration' => 'required|integer|min:1|max:480',
             'photo' => 'nullable|image|max:1024',
             'is_active' => 'required|boolean',
             'service_fee_override' => 'nullable|numeric|min:0',
@@ -126,7 +175,7 @@ class EmployeeController extends Controller
             'max_daily_tokens' => 'nullable|integer|min:1|max:500',
             'email' => 'nullable|email|unique:users,email,' . ($employee->user_id ?? 'null'),
             'password' => 'nullable|string|min:8',
-        ]);
+        ], $messages);
 
         $vendor = auth()->user()->vendor;
         if ($vendor->global_opening_time) {
@@ -173,6 +222,7 @@ class EmployeeController extends Controller
                     'role' => 'employee',
                     'status' => 'active'
                 ]);
+                $user->forceFill(['password_set_at' => now()])->save();
                 $data['user_id'] = $user->id;
 
                 Mail::to($request->email)->send(new EmployeeCredentialsMail(

@@ -21,9 +21,10 @@ class SessionController extends Controller
             'password' => ['required'],
         ]);
 
-        // The login form has always offered a "Remember" checkbox; it was never
-        // passed through, so the box did nothing.
-        if (!Auth::attempt($attributes, $request->boolean('remember'))) {
+        // Always remembered: a signed-in user stays signed in until they press
+        // Logout. The long session lifetime does most of the work; the remember
+        // cookie is the backstop for when the session cookie or row is gone.
+        if (!Auth::attempt($attributes, true)) {
             throw ValidationException::withMessages([
                 'email' => 'Your provided credentials could not be verified.'
             ]);

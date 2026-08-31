@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\AdminBadgeService;
 use App\Services\CustomerBookingService;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -14,7 +15,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        /*
+        | The admin panel's badge counters.
+        |
+        | A singleton because the admin layout renders its menu twice per page
+        | (desktop sidebar + mobile sheet) and the dashboard reads the same
+        | figures again. Without this the four counting queries would run three
+        | times over on every admin page load.
+        */
+        $this->app->singleton(AdminBadgeService::class);
     }
 
     /**
