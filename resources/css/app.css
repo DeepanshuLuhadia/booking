@@ -885,8 +885,20 @@ body[class*="theme-"] {
 }
 
 /* Table responsiveness & helper definitions */
-[data-panel-type] .table-responsive-wrapper {
+
+/*
+ * Deliberately NOT scoped to [data-panel-type].
+ *
+ * That attribute is set by the customer-facing app-layout and by nothing else
+ * — the vendor and admin layouts do not carry it — so scoping this rule to it
+ * meant the only tables in the project never got it. Every one of them sits in
+ * a `glass-card overflow-hidden`, which clipped the overflow instead of
+ * scrolling it: on a phone the rightmost column simply vanished, taking the row
+ * actions (Skip, Complete, Delete) with it and leaving no way to reach them.
+ */
+.table-responsive-wrapper {
   width: 100% !important;
+  max-width: 100% !important;
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
 }

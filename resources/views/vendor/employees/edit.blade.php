@@ -71,7 +71,8 @@
                             </div>
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Appointment Slot Duration (MIN)</label>
-                                <input type="number" name="slot_duration" value="{{ old('slot_duration', $employee->slot_duration) }}" step="15" min="15" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <input type="number" name="slot_duration" value="{{ old('slot_duration', $employee->slot_duration) }}" step="1" min="1" max="480" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <p class="text-[8px] font-black text-slate-200 uppercase tracking-widest ml-4 mt-1 italic">ANY LENGTH FROM 1 MINUTE — HOW LONG ONE APPOINTMENT TAKES</p>
                             </div>
                         </div>
 

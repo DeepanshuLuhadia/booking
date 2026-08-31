@@ -5,23 +5,76 @@
             <p class="text-xs md:text-sm font-medium text-slate-400 uppercase tracking-widest">Real-time business insights and health indicators</p>
         </div>
 
+        {{-- Action Required.
+
+             The queues waiting on a person, above the platform figures because
+             they are the only numbers on this page that need doing something
+             about. Each card links to the page filtered to exactly those rows,
+             so the count and the work are one click apart.
+
+             Every figure comes from AdminBadgeService — the same source as the
+             sidebar badges, so the two can never disagree. --}}
+        <div class="glass-card p-6 sm:p-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h3 class="text-2xl font-black text-white">
+                        Action Required
+                        @if($pendingTotal > 0)
+                            <span class="ml-2 align-middle inline-flex items-center justify-center min-w-[22px] h-7 px-2 rounded-full bg-amber-500 text-slate-900 text-xs font-black tabular-nums">{{ $pendingTotal }}</span>
+                        @endif
+                    </h3>
+                    <p class="text-xs text-slate-400 uppercase font-black tracking-widest mt-1">
+                        {{ $pendingTotal > 0 ? 'Waiting on you right now' : 'Nothing waiting — you are all caught up' }}
+                    </p>
+                </div>
+
+                <a href="{{ route('admin.notifications.index') }}"
+                   class="btn-outline inline-flex items-center gap-3 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    Notifications
+                    @if($unreadAlerts > 0)
+                        <span class="min-w-[20px] h-5 px-1.5 rounded-full bg-blue-500 text-white text-[9px] font-black flex items-center justify-center tabular-nums">{{ $unreadAlerts > 99 ? '99+' : $unreadAlerts }}</span>
+                    @endif
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                @foreach($actionRequired as $item)
+                    @php
+                        // Amber while something is outstanding, muted once the
+                        // queue is empty — a card at zero is information, not
+                        // an alarm, and should not read like one.
+                        $waiting = $item['count'] > 0;
+                    @endphp
+                    <a href="{{ route($item['route'], $item['params']) }}"
+                       class="glass-card p-6 flex items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl {{ $waiting ? 'border-amber-500/30 bg-amber-500/5' : '' }}">
+                        <div class="min-w-0">
+                            <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest truncate">{{ $item['label'] }}</p>
+                            <h3 class="text-3xl font-black tabular-nums {{ $waiting ? 'text-amber-400' : 'text-white/40' }}">{{ number_format($item['count']) }}</h3>
+                        </div>
+                        <svg class="w-5 h-5 shrink-0 {{ $waiting ? 'text-amber-400' : 'text-white/20' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Total Revenue</p>
-                <h3 class="text-3xl font-black text-slate-950">₹{{ number_format($stats['total_revenue'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">₹{{ number_format($stats['total_revenue'] / 1000, 1) }}k+</h3>
             </div>
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Active Vendors</p>
-                <h3 class="text-3xl font-black text-slate-950">{{ number_format($stats['active_vendors'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">{{ number_format($stats['active_vendors'] / 1000, 1) }}k+</h3>
             </div>
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Total Bookings</p>
-                <h3 class="text-3xl font-black text-slate-950">{{ number_format($stats['total_bookings'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">{{ number_format($stats['total_bookings'] / 1000, 1) }}k+</h3>
             </div>
             <div class="glass-card p-6 hover:scale-[1.02] hover:shadow-xl transition-all duration-300">
                 <p class="text-slate-400 text-[10px] mb-2 uppercase font-black tracking-widest">Active Users</p>
-                <h3 class="text-3xl font-black text-slate-950">{{ number_format($stats['active_users'] / 1000, 1) }}k+</h3>
+                <h3 class="text-3xl font-black text-white">{{ number_format($stats['active_users'] / 1000, 1) }}k+</h3>
             </div>
         </div>
 

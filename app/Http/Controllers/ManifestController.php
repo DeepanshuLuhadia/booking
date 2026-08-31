@@ -14,7 +14,7 @@ class ManifestController extends Controller
         $manifest = [
             'id'               => '/',
             'name'             => config('app.name', 'Book Appointment'),
-            'short_name'       => 'Booking',
+            'short_name'       => config('brand.short_name', 'Booking'),
             'description'      => 'Book appointments, grab your token, and get live turn alerts.',
             'start_url'        => url('/'),
             'scope'            => url('/'),

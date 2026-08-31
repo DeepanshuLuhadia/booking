@@ -29,7 +29,7 @@
 
                         <div class="space-y-4">
                             <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Full Name (Display)</label>
-                            <input type="text" name="name" value="{{ old('name') }}" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="e.g. Rahul Sharma">
+                            <input type="text" id="field-name" name="name" value="{{ old('name') }}" required class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="e.g. Rahul Sharma">
                         </div>
 
                         <div class="border-t border-white/10 pt-6 mt-6">
@@ -49,22 +49,23 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Shift Start</label>
-                                <input type="time" name="working_start_time" value="{{ old('working_start_time', $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '') }}" min="{{ $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '' }}" max="{{ $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '' }}" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <input type="time" id="field-working_start_time" name="working_start_time" value="{{ old('working_start_time', $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '') }}" min="{{ $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '' }}" max="{{ $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '' }}" required class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                             </div>
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Shift End</label>
-                                <input type="time" name="working_end_time" value="{{ old('working_end_time', $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '') }}" min="{{ $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '' }}" max="{{ $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '' }}" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <input type="time" id="field-working_end_time" name="working_end_time" value="{{ old('working_end_time', $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '') }}" min="{{ $vendor->global_opening_time ? \Carbon\Carbon::parse($vendor->global_opening_time)->format('H:i') : '' }}" max="{{ $vendor->global_closing_time ? \Carbon\Carbon::parse($vendor->global_closing_time)->format('H:i') : '' }}" required class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Service Fee (₹)</label>
-                                <input type="number" name="service_fee_override" value="{{ old('service_fee_override') }}" step="1" class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="Service Fee">
+                                <input type="number" id="field-service_fee_override" name="service_fee_override" value="{{ old('service_fee_override') }}" step="1" class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium" placeholder="Service Fee">
                             </div>
                             <div class="space-y-4">
                                 <label class="block text-[9px] font-black text-slate-300 uppercase italic tracking-widest ml-4">Appointment Slot Duration (MIN)</label>
-                                <input type="number" name="slot_duration" value="{{ old('slot_duration')??15 }}" step="15" min="15" required class="glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <input type="number" id="field-slot_duration" name="slot_duration" value="{{ old('slot_duration')??15 }}" step="1" min="1" max="480" required class="field-anchor glass-input w-full min-h-[2.75rem] px-4 py-2.5 rounded-xl font-medium">
+                                <p class="text-[8px] font-black text-slate-200 uppercase tracking-widest ml-4 mt-1 italic">ANY LENGTH FROM 1 MINUTE — HOW LONG ONE APPOINTMENT TAKES</p>
                             </div>
                         </div>
 

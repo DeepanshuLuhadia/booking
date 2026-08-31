@@ -47,6 +47,15 @@ class ReviewController extends Controller
             'reported_at'   => now(),
         ]);
 
+        // "Our team will review it shortly" is a promise this keeps: without
+        // an alert the flag only showed up if an admin happened to open the
+        // reported filter.
+        try {
+            app(\App\Services\NotificationService::class)->notifyAdminsReviewReported($review);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Review-reported admin alert failed: ' . $e->getMessage());
+        }
+
         return back()->with('success', 'Review reported. Our team will review it shortly.');
     }
 }

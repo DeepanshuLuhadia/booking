@@ -15,7 +15,9 @@
                         '': { label: 'Matrix: All States', icon: '🌐' },
                         'confirmed': { label: 'State: Confirmed', icon: '✅' },
                         'completed': { label: 'State: Completed', icon: '🏆' },
-                        'cancelled': { label: 'State: Cancelled', icon: '❌' }
+                        'cancelled': { label: 'State: Cancelled', icon: '❌' },
+                        'skipped': { label: 'State: Skipped', icon: '⏭️' },
+                        'expired': { label: 'State: Expired', icon: '⌛' }
                     },
                     get selectedLabel() {
                         return this.options[this.selected]?.label || 'Select State';
@@ -66,27 +68,31 @@
             <table class="w-full">
                 <thead class="bg-white/5 text-left">
                     <tr>
-                        <th class="px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                        <th class="px-4 sm:px-10 py-5 sm:py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Name</th>
-                        <th class="hidden sm:table-cell px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                        <th class="hidden sm:table-cell px-4 sm:px-10 py-5 sm:py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Employee</th>
-                        <th class="hidden md:table-cell px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                        <th class="hidden md:table-cell px-4 sm:px-10 py-5 sm:py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Time </th>
-                        <th class="px-10 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
+                        <th class="px-4 sm:px-10 py-5 sm:py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic">
                             Status</th>
-                        <th class="px-10 py-6 text-right"></th>
+                        <th class="px-4 sm:px-10 py-5 sm:py-6 text-right"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                     @forelse($bookings as $booking)
                     <tr class="hover:bg-white/5/50 transition-all">
-                        <td class="px-10 py-8">
+                        <td class="px-4 sm:px-10 py-5 sm:py-8">
                             <div class="font-black text-white text-lg tracking-tight uppercase italic">{{
                                 $booking->customer_name }}</div>
                             <div class="text-[9px] text-slate-300 font-black mt-1 uppercase tracking-widest italic">{{
                                 $booking->customer_phone }}</div>
+                            <div class="sm:hidden mt-3 px-3 py-2 bg-blue-500/10 rounded-lg border border-blue-500/30 inline-block">
+                                <span class="font-black text-blue-400 text-[10px] uppercase italic tracking-wider">{{
+                                    $booking->employee->name }}</span>
+                            </div>
                         </td>
-                        <td class="hidden sm:table-cell px-10 py-8">
+                        <td class="hidden sm:table-cell px-4 sm:px-10 py-5 sm:py-8">
                             <div class="flex items-center gap-4">
                                 <div
                                     class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black italic">
@@ -96,18 +102,22 @@
                                     $booking->employee->name }}</span>
                             </div>
                         </td>
-                        <td class="hidden md:table-cell px-10 py-8">
+                        <td class="hidden md:table-cell px-4 sm:px-10 py-5 sm:py-8">
+                            {{-- The day the customer actually turns up. For a
+                                 shop trading past midnight this is the day
+                                 after the sheet the booking is filed under. --}}
                             <div class="text-sm font-black text-white italic tracking-tight">{{
-                                \Carbon\Carbon::parse($booking->booking_date)->format('l, M d, Y') }}</div>
+                                ($booking->appointment_at ?? \Carbon\Carbon::parse($booking->booking_date))->format('l, M d, Y') }}</div>
                             <div class="text-[9px] text-blue-600 font-black mt-1 uppercase tracking-widest italic">{{
-                                $booking->slot_start_time }} - {{ $booking->slot_end_time }}</div>
+                                $booking->appointment_at?->format('h:i A') ?? $booking->slot_start_time }} - {{ $booking->appointment_end_at?->format('h:i A') ?? $booking->slot_end_time }}</div>
                         </td>
-                        <td class="px-10 py-8">
+                        <td class="px-4 sm:px-10 py-5 sm:py-8">
                             @php
                             $color = match($booking->status) {
                             'confirmed' => 'bg-emerald-50 text-emerald-600 border-emerald-100',
                             'cancelled' => 'bg-rose-50 text-rose-600 border-rose-100',
                             'completed' => 'bg-blue-50 text-blue-600 border-blue-100',
+                            'skipped' => 'bg-amber-50 text-amber-600 border-amber-100',
                             default => 'bg-white/5 text-slate-300 border-white/10'
                             };
                             @endphp
@@ -115,12 +125,16 @@
                                 class="px-4 py-1.5 {{ $color }} rounded-lg text-[9px] font-black uppercase border tracking-widest italic">{{
                                 $booking->status }}</span>
                         </td>
-                        <td class="px-10 py-8 text-right">
-                            <div class="flex items-center justify-end gap-3">
+                        <td class="px-4 sm:px-10 py-5 sm:py-8 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-2 sm:gap-3">
                                 @if($booking->status === 'confirmed')
-                                    <form action="{{ route('vendor.skip-token', $booking) }}" method="POST" class="inline">
+                                    {{-- Skip: closes the booking and moves the queue on, the same
+                                         as a cancel, but tells the customer it was for
+                                         non-availability and that they need to rebook. --}}
+                                    <form action="{{ route('vendor.skip-token', $booking) }}" method="POST" class="inline"
+                                          onsubmit="return confirm('SKIP THIS APPOINTMENT? THE CUSTOMER WILL BE TOLD YOU ARE UNAVAILABLE AND ASKED TO REBOOK.')">
                                         @csrf
-                                        <button type="submit" title="Skip Token" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all border border-amber-100">
+                                        <button type="submit" title="Skip — customer unavailable to be served" class="p-2.5 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-600 hover:text-white transition-all border border-amber-100">
                                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                         </button>
                                     </form>
@@ -189,8 +203,7 @@
             }
 
             .pagination-container a,
-            .pagination-container span[aria-current="page"]>span,
-            .pagination-container span[aria-disabled="true"]>span {
+            .pagination-container span[aria-current="page"]>span {
                 padding: 0.5rem 1rem;
                 border: 1px solid rgba(255,255,255,0.1);
                 border-radius: 0.75rem;
@@ -221,19 +234,46 @@
                 border-color: #3b82f6;
             }
 
-            .pagination-container span[aria-disabled="true"]>span {
-                background-color: rgba(255,255,255,0.02);
-                color: rgba(255,255,255,0.2);
-                cursor: not-allowed;
-            }
-
             .pagination-container svg {
                 width: 1.25rem;
                 height: 1.25rem;
             }
         </style>
-        <div class="px-10 py-8 border-t border-slate-50 bg-white/5/20 pagination-container">
-            {{ $bookings->links() }}
+        <div class="px-4 sm:px-10 py-5 sm:py-8 border-t border-slate-50 bg-white/5/20 pagination-container">
+            @php
+                $previousUrl = $bookings->previousPageUrl();
+                $nextUrl = $bookings->nextPageUrl();
+            @endphp
+            <nav role="navigation" aria-label="Pagination Navigation">
+                <div>
+                    @if($previousUrl)
+                        <a href="{{ $previousUrl }}">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </a>
+                    @endif
+                    <div></div>
+                    @if($nextUrl)
+                        <a href="{{ $nextUrl }}">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    @endif
+                </div>
+                <div class="hidden sm:flex items-center gap-1">
+                    @foreach($bookings->getUrlRange(1, $bookings->lastPage()) as $page => $url)
+                        @if($page == $bookings->currentPage())
+                            <span aria-current="page">
+                                <span class="px-3 py-2">{{ $page }}</span>
+                            </span>
+                        @else
+                            <a href="{{ $url }}" class="px-3 py-2">{{ $page }}</a>
+                        @endif
+                    @endforeach
+                </div>
+            </nav>
         </div>
         @endif
     </div>

@@ -19,14 +19,179 @@ class NotificationService
 
     /**
      * Send a web push notification to a user via FCM.
+     *
+     * Every push to a real account is also stored (PushNotice, `database`
+     * channel) so the panel's notification tab can replay what the device may
+     * have missed — FCM alone is fire-and-forget. Ad-hoc recipients built
+     * around a bare device token (guest customers) have no row to hang a
+     * stored copy on, so they only get the push.
+     *
+     * Pass `'store' => false` in $data when the caller stores its own richer
+     * copy (e.g. DirectPaymentDue) so the tab does not show the event twice.
      */
     public function sendWebPush($user, $title, $message, $data = [])
     {
-        if (!$user || !$user->fcm_token) {
+        if (!$user) {
             return false;
         }
-        
-        return $this->fcmService->sendToToken($user->fcm_token, $title, $message, $data);
+
+        $store = (bool) ($data['store'] ?? true);
+        unset($data['store']);
+
+        if ($store && $user->id) {
+            // A full notifications table must never turn into a failed booking.
+            try {
+                $user->notify(new \App\Notifications\PushNotice($title, $message, $data));
+            } catch (\Throwable $e) {
+                Log::error("Storing notification for user #{$user->id} failed: {$e->getMessage()}");
+            }
+        }
+
+        if (!$user->fcm_token) {
+            return false;
+        }
+
+        \App\Jobs\SendFcmNotificationJob::dispatch($user->fcm_token, $title, $message, $data);
+        return true;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Platform alerts — the admin panel
+    |--------------------------------------------------------------------------
+    |
+    | Everything below reaches every active admin rather than one account. The
+    | admin panel used to be entirely pull-based: a business could register and
+    | sit unapproved for days because nothing anywhere said it had. These are
+    | the events where somebody is waiting on an admin, so each one carries a
+    | `url` — the notification tab turns that into a link straight to the queue.
+    |
+    | Never allowed to break the thing that triggered them: a registration, an
+    | enquiry or a report is already saved by the time we get here, and a
+    | failure to announce it must not undo it.
+    */
+
+    /**
+     * Fan one alert out to every active admin.
+     *
+     * @return int how many admins were reached
+     */
+    public function notifyAdmins(string $title, string $message, array $data = []): int
+    {
+        $sent = 0;
+
+        try {
+            foreach (app(\App\Services\AdminBadgeService::class)->recipients() as $admin) {
+                $this->sendWebPush($admin, $title, $message, $data);
+                $sent++;
+            }
+        } catch (\Throwable $e) {
+            Log::error('Notifying admins failed: ' . $e->getMessage(), ['title' => $title]);
+        }
+
+        return $sent;
+    }
+
+    /**
+     * A new business has registered and is waiting for approval — however they
+     * signed up, through the form or through Google.
+     */
+    public function notifyAdminsNewVendor($vendor): int
+    {
+        if (!$vendor) {
+            return 0;
+        }
+
+        return $this->notifyAdmins(
+            '🏪 New Vendor Registration',
+            "'{$vendor->business_name}' has registered and is waiting for approval. "
+                . "Contact: {$vendor->contact_number}",
+            [
+                'type'      => 'vendor_registered',
+                'vendor_id' => $vendor->id,
+                'url'       => route('admin.vendors.show', $vendor->id),
+            ]
+        );
+    }
+
+    /** Somebody used the public contact form. */
+    public function notifyAdminsNewEnquiry($contact): int
+    {
+        if (!$contact) {
+            return 0;
+        }
+
+        return $this->notifyAdmins(
+            '✉️ New Enquiry',
+            "{$contact->name}: {$contact->subject}",
+            [
+                'type'       => 'contact_received',
+                'contact_id' => $contact->id,
+                'url'        => route('admin.contacts.show', $contact->id),
+            ]
+        );
+    }
+
+    /** A shop has flagged a review and wants it looked at. */
+    public function notifyAdminsReviewReported($review): int
+    {
+        if (!$review) {
+            return 0;
+        }
+
+        $shop = $review->vendor?->business_name ?? 'A business';
+
+        return $this->notifyAdmins(
+            '🚩 Review Reported',
+            "{$shop} reported a {$review->rating}-star review for moderation.",
+            [
+                'type'      => 'review_reported',
+                'review_id' => $review->id,
+                'url'       => route('admin.reviews.index', ['filter' => 'reported']),
+            ]
+        );
+    }
+
+    /**
+     * Notify vendor owner when their account status changes (approved, rejected, suspended, reinstated).
+     */
+    public function notifyVendorStatusChanged($vendor, string $newStatus, ?string $oldStatus = null): bool
+    {
+        if (!$vendor) {
+            return false;
+        }
+
+        $user = $vendor->user;
+        if (!$user) {
+            Log::info("Vendor #{$vendor->id} status changed to {$newStatus}, but vendor has no linked user; notification skipped.");
+            return false;
+        }
+
+        [$title, $message] = match ($newStatus) {
+            'active' => [
+                $oldStatus === 'suspended' ? "🎉 Vendor Account Reinstated" : "🎉 Vendor Account Approved!",
+                "Great news! Your business account '{$vendor->business_name}' has been approved and is now active for customer bookings.",
+            ],
+            'suspended' => [
+                "⛔ Vendor Account Suspended",
+                "Your business account for '{$vendor->business_name}' has been suspended. Please contact support for assistance.",
+            ],
+            'rejected' => [
+                "❌ Vendor Account Rejected",
+                "Your business account registration for '{$vendor->business_name}' has been rejected by administration.",
+            ],
+            default => [
+                "Vendor Account Status Updated",
+                "Your business account status for '{$vendor->business_name}' has been updated to {$newStatus}.",
+            ]
+        };
+
+        return (bool) $this->sendWebPush($user, $title, $message, [
+            'type'       => 'vendor_status_change',
+            'status'     => $newStatus,
+            'old_status' => $oldStatus,
+            'vendor_id'  => $vendor->id,
+        ]);
     }
 
     public function notifyVendorNewBooking($vendor, $booking)
@@ -41,25 +206,237 @@ class NotificationService
             $message .= " (Priority Fee: ₹{$booking->emergency_fee})";
         }
         
-        // Notify Vendor Owner
-        if ($user && $user->fcm_token) {
+        // Notify Vendor Owner. No fcm_token pre-check: sendWebPush stores the
+        // tab copy either way and only skips the push itself.
+        if ($user) {
             $this->sendWebPush($user, $title, $message, [
                 'booking_id' => $booking->id,
                 'is_premium' => $isPremium,
                 'fee' => $booking->emergency_fee
             ]);
         } else {
-            Log::warning("Vendor #{$vendor->id} has no linked user or FCM token.");
+            Log::warning("Vendor #{$vendor->id} has no linked user.");
         }
 
         // Notify Assigned Employee if they are a different user
         $employeeUser = $booking->employee->user ?? null;
-        if ($employeeUser && $employeeUser->id !== ($user->id ?? 0) && $employeeUser->fcm_token) {
+        if ($employeeUser && $employeeUser->id !== ($user->id ?? 0)) {
             $empTitle = $isPremium ? "🔥 NEW PRIORITY APPOINTMENT" : "New Appointment Assigned";
             $this->sendWebPush($employeeUser, $empTitle, $message, [
                 'booking_id' => $booking->id,
             ]);
         }
+    }
+
+    /**
+     * Tell the shop that a customer has cancelled their own appointment.
+     *
+     * The vendor is looking at a queue that just changed underneath them — a
+     * token they were counting on is no longer coming — so this mirrors
+     * notifyVendorNewBooking rather than leaving the cancellation to be
+     * discovered when the customer fails to turn up.
+     */
+    public function notifyVendorBookingCancelled($vendor, $booking): void
+    {
+        $who = $booking->token_number
+            ? "Token #{$booking->token_number}"
+            : "The {$booking->slot_start_time} slot";
+
+        $this->notifyShop(
+            $vendor,
+            $booking,
+            "Booking Cancelled",
+            "{$who} with {$booking->employee?->name} was cancelled by {$booking->customer_name}."
+        );
+    }
+
+    /**
+     * Push to both sides of the shop: the owner, and the specialist the booking
+     * belongs to when that is a different account.
+     *
+     * Every shop-facing notification funnels through here so no future caller
+     * can remember the owner and forget the specialist, which is exactly how
+     * half these notifications went missing in the first place.
+     */
+    public function notifyShop($vendor, $booking, string $title, string $message, array $data = []): void
+    {
+        $data += ['booking_id' => $booking?->id];
+
+        $owner = $vendor?->user;
+
+        // No fcm_token pre-checks: sendWebPush stores the notification-tab
+        // copy for any real account and only skips the push itself.
+        if ($owner) {
+            $this->sendWebPush($owner, $title, $message, $data);
+        } elseif ($vendor) {
+            Log::info("Vendor #{$vendor->id} has no linked user; shop notification skipped.");
+        }
+
+        $employeeUser = $booking?->employee?->user;
+
+        if ($employeeUser && $employeeUser->id !== ($owner->id ?? 0)) {
+            $this->sendWebPush($employeeUser, $title, $message, $data);
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customer-facing notifications
+    |--------------------------------------------------------------------------
+    | The shop acting on a booking is invisible to the customer otherwise: they
+    | are sitting somewhere with a token, and being completed, cancelled or
+    | skipped changes whether they should still be waiting. Each of these is a
+    | point where the customer used to find out only by refreshing.
+    */
+
+    public function notifyCustomerBookingCompleted($booking): void
+    {
+        $this->notifyCustomer(
+            $booking,
+            "✅ Appointment Complete",
+            "Your appointment with {$booking->employee?->name} at {$booking->vendor?->business_name} is complete. Thanks for visiting!",
+            ['type' => 'booking_completed']
+        );
+    }
+
+    /**
+     * @param  string  $actor  'vendor' or 'employee' — a customer deserves to know
+     *                         the shop cancelled on them, not just that it happened.
+     */
+    public function notifyCustomerBookingCancelled($booking, string $actor = 'vendor'): void
+    {
+        $by = $actor === 'employee'
+            ? ($booking->employee?->name ?? 'your specialist')
+            : ($booking->vendor?->business_name ?? 'the business');
+
+        $this->notifyCustomer(
+            $booking,
+            "Appointment Cancelled",
+            "{$by} has cancelled your " . $this->bookingLabel($booking) . ". You are free to book again.",
+            ['type' => 'booking_cancelled']
+        );
+    }
+
+    /**
+     * The shop passed this customer over because it could not serve them —
+     * the queue has already moved on to whoever was behind them.
+     *
+     * This has to say more than "you were skipped": the customer is usually
+     * sitting there waiting, and what they need to know is that the turn is
+     * gone, why, and that rebooking is on them. So it names the reason
+     * (unavailability), and gives both ways forward — book a fresh slot, or
+     * call the shop — including the number when the shop publishes one.
+     */
+    public function notifyCustomerBookingSkipped($booking): void
+    {
+        $shop  = $booking->vendor?->business_name ?? 'The business';
+        $phone = $booking->vendor?->show_contact_number ? $booking->vendor?->contact_number : null;
+
+        $contact = $phone
+            ? "contact {$shop} on {$phone}"
+            : "contact {$shop}";
+
+        $this->notifyCustomer(
+            $booking,
+            "Appointment Skipped",
+            "{$shop} has skipped your " . $this->bookingLabel($booking)
+                . " due to non-availability, so your turn has passed. Please book a new appointment or {$contact} to reschedule.",
+            ['type' => 'booking_skipped']
+        );
+    }
+
+    public function notifyCustomerBookingRemoved($booking): void
+    {
+        $this->notifyCustomer(
+            $booking,
+            "Appointment Removed",
+            "{$booking->vendor?->business_name} has removed your " . $this->bookingLabel($booking) . ". You are free to book again.",
+            ['type' => 'booking_removed']
+        );
+    }
+
+    public function notifyCustomerBookingExpired($booking): void
+    {
+        $this->notifyCustomer(
+            $booking,
+            "Appointment Expired",
+            "Your " . $this->bookingLabel($booking) . " at {$booking->vendor?->business_name} expired when the shift closed.",
+            ['type' => 'booking_expired']
+        );
+    }
+
+    /**
+     * Ping everyone still holding a live booking with this specialist — used
+     * when the shop stops serving (a break, bookings paused, shutting early).
+     * People are physically waiting; they need to hear it without refreshing.
+     */
+    public function notifyWaitingCustomers($employee, string $title, string $message, array $data = []): int
+    {
+        if (!$employee) {
+            return 0;
+        }
+
+        $bookings = Booking::where('employee_id', $employee->id)
+            ->where('booking_date', app(ShiftService::class)->businessDate($employee->vendor))
+            ->whereIn('status', ['confirmed', 'pending'])
+            ->with(['vendor', 'employee'])
+            ->get();
+
+        $sent = 0;
+        foreach ($bookings as $booking) {
+            if ($this->notifyCustomer($booking, $title, $message, $data)) {
+                $sent++;
+            }
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Push to whoever made this booking.
+     *
+     * A guest has no account, so their device token is stamped on the booking
+     * row itself; a signed-in customer carries it on their user record. Try the
+     * booking first — it is the one that is right for the device that actually
+     * booked.
+     */
+    public function notifyCustomer($booking, string $title, string $message, array $data = []): bool
+    {
+        $recipient = $this->customerRecipient($booking);
+
+        if (!$recipient) {
+            return false;
+        }
+
+        return (bool) $this->sendWebPush($recipient, $title, $message, $data + [
+            'booking_id'   => $booking->id,
+            'token_number' => $booking->token_number,
+        ]);
+    }
+
+    protected function customerRecipient($booking): ?User
+    {
+        if (!$booking) {
+            return null;
+        }
+
+        if ($booking->fcm_token) {
+            return new User(['fcm_token' => $booking->fcm_token]);
+        }
+
+        return $booking->customer_id ? User::find($booking->customer_id) : null;
+    }
+
+    /** "token #4" / "10:30 AM slot" — how the customer thinks of the booking. */
+    protected function bookingLabel($booking): string
+    {
+        if ($booking->token_number) {
+            return "token #{$booking->token_number}";
+        }
+
+        $time = $booking->appointment_at?->format('h:i A') ?? $booking->slot_start_time;
+
+        return $time ? "{$time} slot" : 'appointment';
     }
 
     /**
@@ -100,7 +477,9 @@ class NotificationService
     protected function pingTokenCustomer(Employee $employee, int $token, string $kind): void
     {
         $booking = Booking::where('employee_id', $employee->id)
-            ->where('booking_date', Carbon::today()->toDateString())
+            // Business date of the shift this employee is working, so tokens
+            // called after midnight still find their customer.
+            ->where('booking_date', app(ShiftService::class)->businessDate($employee->vendor))
             ->where('token_number', $token)
             ->whereIn('status', ['confirmed', 'pending'])
             ->first();

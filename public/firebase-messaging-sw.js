@@ -19,10 +19,12 @@ try {
   importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
   firebase.initializeApp({
-    apiKey: "YOUR_API_KEY",
-    projectId: "ebooking-b2c07",
-    messagingSenderId: "100739474622",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCr7XU5EysDj-D361wrTdskzZr5d5vb49A",
+    authDomain: "apni-baari-6d2b0.firebaseapp.com",
+    projectId: "apni-baari-6d2b0",
+    storageBucket: "apni-baari-6d2b0.firebasestorage.app",
+    messagingSenderId: "831015537203",
+    appId: "1:831015537203:web:ccb2d4196559a23349f146"
   });
 
   const messaging = firebase.messaging();

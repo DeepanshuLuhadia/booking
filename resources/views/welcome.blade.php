@@ -1,23 +1,47 @@
 <x-app-layout>
     <!-- Hero Section -->
-    <section class="relative pt-20 pb-32 px-6 overflow-hidden">
+    <section class="relative pt-24 sm:pt-28 md:pt-32 pb-4 sm:pb-10 md:pb-32 px-4 sm:px-6 overflow-hidden">
         <div class="container mx-auto relative z-10 text-center">
-            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-bold uppercase tracking-widest mb-8 animate-fade-in">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4 sm:mb-8 animate-fade-in">
                 <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
                 Multi-Vendor Appointment Platform
             </div>
 
-            <h1 class="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-[1.1] mb-6 tracking-tighter">
-                Book Verified <span class="text-orange-500 italic">Experts</span><br class="hidden sm:block">
-                In Your City
+            @php
+                $hour = now()->hour;
+                $isWeekend = now()->isWeekend();
+                
+                if ($hour >= 5 && $hour < 12) {
+                    $greeting = "Good Morning!";
+                    $action = "Need a fresh start today?";
+                } elseif ($hour >= 12 && $hour < 17) {
+                    $greeting = "Good Afternoon!";
+                    $action = "Take some time for yourself.";
+                } elseif ($hour >= 17 && $hour < 22) {
+                    $greeting = "Good Evening!";
+                    $action = "Unwind with top professionals.";
+                } else {
+                    $greeting = "Discover & Book";
+                    $action = "Connect with trusted experts.";
+                }
+                
+                if ($isWeekend) {
+                    $greeting = "Happy Weekend!";
+                    $action = "Perfect time for self-care and sports.";
+                }
+            @endphp
+
+            <h1 class="text-3xl sm:text-5xl md:text-7xl font-black text-white leading-[1.1] mb-4 sm:mb-6 tracking-tighter">
+                {{ $greeting }}<br class="hidden sm:block">
+                Book Verified <span class="text-orange-500 italic">Experts</span>
             </h1>
 
-            <p class="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium">
-                Personalized platform to find top-rated professionals near you.
+            <p class="text-white/60 text-base md:text-xl max-w-2xl mx-auto mb-6 sm:mb-12 font-medium">
+                {{ $action }} The personalized platform to find top-rated professionals in your city.
             </p>
 
             <!-- Premium Search Matrix -->
-            <div class="max-w-4xl mx-auto mb-16">
+            <div class="max-w-4xl mx-auto mb-6 sm:mb-10 md:mb-16">
                 <div class="premium-search-container p-2 md:p-3 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl md:rounded-[2.5rem] shadow-2xl">
                     <div class="flex flex-col md:flex-row items-center w-full gap-2">
                         <div class="w-full flex items-center gap-3 md:gap-4 px-4 md:px-6 py-2 md:py-3 min-w-0">
@@ -37,7 +61,7 @@
                 </div>
 
                 <!-- Quick Categories -->
-                <div class="flex flex-wrap justify-center gap-2 md:gap-4 mt-8">
+                <div class="flex flex-wrap justify-center gap-2 md:gap-4 mt-4 sm:mt-8">
                     @foreach(\App\Services\ThemeService::getAllThemes() as $key => $theme)
                         <a href="{{ route('home', ['type' => $key]) }}" 
                            class="flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors group">
@@ -56,7 +80,7 @@
                 $avgRating = 4.9; // rating system not yet implemented
             @endphp
             @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-8 max-w-5xl mx-auto pt-12 border-t border-white/5">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 sm:gap-8 max-w-5xl mx-auto pt-4 sm:pt-8 md:pt-12 border-t border-white/5">
                 <div class="stat-pill">
                     <span class="stat-value" data-counter data-target="{{ $totalClients }}" data-suffix="+">0</span>
                     <span class="stat-label">Happy Clients</span>
@@ -86,9 +110,9 @@
     </section>
 
     <!-- Recommended Section -->
-    <section class="py-24 px-6 bg-slate-900/40">
+    <section class="py-3 sm:py-12 md:py-24 px-4 sm:px-6 bg-slate-900/40">
         <div class="container mx-auto">
-            <div class="text-center mb-16">
+            <div class="text-center mb-4 sm:mb-8 md:mb-16">
                 <h2 class="text-4xl font-black text-white mb-4">Recommended <span class="text-orange-500">Professionals</span></h2>
                 <p class="text-white/40 font-bold uppercase tracking-widest text-xs">Handpicked specialists for your needs</p>
             </div>
