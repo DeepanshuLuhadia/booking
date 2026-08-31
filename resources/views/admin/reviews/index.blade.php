@@ -118,11 +118,9 @@
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        @if($reviews->hasPages())
-            <div class="pt-2">{{ $reviews->links() }}</div>
-        @endif
+            <x-admin-pagination :paginator="$reviews" label="reviews" />
+        </div>
     </div>
 
     <!-- REPORT DETAIL MODAL -->

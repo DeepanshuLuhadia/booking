@@ -31,10 +31,15 @@ class FcmService
         return $this->projectId;
     }
 
+    protected static bool $loggedMissingWarning = false;
+
     protected function getAccessToken()
     {
         if (!file_exists($this->credentialsPath)) {
-            Log::warning("FCM credentials file missing at {$this->credentialsPath}");
+            if (!static::$loggedMissingWarning) {
+                Log::warning("FCM credentials file missing at {$this->credentialsPath}. WebPush notifications are disabled.");
+                static::$loggedMissingWarning = true;
+            }
             return null;
         }
 

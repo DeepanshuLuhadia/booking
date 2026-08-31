@@ -1,10 +1,43 @@
 <x-app-layout :vendor-theme="$theme" :page-title="$vendor->business_name">
+    @php
+        /*
+        | Does this shop collect payment before confirming a booking?
+        |
+        | Fixed for the whole page, so everything that depends only on it is
+        | branched in Blade rather than with x-show — shipping the paid wording
+        | to shops that do not charge and merely hiding it is how the wrong
+        | label eventually surfaces.
+        */
+        $takesDirectPayment = $vendor->acceptsDirectAdvance();
+
+        /*
+        | The location row (one desktop, one mobile).
+        |
+        | All three values come from the model so the two rows here, the listing
+        | cards and anything added later cannot drift apart on what "where is
+        | this shop" means. Vendor::mapUrl() prefers the coordinates the vendor
+        | pinned in their panel over the address string — a text search lands
+        | wherever Google decides to interpret it, which for a shop on an
+        | unnamed lane is often the wrong end of the neighbourhood.
+        |
+        | The label is the address when there is one and "Go to Map" when there
+        | is not: the address box is optional now, so a shop that pinned itself
+        | and typed nothing gets the row as the action it really is rather than
+        | a blank line. `$mapUrl` is null only when the shop has neither, and
+        | then the row is dropped instead of linking nowhere.
+        */
+        $mapUrl       = $vendor->mapUrl();
+        $addressLabel = $vendor->locationLabel();
+        $mapIsExact   = $vendor->hasMapCoordinates();
+    @endphp
     <div x-data="bookingSystem()"
         class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['label'] ?? 'default')) }}">
 
         <!-- PROFILE HERO -->
         <section class="relative z-10 pt-28 pb-10 px-5 md:pt-32 md:pb-16 md:px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-12">
+            {{-- Desktop / tablet hero (≥md) — unchanged. The mobile hero is a separate
+                 block below (md:hidden) redesigned to match the approved reference. --}}
+            <div class="hidden md:flex max-w-7xl mx-auto md:flex-row items-center gap-6 md:gap-12">
                 <!-- Left: Profile Avatar -->
                 <div class="relative group shrink-0">
                     <div
@@ -33,16 +66,10 @@
 
                 <!-- Right: Business Credentials -->
                 <div class="flex-grow w-full min-w-0 text-center md:text-left animate-text-reveal">
-                    <div
-                        class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 border border-white/20 backdrop-blur-xl rounded-full text-white/50 text-[9px] font-black uppercase tracking-widest mb-4 md:mb-6">
-                        <span class="w-2 h-2 rounded-full theme-gradient-bg animate-pulse"></span> Verified Appointment
-                        Registry
-                    </div>
-
                     <h1
                         class="text-4xl sm:text-5xl md:text-[5.5rem] font-black text-white mb-4 md:mb-6 tracking-tighter leading-[0.95] md:leading-[0.9] italic break-words">
                         {{ $vendor->business_name }}
-                        @if($vendor->is_verified)
+                        @if($vendor->hasPremiumBadge())
                         <span class="inline-flex items-center gap-1 align-middle text-[10px] not-italic font-black uppercase tracking-widest text-sky-300 bg-sky-500/10 border border-sky-400/20 px-2.5 py-1 rounded-full">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
                             Verified
@@ -51,9 +78,14 @@
                     </h1>
 
                     <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center justify-center md:justify-start gap-3 md:gap-8 mb-6 md:mb-10">
-                        <a href="https://www.google.com/maps/search/?api=1&query={{ urlencode($vendor->address ?? 'Professional District') }}"
+                        {{-- Dropped entirely for a shop with neither a pin nor an
+                             address: a location row that leads nowhere is worse
+                             than no row. --}}
+                        @if($mapUrl)
+                        <a href="{{ $mapUrl }}"
                             target="_blank" rel="noopener noreferrer"
-                            class="flex items-center gap-3 group/address transition-all hover:scale-[1.02] w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
+                            title="{{ $mapIsExact ? 'Open the shop\'s exact location in Google Maps' : 'Search this address in Google Maps' }}"
+                            class="flex items-center gap-3 group/address transition-all hover:scale-[1.02] w-full md:w-auto justify-start md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
                                 class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 group-hover/address:border-white/30 group-hover/address:bg-white/20 transition-all">
                                 <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,8 +95,9 @@
                             </div>
                             <span
                                 class="text-base font-bold text-white/60 italic group-hover/address:text-white transition-colors underline underline-offset-4">{{
-    $vendor->address ?? 'Professional District' }}</span>
+    $addressLabel }}</span>
                         </a>
+                        @endif
                         <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start px-4 py-3 md:p-0 bg-white/5 md:bg-transparent rounded-2xl md:rounded-none border border-white/10 md:border-0">
                             <div
                                 class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xl flex items-center justify-center theme-gradient-text border border-white/10 shrink-0">
@@ -73,7 +106,7 @@
                                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <span class="text-2xl md:text-3xl font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
+                            <span class="text-2xl md:text-3xl text-left md:text-center font-black text-white tracking-tighter italic">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards <span
                                     class="tracking-widest text-[10px] font-black uppercase text-white/10 ml-1">Professional
                                     Fee</span></span>
                         </div>
@@ -90,10 +123,68 @@
                     </div>
                 </div>
             </div>
+
+            {{-- ═══════════════════════════════════════════════════════════════
+                 MOBILE HERO (<md) — matches the approved reference layout.
+                 Reuses $img/$vendor/$theme computed in the desktop block above.
+                 Desktop is untouched (that block is hidden md:flex).
+                 ═══════════════════════════════════════════════════════════════ --}}
+            {{-- Inline styles are used deliberately: the site serves a prebuilt
+                 Tailwind bundle, so newly-introduced utility classes (w-44, the amber
+                 gradient, sky tints, md:hidden, …) aren't compiled. Inline styles render
+                 reliably without a rebuild. Visibility is toggled by the .vd-mobile-hero
+                 rule added to the app layout's <style> (hidden ≥768px). --}}
+            <div class="vd-mobile-hero" style="display:flex; flex-direction:column; align-items:center; text-align:center; max-width:430px; margin:0 auto;">
+                {{-- Circular avatar with gold ring --}}
+                <div style="width:180px; height:180px; padding:3px; border-radius:50%; background:linear-gradient(135deg,#fde68a,#f4b740,#b45309); box-shadow:0 20px 45px rgba(0,0,0,0.5); margin-bottom:24px;">
+                    <div style="width:100%; height:100%; border-radius:50%; overflow:hidden; background:#0b1020;">
+                        <img src="{{ $img }}" alt="{{ $vendor->business_name }}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                </div>
+
+                {{-- Business name + premium verified badge (Premium ₹399 plan only) --}}
+                <h1 style="font-size:30px; font-weight:900; color:#fff; letter-spacing:-0.01em; line-height:1.15; margin:0 0 30px; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; word-break:break-word;">
+                    {{ $vendor->business_name }}
+                    @if($vendor->hasPremiumBadge())
+                    <svg style="width:26px; height:26px; flex-shrink:0; color:#38bdf8;" viewBox="0 0 24 24" fill="currentColor" aria-label="Verified">
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+                    </svg>
+                    @endif
+                </h1>
+
+                {{-- Address row. Same guard as the desktop one above. --}}
+                @if($mapUrl)
+                <a href="{{ $mapUrl }}"
+                    target="_blank" rel="noopener noreferrer"
+                    title="{{ $mapIsExact ? 'Open the shop\'s exact location in Google Maps' : 'Search this address in Google Maps' }}"
+                    style="width:100%; display:flex; align-items:center; gap:16px; margin-bottom:22px; text-align:left; text-decoration:none;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg style="width:22px; height:22px; color:rgba(255,255,255,0.75);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <span style="font-size:17px; font-weight:500; color:rgba(255,255,255,0.9); line-height:1.4;">{{ $addressLabel }}</span>
+                </a>
+                @endif
+
+                {{-- Fee row --}}
+                <div style="width:100%; display:flex; align-items:center; gap:16px; text-align:left;">
+                    <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg style="width:22px; height:22px; color:rgba(255,255,255,0.75);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div style="font-size:23px; font-weight:900; color:#fff; line-height:1;">₹{{ number_format($vendor->employees->where('is_active', true)->where('service_fee_override', '>', 0)->min('service_fee_override') ?? $vendor->service_fee) }} onwards</div>
+                        <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.14em; color:rgba(255,255,255,0.4); margin-top:6px;">Fee</div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         @if($isSubscriptionExpired)
-        <div class="max-w-7xl mx-auto px-6 mb-12 relative z-10">
+        <div class="max-w-7xl mx-auto px-6 mb-8 md:mb-12 relative z-10">
             <div class="glass-card p-8 bg-red-500/10 border-red-500/20 backdrop-blur-3xl rounded-[2.5rem] flex flex-col md:flex-row items-center gap-6 shadow-2xl relative overflow-hidden">
                 <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent"></div>
                 <div class="w-16 h-16 rounded-2xl bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/30">
@@ -110,7 +201,7 @@
         @endif
 
         <!-- APPOINTMENT SELECTION MATRIX -->
-        <div class="max-w-7xl mx-auto px-5 md:px-6 grid grid-cols-1 xl:grid-cols-12 gap-10 xl:gap-16 relative z-10 pb-24 md:pb-40">
+        <div class="max-w-7xl mx-auto px-5 md:px-6 grid grid-cols-1 xl:grid-cols-12 gap-10 xl:gap-16 relative z-10 pb-12 md:pb-40">
 
             <!-- STEP 1: Service Selection -->
             <div class="order-1 xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-1">
@@ -169,7 +260,7 @@
                         </button>
                     @empty
                         <div
-                            class="py-20 text-center border-4 border-dashed border-white/5 rounded-[3rem] opacity-20 italic">
+                            class="py-12 md:py-20 text-center border-4 border-dashed border-white/5 rounded-[3rem] opacity-20 italic">
                             <span class="text-6xl block mb-6 grayscale text-white">Offline</span>
                             <p class="font-black uppercase tracking-widest text-white">No Specialists Available</p>
                         </div>
@@ -180,23 +271,17 @@
             <!-- OVERVIEW + REVIEWS (sits after both steps on mobile, under Step 1 on desktop) -->
             <div class="order-3 xl:order-none xl:col-span-7 xl:col-start-1 xl:row-start-2">
                 <!-- Professional Overview -->
-                <div class="mt-12 pt-12 md:mt-24 md:pt-24 border-t border-white/5">
+                <div class="mt-10 pt-8 md:mt-24 md:pt-24 border-t border-white/5">
                     <h3 class="text-3xl font-black text-white tracking-tighter uppercase italic mb-8">Establishment
                         Overview</h3>
                     <div class="glass-card shadow-xl shadow-black/20 bg-white/5 backdrop-blur-3xl border border-white/10 p-10 text-lg font-medium text-white/60 leading-relaxed italic"
                         style="padding: 24px; border-radius: 16px;">
-                        @if($vendor->description)
-                            {!! nl2br(e($vendor->description)) !!}
-                        @else
-                                            The premier {{ strtolower($theme['label']) }} destination at <strong class="text-white">{{
-                            $vendor->business_name }}</strong>. Experience unrivaled professional standards in a
-                                            world-class environment.
-                        @endif
+                        {!! nl2br(e($vendor->dynamic_description)) !!}
                     </div>
                 </div>
 
                 <!-- REVIEWS & RATINGS -->
-                <div x-data="reviewSystem()" class="mt-24 pt-24 border-t border-white/5">
+                <div x-data="reviewSystem()" class="mt-10 pt-8 md:mt-24 md:pt-24 border-t border-white/5">
                     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
                         <div>
                             <div class="flex items-center gap-3 mb-4">
@@ -229,15 +314,24 @@
                         <div class="flex-grow w-full">
                             <template x-if="reviewsCount > 0">
                                 <div class="space-y-2">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-[9px] font-black uppercase tracking-widest text-white/30 italic flex items-center gap-1.5">
+                                            <svg class="w-3 h-3 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L14 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 018 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+                                            Filter by rating
+                                        </p>
+                                        <button type="button" x-show="activeRating > 0" x-cloak @click="showLatest()" class="theme-gradient-text text-[9px] font-black uppercase tracking-widest italic">Clear</button>
+                                    </div>
                                     <template x-for="n in [5,4,3,2,1]" :key="n">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-[10px] font-black text-white/40 w-3" x-text="n"></span>
+                                        <button type="button" class="vd-rating-row" :class="{ active: activeRating === n }"
+                                            :disabled="ratingCount(n) === 0" @click="filterByRating(n)"
+                                            :title="`Show ${n}-star reviews`">
+                                            <span class="text-[10px] font-black w-3" :class="activeRating === n ? 'text-amber-400' : 'text-white/40'" x-text="n"></span>
                                             <svg class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                                             <div class="flex-grow h-2 rounded-full bg-white/5 overflow-hidden">
                                                 <div class="h-full theme-gradient-bg rounded-full transition-all duration-700" :style="`width: ${ratingPercent(n)}%`"></div>
                                             </div>
                                             <span class="text-[10px] font-black text-white/30 w-6 text-right" x-text="ratingCount(n)"></span>
-                                        </div>
+                                        </button>
                                     </template>
                                 </div>
                             </template>
@@ -247,8 +341,22 @@
                         </div>
                     </div>
 
-                    <!-- Individual Reviews -->
-                    <div class="space-y-4">
+                    <!-- Active-filter header: shown when the list is filtered by a star rating -->
+                    <div class="flex items-center justify-between mb-4" x-show="activeRating > 0" x-cloak>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-white/50 italic">
+                            Showing <span x-text="activeRating"></span>-Star Reviews
+                        </span>
+                        <button type="button" @click="showLatest()" class="theme-gradient-text text-[10px] font-black uppercase tracking-widest italic">
+                            Show Latest
+                        </button>
+                    </div>
+
+                    <!-- Individual Reviews — vertical on desktop, auto-advancing swipe
+                         slider on mobile (see the carousel script in the layout).
+                         Slower cadence than the category strip: a review has to be
+                         readable before it moves on. -->
+                    <div class="vd-review-slider" :class="loadingReviews ? 'opacity-50' : ''"
+                         data-auto-slide data-auto-slide-interval="5000">
                         <template x-for="(review, idx) in reviews" :key="idx">
                             <div class="glass-card bg-white/5 backdrop-blur-3xl border border-white/10 p-6 rounded-[2rem] animate-reveal">
                                 <div class="flex items-start justify-between gap-4 mb-3">
@@ -300,11 +408,41 @@
                             <!-- Star Picker (rendered statically so each button's click binds reliably) -->
                             <div class="flex items-center justify-center gap-2 mb-8">
                                 @for($s = 1; $s <= 5; $s++)
-                                    <button type="button" @click="rating = {{ $s }}" @mouseenter="hoverRating = {{ $s }}" @mouseleave="hoverRating = 0"
+                                    <button type="button" @click="rating = {{ $s }}; refreshSuggestions()" @mouseenter="hoverRating = {{ $s }}" @mouseleave="hoverRating = 0"
                                         class="transition-transform duration-200 hover:scale-125 focus:outline-none">
                                         <svg class="w-10 h-10 transition-colors duration-150" :class="{{ $s }} <= (hoverRating || rating) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-white/15'" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
                                     </button>
                                 @endfor
+                            </div>
+
+                            <!-- AI Suggestions (appear when rating is selected) -->
+                            <div x-show="rating > 0 && activeAiSuggestions.length > 0" class="mb-8" x-cloak x-transition>
+                                <div class="flex items-center gap-3 mb-4">
+                                    <span class="flex-grow h-px bg-white/10"></span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest text-sky-400 italic flex items-center gap-1.5">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                                        AI Suggestions
+                                    </span>
+                                    <span class="flex-grow h-px bg-white/10"></span>
+                                    <button type="button" @click="refreshSuggestions()" class="text-sky-400 hover:text-sky-300 transition-colors shrink-0 flex items-center justify-center p-1 rounded-full hover:bg-sky-500/10" title="Get new suggestions">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                    </button>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <template x-for="(suggestion, index) in activeAiSuggestions" :key="index">
+                                        <button type="button" @click="applySuggestion(suggestion, index)"
+                                            :class="selectedSuggestion === index
+                                                ? 'border-sky-400 bg-sky-500/20 text-white ring-2 ring-sky-500/40'
+                                                : 'border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 hover:border-sky-500/40 text-white/80'"
+                                            class="relative text-left px-4 py-3 pr-10 rounded-xl border text-sm transition-all italic group">
+                                            <span class="text-sky-400 mr-1.5 group-hover:scale-110 transition-transform inline-block">✨</span> <span x-text="suggestion"></span>
+                                            <!-- Tick marks the one now sitting in the review box -->
+                                            <span x-show="selectedSuggestion === index" x-cloak class="absolute top-1/2 right-3 -translate-y-1/2 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center shrink-0">
+                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                            </span>
+                                        </button>
+                                    </template>
+                                </div>
                             </div>
 
                             <div class="space-y-5 text-left mb-8">
@@ -316,15 +454,18 @@
                                 </div>
                                 <div class="space-y-2">
                                     <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Phone <span class="text-white/30 normal-case">(optional)</span></label>
-                                    <input type="tel" x-model="phone" maxlength="10" :readonly="!!googleUser" @input="phone = phone.replace(/[^0-9]/g, '')"
+                                    <input type="tel" x-model="phone" maxlength="10" :readonly="!!(googleUser && account && account.phone)" @input="phone = phone.replace(/[^0-9]/g, '')"
                                         class="premium-input w-full h-14 px-5 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border read-only:opacity-60 read-only:cursor-not-allowed"
                                         placeholder="10 digit number">
                                 </div>
-                                <div class="space-y-2">
+                                <div class="space-y-2" x-ref="commentSection">
                                     <label class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 block">Review <span class="text-white/30 normal-case">(optional)</span></label>
-                                    <textarea x-model="comment" maxlength="1000" rows="4"
-                                        class="premium-input w-full px-5 py-4 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border resize-none"
+                                    <textarea x-model="comment" maxlength="1000" rows="4" x-ref="commentBox"
+                                        @input="selectedSuggestion = null"
+                                        :class="commentFlash ? 'ring-2 ring-sky-500/60 border-sky-400/60' : ''"
+                                        class="premium-input w-full px-5 py-4 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border resize-none transition-all duration-300"
                                         placeholder="Tell us about your visit..."></textarea>
+                                    <p x-show="selectedSuggestion !== null" x-cloak x-transition class="text-[10px] font-black uppercase tracking-widest text-sky-400 italic ml-2">Suggestion added — edit it however you like.</p>
                                 </div>
 
                                 <!-- Mandatory photo evidence for low (under 2-star) ratings -->
@@ -358,8 +499,8 @@
                                 <span x-show="submitting" style="display:none;">Posting...</span>
                             </button>
 
-                            @if(config('services.google.client_id'))
-                                <!-- Optional: auto-fill name & verify identity with Google -->
+                            @if(config('services.google.client_id') || $reviewAccount)
+                                <!-- Sign in with Google: creates the session, fills in the details -->
                                 <div class="mt-6">
                                     <div class="flex items-center gap-4 mb-4">
                                         <span class="flex-grow h-px bg-white/10"></span>
@@ -368,9 +509,16 @@
                                     </div>
 
                                     <!-- Signed-out: render the Google button -->
-                                    <div x-show="!googleUser">
+                                    <div x-show="!googleUser && !signedIn">
                                         <div x-ref="googleBtn" class="flex justify-center min-h-[44px]"></div>
-                                        <p class="text-center text-white/30 text-[11px] font-medium italic mt-3">Sign in with Google to auto-fill your details and post as a verified reviewer.</p>
+                                        <p class="text-center text-white/30 text-[11px] font-medium italic mt-3">Continue with Google to sign in, auto-fill your details and post as a verified reviewer.</p>
+                                        <p x-show="signingIn" x-cloak class="text-center text-sky-400/80 text-[11px] font-black uppercase tracking-widest mt-3">Signing you in...</p>
+                                    </div>
+
+                                    <!-- Signed in, but posting this one unnamed -->
+                                    <div x-show="!googleUser && signedIn" x-cloak class="text-center">
+                                        <p class="text-white/30 text-[11px] font-medium italic">This review will be posted as <span class="text-white/60">Anonymous</span>.</p>
+                                        <button type="button" @click="useAccountIdentity()" class="mt-2 text-[9px] font-black uppercase tracking-widest text-sky-400 hover:text-sky-300">Use my account instead</button>
                                     </div>
 
                                     <!-- Signed-in chip -->
@@ -382,8 +530,10 @@
                                                 <svg class="w-4 h-4 text-sky-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z" clip-rule="evenodd"/></svg>
                                             </div>
                                             <span class="text-[10px] font-black uppercase tracking-widest text-sky-400 truncate block" x-text="googleUser?.email"></span>
+                                            <span x-show="signedIn" x-cloak class="text-[9px] font-black uppercase tracking-widest text-emerald-400/80 block mt-0.5">Signed in</span>
                                         </div>
-                                        <button type="button" @click="signOutGoogle()" class="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white shrink-0">Use a name instead</button>
+                                        <button type="button" @click="signOutGoogle()" class="text-[9px] font-black uppercase tracking-widest text-white/40 hover:text-white shrink-0"
+                                            x-text="signedIn ? 'Post anonymously' : 'Use a name instead'"></button>
                                     </div>
                                 </div>
                             @endif
@@ -401,15 +551,15 @@
                 <div class="sticky top-32">
                     <div
                         class="glass-card shadow-2xl shadow-black/20 bg-white/10 backdrop-blur-3xl border-white/10 p-2 overflow-hidden rounded-[3rem]">
-                        <div class="p-8 pb-4 flex items-center justify-between">
-                            <div>
+                        <div class="p-8 pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                            <div class="order-2 md:order-1">
                                 <span
                                     class="theme-gradient-text font-black text-[10px] uppercase tracking-widest italic block mb-2">Step
                                     02</span>
                                 <h3 class="text-3xl font-black text-white tracking-tighter italic"
                                     x-text="isTokenEnabled ? 'Choose Token & Wait Time' : 'Choose Time'"></h3>
                             </div>
-                            <div class="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"
+                            <div class="absolute md:static top-4 right-5 md:top-auto md:right-auto order-1 md:order-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 flex items-center gap-2"
                                 x-show="!isOffline && !isSubscriptionExpired">
                                 <span class="open-pulse bg-emerald-500"></span>
                                 Online Now
@@ -425,8 +575,132 @@
                         </div>
 
                         <div class="p-4 pt-0">
+                            <!-- ACTIVE BOOKING — mirrors the single-employee page.
+                                 One active booking is allowed per vendor per day
+                                 (enforced in BookingController), so while it stands
+                                 this panel takes the place of the whole booking
+                                 interface rather than letting the customer fill in
+                                 a form that the server would reject. -->
+                            <template x-if="activeBooking">
+                                <div class="p-2 md:p-4 animate-reveal">
+                                    <div class="p-6 md:p-8 bg-sky-500/10 border border-sky-400/30 rounded-[2.5rem] text-center relative overflow-hidden shadow-xl">
+                                        <div class="w-16 h-16 theme-gradient-bg text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+
+                                        <span class="inline-block px-4 py-1.5 bg-sky-500/20 text-sky-300 rounded-full text-[10px] font-black uppercase tracking-widest italic mb-3">Your Active Booking</span>
+
+                                        <template x-if="activeBooking.token_number">
+                                            <div>
+                                                <h2 class="text-4xl sm:text-5xl font-black italic tracking-tighter uppercase text-white mb-4"
+                                                    x-text="'Token #' + activeBooking.token_number"></h2>
+
+                                                {{-- Label and value both come from the server: between
+                                                     customers this reads "Up Next #10" rather than
+                                                     still announcing a token that has already left. --}}
+                                                <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto bg-white/5 p-4 rounded-2xl border border-white/10">
+                                                    <div>
+                                                        <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic"
+                                                           x-text="activeBooking.serving_label ?? 'Now Serving'"></p>
+                                                        <p class="text-3xl font-black text-white italic"
+                                                           x-text="activeBooking.serving_display ?? '—'"></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic">Ahead Of You</p>
+                                                        <p class="text-3xl font-black text-sky-400 italic"
+                                                           x-text="'#' + (activeBooking.people_ahead ?? 0)"></p>
+                                                    </div>
+                                                </div>
+
+                                                <p x-show="activeBooking.approx_wait_min > 0" style="display:none;"
+                                                   class="mt-4 text-[10px] font-black uppercase tracking-widest text-white/40 italic"
+                                                   x-text="'Approx. ' + activeBooking.approx_wait_min + ' min wait'"></p>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="!activeBooking.token_number">
+                                            <div>
+                                                <h2 class="text-3xl font-black italic tracking-tighter uppercase text-white mb-2"
+                                                    x-text="'Slot: ' + activeBooking.slot_time"></h2>
+                                                <p class="text-white/60 font-medium text-sm" x-text="'Date: ' + activeBooking.booking_date"></p>
+                                                <span class="inline-block mt-3 px-3 py-1 bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase rounded-lg"
+                                                      x-text="'Status: ' + (activeBooking.status_label ?? activeBooking.status)"></span>
+                                            </div>
+                                        </template>
+
+                                        <p class="text-white/50 text-xs mt-6 italic">
+                                            You already have a booking with <span class="font-black text-white" x-text="activeBooking.employee_name"></span>
+                                            at {{ $vendor->business_name }}. Only one active booking per business is allowed each day —
+                                            you can book here again once this one is complete.
+                                        </p>
+
+                                        {{-- The customer may be holding tokens at other businesses too;
+                                             this is the one page that shows all of them. --}}
+                                        <a href="{{ route('bookings.mine') }}"
+                                           class="inline-block mt-5 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all active:scale-95">
+                                            See All My Bookings
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+
+                            {{-- OUTCOME PANEL — the shop just closed this customer's booking.
+                                 Their token panel must not simply vanish back into a booking
+                                 form: they were watching a number, and they need to be told
+                                 plainly that their turn happened (or was called off) rather
+                                 than left to work it out from the form reappearing. --}}
+                            <template x-if="closedBooking">
+                                <div class="p-2 md:p-4 animate-reveal">
+                                    <div class="p-6 md:p-8 rounded-[2.5rem] text-center relative overflow-hidden shadow-xl border"
+                                         :class="closedBooking.status === 'completed'
+                                            ? 'bg-emerald-500/10 border-emerald-400/30'
+                                            : 'bg-amber-500/10 border-amber-400/30'">
+
+                                        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+                                             :class="closedBooking.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'">
+                                            <template x-if="closedBooking.status === 'completed'">
+                                                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </template>
+                                            <template x-if="closedBooking.status !== 'completed'">
+                                                <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </template>
+                                        </div>
+
+                                        <h2 class="text-3xl md:text-4xl font-black italic tracking-tighter uppercase text-white mb-3"
+                                            x-text="closedBookingHeadline()"></h2>
+
+                                        <p class="text-white/60 text-sm font-medium mb-2">
+                                            <template x-if="closedBooking.token_number">
+                                                <span>Token <span class="font-black text-white" x-text="'#' + closedBooking.token_number"></span> at {{ $vendor->business_name }}</span>
+                                            </template>
+                                            <template x-if="!closedBooking.token_number">
+                                                <span>Your appointment at {{ $vendor->business_name }}</span>
+                                            </template>
+                                        </p>
+                                        <p class="text-white/40 text-xs italic mb-7" x-text="closedBookingNote()"></p>
+
+                                        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                                            <a href="{{ route('bookings.mine') }}"
+                                               class="px-7 py-4 rounded-xl theme-gradient-bg text-[10px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:brightness-110 active:scale-95">
+                                                View My Bookings
+                                            </a>
+                                            <button type="button" @click="closedBooking = null"
+                                                    class="px-7 py-4 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all active:scale-95">
+                                                Book Again
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
                             <!-- Loading Interface -->
-                            <div x-show="loading && !isSubscriptionExpired" class="py-32 flex flex-col items-center justify-center gap-6">
+                            <div x-show="loading && !isSubscriptionExpired && !activeBooking && !closedBooking" class="py-16 md:py-32 flex flex-col items-center justify-center gap-6">
                                 <div
                                     class="w-10 h-10 border-4 border-white/10 border-t-orange-500 rounded-full animate-spin">
                                 </div>
@@ -435,13 +709,13 @@
                             </div>
 
                             <!-- Interactive Selection Logic -->
-                            <div x-show="!loading && selectedEmployee && !isSubscriptionExpired" class="animate-reveal">
+                            <div x-show="!loading && selectedEmployee && !isSubscriptionExpired && !activeBooking && !closedBooking" class="animate-reveal">
 
                                 <!-- Token Flow -->
                                 <template x-if="isTokenEnabled && !isOffline">
                                     <div class="p-6 space-y-6">
                                         <div
-                                            class="bg-white/5 p-8 rounded-[2.5rem] text-center text-white relative overflow-hidden shadow-2xl shadow-black/20 border border-white/10">
+                                            class="bg-white/5 p-4 md:p-8 rounded-[2.5rem] text-center text-white relative overflow-hidden shadow-2xl shadow-black/20 border border-white/10">
                                             <div class="absolute inset-0 theme-gradient-bg opacity-10"></div>
                                             <div class="grid grid-cols-2 gap-4 relative z-10">
                                                 <div class="border-r border-white/10 pb-2">
@@ -468,7 +742,7 @@
                                         <button
                                             @click="initiateBooking({start: '{{ now()->format('H:i') }}', end: 'Queue', available: true})"
                                             x-show="canBookToken()"
-                                            class="theme-btn w-full h-24 text-xl rounded-3xl font-black italic">
+                                            class="theme-btn w-full h-16 md:h-24 px-4 md:px-8 text-base md:text-xl rounded-3xl flex items-center justify-center gap-2 md:gap-3 shadow-lg">
                                             SECURE MY TOKEN
                                         </button>
                                         <div x-show="!canBookToken()" class="py-6 text-center opacity-50 italic">
@@ -507,7 +781,7 @@
                                                 </button>
                                             </template>
                                         </div>
-                                        <div x-show="uniqueSlots.length === 0" class="py-20 text-center opacity-10 italic">
+                                        <div x-show="uniqueSlots.length === 0" class="py-12 md:py-20 text-center opacity-10 italic">
                                             <span class="text-4xl font-black uppercase tracking-widest text-white">No
                                                 Active Slots</span>
                                         </div>
@@ -517,7 +791,7 @@
                                 <!-- Offline State -->
                                 <template x-if="isOffline">
                                     <div
-                                        class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                                        class="py-12 md:py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
                                         <div
                                             class="w-20 h-20 theme-gradient-bg rounded-3xl flex items-center justify-center mx-auto mb-6 border theme-border opacity-50">
                                             <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24"
@@ -542,7 +816,7 @@
 
                                 <!-- Paused State -->
                                 <template x-if="!isOffline && isPaused">
-                                    <div class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                                    <div class="py-12 md:py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
                                         <div class="w-20 h-20 bg-amber-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-500/50">
                                             <svg class="w-10 h-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -554,14 +828,14 @@
                                 </template>
                             </div>
 
-                            <div x-show="!selectedEmployee && !isSubscriptionExpired" class="py-32 text-center opacity-30 animate-fade-in">
+                            <div x-show="!selectedEmployee && !isSubscriptionExpired && !activeBooking && !closedBooking" class="py-16 md:py-32 text-center opacity-30 animate-fade-in">
                                 <span class="text-6xl block mb-6 grayscale">⏳</span>
                                 <p class="text-[9px] font-black uppercase tracking-[0.4em] text-white italic">Initiate
                                     Selection Above</p>
                             </div>
 
                             <!-- Subscription Expired State -->
-                            <div x-show="isSubscriptionExpired" class="py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
+                            <div x-show="isSubscriptionExpired" class="py-12 md:py-20 px-8 text-center bg-white/5 rounded-[2.5rem] border border-white/10 animate-reveal">
                                 <div class="w-20 h-20 bg-red-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-red-500/50">
                                     <svg class="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -607,7 +881,7 @@
                     <span
                         class="inline-block px-4 py-1 theme-gradient-bg text-white border theme-border rounded-full text-[9px] font-black uppercase tracking-widest italic mb-6">Security
                         Clearance</span>
-                    <h2 class="text-4xl font-black italic tracking-tighter uppercase mb-2">{{ $theme['customer_label']
+                    <h2 class="text-3xl md:text-4xl font-black italic tracking-tighter uppercase mb-2">{{ $theme['customer_label']
                         }} Details</h2>
                     <p class="text-white/40 font-medium">Please verify your identification for this {{
     strtolower($theme['booking_label']) }}.</p>
@@ -649,6 +923,23 @@
                                 placeholder="10 Digit Primary Number">
                         </div>
                     </div>
+                    <div class="space-y-2">
+                        <label
+                            class="text-xs font-black uppercase tracking-[0.2em] text-white/70 ml-2 shrink-0 text-left block">Email
+                            <span class="text-white/30">(Optional)</span></label>
+                        <div class="relative group">
+                            <span
+                                class="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </span>
+                            <input type="email" x-model="guestEmail" maxlength="255"
+                                class="premium-input w-full h-14 pl-12 text-base bg-white/5 border-white/10 text-white placeholder-white/20 theme-focus-border"
+                                placeholder="you@example.com">
+                        </div>
+                    </div>
                 </div>
 
                 <div
@@ -665,23 +956,85 @@
                             <span class="text-[9px] font-black uppercase tracking-widest italic">Priority Booking Fee</span>
                             <span class="font-black" x-text="'₹' + selectedSlot?.premium_fee_amount"></span>
                         </div>
+                        {{-- What is actually payable on this screen.
+
+                             At a shop taking direct UPI payment the customer is
+                             about to be sent to a UPI app, so "Due Now" has to
+                             mean the figure that will appear there — the shop's
+                             advance when it set one, otherwise the whole price.
+                             Quoting the full total and then asking for a
+                             different number one tap later is how a legitimate
+                             charge starts to look like a scam. --}}
+                        {{-- Whether this shop takes payment is fixed for the
+                             page, so it is branched in Blade rather than with
+                             x-show — an x-show would ship the paid wording to
+                             every shop that does not charge and merely hide it.
+                             Only the AMOUNT is reactive, because it depends on
+                             which slot was picked. --}}
                         <div class="flex justify-between items-center pt-6 border-t border-white/10">
-                            <span class="text-xl font-black italic uppercase tracking-tighter">Due Now</span>
+                            <span class="text-xl font-black italic uppercase tracking-tighter">
+                                {{ $takesDirectPayment ? 'Pay Now' : 'Due Now' }}
+                            </span>
                             <span
-                                class="text-4xl font-black theme-gradient-text drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-                                x-text="'₹' + totalAmount"></span>
+                                class="text-2xl md:text-4xl font-black theme-gradient-text drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
+                                x-text="'₹' + payableNow"></span>
                         </div>
+
+                        {{-- Only when the advance is a deposit. Says plainly
+                             that the rest is still owed, so the customer is not
+                             surprised at the counter. --}}
+                        @if($takesDirectPayment)
+                        <div x-show="payAtVenue > 0" style="display:none;"
+                             class="flex justify-between items-center opacity-50">
+                            <span class="text-[9px] font-black uppercase tracking-widest italic">Balance At Venue</span>
+                            <span class="font-black" x-text="'₹' + payAtVenue"></span>
+                        </div>
+                        @endif
                     </div>
                 </div>
 
-                <button @click="confirmBooking()" class="theme-btn w-full h-24 text-xl rounded-3xl group shadow-lg">
-                    AUTHENTICATE & BOOK
-                    <svg class="w-6 h-6 transform group-hover:translate-x-2 transition-transform" fill="none"
+                {{-- One action, not two.
+
+                     The booking row still has to be written before a payment
+                     screen can exist — it is what holds the slot while the
+                     customer pays, and what the UTR and screenshot are later
+                     attached to. But that is our sequencing problem, not
+                     something to make the customer step through: they tap once
+                     and land on the payment screen, with no "booked!" interlude
+                     claiming a slot that is not paid for yet.
+
+                     So the label names the real next action and the exact
+                     amount, and it matches the "Pay Now" figure directly above
+                     it. --}}
+                <button @click="confirmBooking()" :disabled="submitting"
+                        class="theme-btn w-full h-16 md:h-24 px-4 md:px-8 text-base md:text-xl rounded-3xl flex items-center justify-center gap-2 md:gap-3 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                    @if($takesDirectPayment)
+                        {{-- A shop can have payment enabled and still have
+                             nothing to charge for this slot (no advance, and a
+                             free service). "PAY ₹0 & BOOK" is nonsense, and the
+                             server agrees — it confirms such a booking outright
+                             rather than sending anyone to a payment screen. --}}
+                        <span x-show="!submitting" x-text="payableNow > 0 ? ('PAY ₹' + payableNow + ' & BOOK') : 'CONFIRM BOOKING'"></span>
+                        <span x-show="submitting" style="display:none;"
+                              x-text="payableNow > 0 ? 'OPENING PAYMENT…' : 'BOOKING…'"></span>
+                    @else
+                        <span x-show="!submitting">AUTHENTICATE &amp; BOOK</span>
+                        <span x-show="submitting" style="display:none;">BOOKING…</span>
+                    @endif
+                    <svg x-show="!submitting" class="w-6 h-6 transform group-hover:translate-x-2 transition-transform" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4"
                             d="M14 5l7 7m0 0l-7 7m7-7H3" />
                     </svg>
                 </button>
+
+                {{-- Said at the moment of handoff: the money never touches this
+                     platform. --}}
+                @if($takesDirectPayment)
+                <p class="mt-5 text-[9px] font-black uppercase tracking-widest text-white/30 text-center leading-relaxed">
+                    Paid directly to {{ $vendor->business_name }} via UPI
+                </p>
+                @endif
                 <button @click="bookingModal = false"
                     class="mt-8 text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">Abort
                     Transaction</button>
@@ -692,20 +1045,123 @@
         <div x-show="successModal" class="fixed inset-0 z-[300] flex items-center justify-center p-6" x-cloak
             x-transition>
             <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-3xl"></div>
+            <!-- Sized for a phone first: the fixed p-16 / rounded-[5rem] shell left
+                 almost no content width at 390px once the token block was added. -->
             <div
-                class="relative bg-slate-900/90 text-white rounded-[5rem] p-16 text-center max-w-lg shadow-[0_100px_200px_-50px_rgba(0,0,0,0.5)] border-8 border-white/5">
+                class="relative bg-slate-900/90 text-white rounded-[2.5rem] sm:rounded-[4rem] p-6 sm:p-12 text-center w-full max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar shadow-[0_100px_200px_-50px_rgba(0,0,0,0.5)] border-4 sm:border-8 border-white/5">
                 <div
-                    class="w-24 h-24 theme-gradient-bg text-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 animate-reveal-zoom shadow-2xl theme-glow-sm">
+                    class="w-20 h-20 sm:w-24 sm:h-24 theme-gradient-bg text-white rounded-[2rem] sm:rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 sm:mb-10 animate-reveal-zoom shadow-2xl theme-glow-sm">
                     <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h2 class="text-5xl font-black mb-4 italic tracking-tighter uppercase leading-none theme-gradient-text">Appointment
-                    Segmented</h2>
-                <p class="text-white/60 font-medium text-lg mb-12" x-text="successMsg"></p>
-                <button @click="window.location.href='/'"
-                    class="theme-btn w-full h-24 text-xl rounded-3xl opacity-100 italic">GLOBAL
-                    REGISTRY</button>
+                <h2 class="text-3xl sm:text-5xl font-black mb-4 italic tracking-tighter uppercase leading-none theme-gradient-text">Booking
+                    Confirmed</h2>
+                <p class="text-white/60 font-medium text-base sm:text-lg mb-8" x-text="successMsg"></p>
+
+                <!-- The token is the thing the customer came for — show it here
+                     rather than only on the panel behind the modal. -->
+                <div class="bg-white/5 border border-white/10 rounded-[2rem] p-6 mb-10 text-center">
+                    <template x-if="confirmedBooking && confirmedBooking.token_number">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1 italic">Your Token Number</p>
+                            <p class="text-6xl font-black theme-gradient-text italic leading-none"
+                               x-text="'#' + confirmedBooking.token_number"></p>
+                            <div class="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-white/10">
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic"
+                                       x-text="confirmedBooking.serving_label ?? 'Now Serving'"></p>
+                                    <p class="text-2xl font-black text-white italic"
+                                       x-text="confirmedBooking.serving_display ?? '—'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-white/40 italic">Ahead Of You</p>
+                                    <p class="text-2xl font-black text-sky-400 italic" x-text="'#' + (confirmedBooking.people_ahead ?? 0)"></p>
+                                </div>
+                            </div>
+                            <p x-show="confirmedBooking.approx_wait_min > 0" style="display:none;"
+                               class="mt-5 text-[10px] font-black uppercase tracking-widest text-white/40 italic"
+                               x-text="'Approx. ' + confirmedBooking.approx_wait_min + ' min wait'"></p>
+                        </div>
+                    </template>
+                    <template x-if="!(confirmedBooking && confirmedBooking.token_number)">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-white/40 mb-1 italic">Your Appointment Time</p>
+                            <p class="text-4xl font-black theme-gradient-text italic" x-text="selectedSlot ? selectedSlot.start : ''"></p>
+                        </div>
+                    </template>
+                    <p class="text-xs text-white/50 font-medium mt-5 italic">
+                        With <span x-text="employeeName(selectedEmployee)"></span> at {{ $vendor->business_name }}
+                    </p>
+                </div>
+
+                {{--
+                    The shop takes payment directly, so paying is one tap from
+                    this screen — the button below raises the device's own UPI
+                    chooser. Nothing is raised automatically: a payment sheet
+                    that appears over a confirmation the customer has not read
+                    yet is startling, and dismissing it out of surprise is
+                    indistinguishable from refusing to pay.
+
+                    The booking is confirmed either way. This platform never sees
+                    the transfer and never gates the appointment on it, which is
+                    why the pay button sits next to a confirmation rather than in
+                    front of one.
+                --}}
+                <template x-if="payment">
+                    <div class="mb-6 space-y-4 text-left">
+                        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5">
+                            <div class="flex items-center justify-between gap-4 mb-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-emerald-300">Pay The Business</span>
+                                <span class="text-xl font-black italic text-white" x-text="'₹' + payment.amount"></span>
+                            </div>
+                            <p class="text-xs text-white/60 font-medium leading-relaxed">
+                                Paid straight to <span class="text-white font-bold" x-text="payment.payee"></span> in your
+                                own UPI app. <span x-show="!payment.is_advance">This is the full amount.</span>
+                                <span x-show="payment.is_advance">The balance is settled at the counter.</span>
+                            </p>
+                        </div>
+
+                        {{-- Desktop has no app to hand off to, so the QR is the
+                             only route; on a phone it is the second chance for
+                             somebody who closed the chooser by accident. --}}
+                        <div x-show="showQr" x-cloak class="bg-white rounded-2xl p-5">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 text-center">Scan With Any UPI App</p>
+                            <div class="w-44 mx-auto [&>svg]:w-full [&>svg]:h-auto" x-html="payment.qr_svg"></div>
+                            <p class="mt-3 text-center text-[11px] font-bold text-slate-600 break-all" x-text="payment.vpa"></p>
+                        </div>
+
+                        {{-- Phone only. A real anchor on the upi:// scheme, not
+                             a scripted navigation: a tap on a genuine link is
+                             the form mobile browsers hand to the OS chooser
+                             most reliably. On desktop no handler for the scheme
+                             exists and following it errors, so the button (and
+                             the QR toggle with it) is never shown there — the
+                             QR above is already open and is the only route. --}}
+                        <a x-show="onPhone()" x-cloak
+                           :href="payment.upi_link" @click="payNow($event)"
+                           class="theme-btn w-full h-16 rounded-2xl flex items-center justify-center text-base italic font-black uppercase tracking-widest"
+                           x-text="'Pay ₹' + payment.amount + ' Now'"></a>
+
+                        <button type="button" x-show="onPhone()" x-cloak @click="showQr = !showQr"
+                                class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/60 hover:bg-white/10 transition-all active:scale-95"
+                                x-text="showQr ? 'Hide QR Code' : 'Pay By Scanning A QR Code'"></button>
+
+                        {{-- The one instruction that replaces the whole upload
+                             step: the receipt is shown to a person, not to us. --}}
+                        <div class="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-2">When Your Turn Comes</p>
+                            <p class="text-xs text-white/70 font-medium leading-relaxed">
+                                Show your UPI payment screenshot to
+                                <span class="text-white font-bold" x-text="payment.employee_name"></span>.
+                                {{ $vendor->business_name }} has already been told to expect it.
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                <button @click="successModal = false"
+                    class="theme-btn w-full h-20 text-xl rounded-3xl opacity-100 italic">GOT IT</button>
             </div>
         </div>
     </div>
@@ -714,24 +1170,78 @@
     @if($vendor->appointment_mode !== 'token')
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     @endif
+    @php
+        /*
+        | Shape the customer's live booking for Alpine. Built by
+        | CustomerBookingService::present() so the first paint agrees with every
+        | later socket update — in particular people_ahead, which is COUNTED from
+        | the tokens still waiting rather than derived by subtracting now_serving
+        | (that treated completed and cancelled tokens below yours as people
+        | still standing in front of you).
+        */
+        $activeBookingPayload = $activeBooking
+            ? app(\App\Services\CustomerBookingService::class)->present($activeBooking)
+            : null;
+    @endphp
     <script>
         function bookingSystem() {
             return {
                 selectedEmployee: {{ $selectedEmployee ? $selectedEmployee->id : 'null' }},
 
+                // Non-null while this customer holds a booking here today. Set on
+                // load from the server and again the moment a booking succeeds, so
+                // the interface flips without waiting for a refresh.
+                activeBooking: @js($activeBookingPayload),
+
                 selectedServiceFee: {{ $selectedEmployee ? ($selectedEmployee->service_fee_override ?? $vendor->service_fee) : 0 }},
                 slots: @js($slots),
                 loading: false,
                 bookingModal: false,
+                submitting: false,
                 isOffline: {{ $isOffline ? 'true' : 'false' }},
                 isPaused: {{ (isset($isPaused) && $isPaused) ? 'true' : 'false' }},
                 isSubscriptionExpired: {{ $isSubscriptionExpired ? 'true' : 'false' }},
 
+                /*
+                | Direct-to-vendor UPI payment.
+                |
+                | Mirrors the server so the button can quote the real figure
+                | before the booking exists. It is a DISPLAY copy only — the
+                | amount actually charged is recomputed server-side in
+                | BookingController and written to the booking row, so a tampered
+                | value here changes the label and nothing else.
+                |
+                | fixedAdvance = 0 means "no deposit set", which is the shop
+                | asking for the full booking price, NOT for nothing.
+                */
+                directPayment: {{ $vendor->acceptsDirectAdvance() ? 'true' : 'false' }},
+                fixedAdvance: {{ (float) ($vendor->advance_amount ?? 0) }},
+
                 successModal: false,
+                // The direct-payment block on the confirmation modal, or null at
+                // a shop that takes no payment. Set from the booking response.
+                payment: null,
+                // QR visible: forced open on desktop, where there is no UPI app
+                // to hand off to, and toggleable on a phone.
+                showQr: false,
                 successMsg: '',
+                // What the server returned for the booking just made — drives the
+                // token number shown on the confirmation screen.
+                confirmedBooking: null,
+                employeeNames: @js($vendor->employees->pluck('name', 'id')),
+                todayLabel: '{{ now()->format('M d, Y') }}',
                 selectedSlot: null,
                 guestName: '',
                 guestPhone: '',
+                guestEmail: '',
+
+                /*
+                 * Whether this business collects customer details before a
+                 * booking (Vendor::$require_customer_details). Set shop-wide, so
+                 * it governs every specialist listed here. Off, the details
+                 * modal never opens — picking a slot or token books it outright.
+                 */
+                requireDetails: {{ $vendor->require_customer_details ? 'true' : 'false' }},
                 isTokenEnabled: {{ $vendor->appointment_mode === 'token' ? 'true' : 'false' }},
                 emergencyFee: {{ $vendor->emergency_fee ?: 0 }},
                 totalAmount: 0,
@@ -741,6 +1251,23 @@
                 avgTimePerToken: {{ $vendor->avg_consultation_time ?: 15 }},
                 queueIndex: {{ $queueIndex ?? 0 }},
                 runningToken: {{ $runningToken ?? 0 }},
+
+                // Queue channel of the specialist currently being browsed. Moves
+                // as the customer taps around. See watchQueue().
+                watchedEmployee: null,
+
+                // Queue channel of the specialist holding THIS customer's booking.
+                // Pinned for the life of the page — browsing must never cost them
+                // updates about their own appointment.
+                pinnedEmployee: null,
+
+                // Employee ids we already hold a subscription for.
+                subscribed: [],
+
+                // Set when the shop closes out this customer's booking while they
+                // are watching. Replaces the token panel with a plain statement of
+                // what happened, instead of the form silently reappearing.
+                closedBooking: null,
 
                 get uniqueSlots() {
                     const seen = new Set();
@@ -806,10 +1333,36 @@
                     this.loading = false;
                 },
 
+        /**
+         * What the customer pays on the payment screen they are about to be
+         * sent to: the shop's fixed advance if it set one, otherwise the whole
+         * booking price. Mirrors UpiPaymentService::amountDueFor().
+         *
+         * Falls back to the full total at shops not taking direct payment, so
+         * the "Due Now" line keeps its original meaning there.
+         */
+        get payableNow() {
+            if (!this.directPayment) return this.totalAmount;
+
+            return this.fixedAdvance > 0 ? this.fixedAdvance : this.totalAmount;
+        },
+
+        /** What is left to settle in person — zero in full-payment mode. */
+        get payAtVenue() {
+            return Math.max(this.totalAmount - this.payableNow, 0);
+        },
+
         initiateBooking(slot) {
             this.selectedSlot = slot;
             const premiumSlotFee = slot.is_premium ? slot.premium_fee_amount : 0;
             this.totalAmount = this.selectedServiceFee + premiumSlotFee;
+
+            // No details wanted: the tap on the slot IS the booking.
+            if (!this.requireDetails) {
+                this.confirmBooking();
+                return;
+            }
+
             this.bookingModal = true;
         },
 
@@ -817,12 +1370,19 @@
             if (!this.selectedSlot) {
                 return;
             }
-            if (!this.guestName || this.guestPhone.length < 10) return;
+            if (this.requireDetails && (!this.guestName || this.guestPhone.length < 10)) return;
             this.submitBooking('pay_ext_' + Math.random().toString(36).substr(2, 9));
         },
 
                 async submitBooking(paymentId) {
             if (!this.selectedSlot) return;
+
+            // Without the details modal in the way, a slot books on a single tap
+            // — so a double tap would post twice and meet the server's "you
+            // already have a booking here" refusal.
+            if (this.submitting) return;
+            this.submitting = true;
+
             this.bookingModal = false;
             this.loading = true;
             try {
@@ -841,27 +1401,152 @@
                         booking_type: this.selectedSlot.is_premium ? 'premium' : 'normal',
                         customer_name: this.guestName,
                         customer_phone: this.guestPhone,
+                        customer_email: this.guestEmail,
                         payment_id: paymentId
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
                     this.successMsg = data.message;
+                    this.confirmedBooking = data.booking || null;
+
+                    // Same flow as the single-employee page: the token becomes the
+                    // customer's standing state here, so the booking interface is
+                    // replaced by the token panel straight away.
+                    this.activeBooking = {
+                        id: data.booking?.id ?? null,
+                        employee_id: this.selectedEmployee,
+                        employee_name: this.employeeName(this.selectedEmployee),
+                        token_number: data.booking?.token_number ?? null,
+                        // The server resolves the real appointment date and
+                        // time (an after-midnight slot lands on the NEXT day,
+                        // not today), so prefer its values and only fall back
+                        // to the local ones if the response omits them.
+                        slot_time: data.booking?.token_number
+                            ? null
+                            : (data.booking?.slot_time || this.selectedSlot.start),
+                        booking_date: data.booking?.booking_date || this.todayLabel,
+                        status: 'confirmed',
+                        status_label: 'Confirmed',
+                        now_serving: data.booking?.now_serving ?? 0,
+                        serving_label: data.booking?.serving_label ?? 'Now Serving',
+                        serving_display: data.booking?.serving_display ?? '—',
+                        // Counted server-side from the tokens still waiting.
+                        people_ahead: data.booking?.people_ahead ?? 0,
+                        approx_wait_min: data.booking?.approx_wait_min ?? 0,
+                    };
+
+                    // Follow the new booking's queue for the rest of this visit,
+                    // pinned so browsing other specialists cannot drop it.
+                    this.watchQueue(this.selectedEmployee, { pin: true });
+
                     this.successModal = true;
+
+                    /*
+                     * The shop takes payment directly. The pay button on this
+                     * modal is the whole of the payment flow — one tap raises the
+                     * device's own UPI chooser, and coming back out of the app
+                     * lands on this same confirmed screen rather than on a form.
+                     *
+                     * Deliberately not launched for them: the customer reads what
+                     * they booked first, then chooses to pay. On desktop, where no
+                     * UPI app exists, the QR is opened up front because there is
+                     * nothing to tap.
+                     */
+                    this.payment = data.booking?.payment || null;
+                    this.showQr = !!this.payment && !this.onPhone();
+
                     setTimeout(() => {
                         window.dispatchEvent(new Event('trigger-notification-prompt'));
                     }, 500);
-                    // Refresh slots so the just-booked slot reflects as taken
-                    await this.fetchSlots(this.selectedEmployee, this.selectedServiceFee);
                 } else {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.error || 'ALLOCATION FAILED', type: 'error' } }));
+
+                    /*
+                     * The server refused because this customer already holds a
+                     * booking we were not showing — the phone they just typed is
+                     * not the one this device was remembered by. Reload
+                     * identified by that number so the token panel replaces the
+                     * form, rather than leaving them on an error with no way to
+                     * see the booking that caused it.
+                     *
+                     * Nothing to reload by when the shop collects no phone
+                     * number — the guest key in the cookie is what the server
+                     * matched on, so a plain reload surfaces the same booking.
+                     */
+                    if (data.bookings_url) {
+                        setTimeout(() => {
+                            if (this.guestPhone) {
+                                window.location.search = '?phone=' + encodeURIComponent(this.guestPhone);
+                            } else {
+                                window.location.reload();
+                            }
+                        }, 2000);
+                    }
                 }
             } catch (e) {
                 console.error('ALLOCATION FAILURE', e);
                 window.dispatchEvent(new CustomEvent('toast', { detail: { message: 'SYSTEM ERROR', type: 'error' } }));
             }
             this.loading = false;
+            this.submitting = false;
         },
+                employeeName(id) {
+                    return this.employeeNames[id] || 'your specialist';
+                },
+
+                onPhone() {
+                    return /Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+                },
+
+                /*
+                 * The customer tapped Pay. Hand the device to whichever UPI apps
+                 * it has installed.
+                 *
+                 * `upi://` is an intent, not a page: following it navigates
+                 * nothing, it raises the OS payment chooser over the page we are
+                 * already on. So the customer comes back out of their UPI app to
+                 * the same confirmed screen — no redirect, no second page and
+                 * nothing to upload.
+                 *
+                 * The anchor is left to do the work rather than assigning
+                 * location: a real link tap is what mobile browsers hand to the
+                 * chooser most reliably. All this does is stop the navigation on
+                 * desktop, where no handler for the scheme exists and following it
+                 * produces either nothing at all or a jarring "no app found"
+                 * dialog — there the QR is the only route.
+                 *
+                 * The QR is revealed on the way out in either case, so a customer
+                 * whose chooser never appeared has somewhere to go next.
+                 */
+                payNow(event) {
+                    if (!this.onPhone()) {
+                        event.preventDefault();
+                    }
+
+                    this.showQr = true;
+                },
+
+                /*
+                 * Keep the customer's own token panel live. The general queue poll
+                 * follows whichever specialist is selected, which is not
+                 * necessarily the one holding their booking — so this asks for the
+                 * booking's own employee and passes the token, which is what makes
+                 * the endpoint return an estimated wait.
+                 */
+                async refreshActiveBooking() {
+                    if (!this.activeBooking || !this.activeBooking.token_number) return;
+                    try {
+                        const res = await fetch(`/vendors/{{ $vendor->slug }}/queue-status?employee_id=${this.activeBooking.employee_id}&my_token=${this.activeBooking.token_number}`);
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        this.activeBooking.now_serving = data.now_serving;
+                        this.activeBooking.approx_wait_min = data.approx_wait_min;
+                    } catch (e) {
+                        console.error('Active booking refresh failed', e);
+                    }
+                },
+
                 async refreshQueueStatus() {
                     if (this.isSubscriptionExpired) return;
                     try {
@@ -881,19 +1566,183 @@
                     }
                 },
 
+                /*
+                 * Follow a specialist's queue over the socket.
+                 *
+                 * The customer's OWN booking channel is pinned and never left. It
+                 * used to be dropped the instant they tapped a different
+                 * specialist to compare wait times — and from that moment their
+                 * token screen stopped hearing about their own appointment, so it
+                 * never closed out when the shop completed it. Browsing the shop
+                 * must not cost you updates about the booking you are holding.
+                 *
+                 * The merely-selected channel is still released on the way out, so
+                 * a long browse does not accumulate a subscription per tap.
+                 */
+                watchQueue(employeeId, { pin = false } = {}) {
+                    if (!window.Echo || !employeeId) return;
+
+                    if (pin) {
+                        this.pinnedEmployee = employeeId;
+                    }
+
+                    // Release the previous *selected* channel, never the pinned one.
+                    if (this.watchedEmployee
+                        && this.watchedEmployee !== employeeId
+                        && this.watchedEmployee !== this.pinnedEmployee) {
+                        window.Echo.leave(`queue.${this.watchedEmployee}`);
+                        this.subscribed = this.subscribed.filter(id => id !== this.watchedEmployee);
+                    }
+
+                    if (!pin) {
+                        this.watchedEmployee = employeeId;
+                    }
+
+                    if (this.subscribed.includes(employeeId)) return;
+                    this.subscribed.push(employeeId);
+
+                    window.Echo.channel(`queue.${employeeId}`)
+                        .listen('.queue.updated', (e) => this.onQueueUpdate(e));
+                },
+
+                onQueueUpdate(e) {
+                    // Counters for the specialist currently on screen.
+                    if (e.employee_id === this.selectedEmployee) {
+                        this.runningToken = e.now_serving;
+                        this.queueIndex   = e.queue_index;
+                        this.isPaused     = e.is_paused;
+                    }
+
+                    if (this.activeBooking && this.activeBooking.employee_id === e.employee_id) {
+                        this.activeBooking.now_serving     = e.now_serving;
+                        this.activeBooking.serving_label   = e.serving_label;
+                        this.activeBooking.serving_display = e.serving_display;
+                        this.activeBooking.is_serving      = e.is_serving;
+
+                        // Counted from the tokens still waiting, not derived by
+                        // subtracting now_serving — a completed or cancelled token
+                        // below yours is nobody standing in front of you.
+                        if (Array.isArray(e.waiting_tokens) && this.activeBooking.token_number) {
+                            this.activeBooking.people_ahead = e.waiting_tokens
+                                .filter(t => t < this.activeBooking.token_number).length;
+                        }
+                    }
+
+                    // The shop just acted on THIS customer's booking —
+                    // completed, cancelled, skipped or deleted it.
+                    const changed = e.changed;
+                    if (changed && this.activeBooking && changed.booking_id === this.activeBooking.id
+                        && changed.status !== 'confirmed' && changed.status !== 'pending') {
+                        this.closeOutBooking(changed.status, this.activeBooking);
+                    }
+                },
+
+                /*
+                 * Swap the live token panel for the outcome of the appointment.
+                 *
+                 * The customer has been watching a number climb; when their turn
+                 * is finished, cancelled or skipped they need to be told which of
+                 * those happened. Dropping straight back to a booking form leaves
+                 * them guessing whether it worked or something went wrong.
+                 */
+                closeOutBooking(status, booking) {
+                    this.closedBooking = {
+                        status:        status,
+                        token_number:  booking?.token_number ?? null,
+                        employee_name: booking?.employee_name ?? null,
+                    };
+                    this.activeBooking = null;
+
+                    window.dispatchEvent(new CustomEvent('toast', {
+                        detail: { message: this.closedBookingHeadline(), type: status === 'completed' ? 'success' : 'info' }
+                    }));
+                },
+
+                closedBookingHeadline() {
+                    return {
+                        completed: 'Appointment Complete',
+                        cancelled: 'Booking Cancelled',
+                        skipped:   'Appointment Skipped',
+                        removed:   'Booking Removed',
+                        expired:   'Booking Expired',
+                    }[this.closedBooking?.status] ?? 'Booking Closed';
+                },
+
+                closedBookingNote() {
+                    return {
+                        completed: 'Thanks for visiting. You are free to book here again.',
+                        cancelled: 'The business cancelled this booking. You are free to book again.',
+                        skipped:   'The business could not serve you due to non-availability, so your turn has passed. Please book a new appointment or contact the business to reschedule.',
+                        removed:   'The business removed this booking. You are free to book again.',
+                        expired:   'The shift closed before your turn came up.',
+                    }[this.closedBooking?.status] ?? 'You are free to book again.';
+                },
+
                 init() {
+                    // The shop opening, closing or pausing bookings, live — this
+                    // page used to keep offering a form for a shop that had shut.
+                    if (window.Echo) {
+                        window.Echo.channel(`shop.{{ $vendor->id }}`)
+                            .listen('.shop.status', (e) => {
+                                this.isOffline = !e.is_open;
+                                this.isPaused  = e.bookings_paused;
+                            });
+
+                        // Pin the customer's own booking first, so the subscription
+                        // that carries its completion survives everything below.
+                        if (this.activeBooking?.employee_id) {
+                            this.watchQueue(this.activeBooking.employee_id, { pin: true });
+                        }
+
+                        this.watchQueue(this.selectedEmployee);
+
+                        // Selecting a different specialist moves the browsing
+                        // subscription; the pinned one stays put.
+                        this.$watch('selectedEmployee', (id) => this.watchQueue(id));
+                    }
+
                     if (this.isTokenEnabled) {
+                        // Fallback only. While the socket is connected the queue is
+                        // pushed to us, so this poll stands down to a slow safety
+                        // net for the case where Reverb is unreachable.
                         setInterval(() => {
-                            if (!this.bookingModal) {
-                                this.refreshQueueStatus();
-                            }
-                        }, 10000); // 10 seconds
+                            if (this.bookingModal) return;
+                            if (window.Realtime?.connected()) return;
+
+                            this.refreshQueueStatus();
+                            this.refreshActiveBooking();
+                        }, 10000);
+
+                        // First refresh straight away so a returning customer sees
+                        // the current "now serving" rather than the page-load value.
+                        this.refreshActiveBooking();
                     }
                 }
             }
         }
 
     </script>
+
+    @php
+        /*
+        | The signed-in customer, when there is one, in the shape the review
+        | modal's identity chip renders. Lets a visitor who used "Continue with
+        | Google" on an earlier visit skip the button entirely — their details
+        | are already on the account.
+        |
+        | Customers only: a vendor/admin/employee browsing a shop page is not a
+        | reviewer identity, and the sign-in endpoint refuses those accounts too.
+        */
+        $reviewAccount = auth()->check() && auth()->user()->isCustomer()
+            ? [
+                'name'     => auth()->user()->name,
+                'email'    => auth()->user()->email,
+                'picture'  => auth()->user()->avatar,
+                'phone'    => auth()->user()->mobile,
+                'verified' => auth()->user()->usesGoogleSignIn(),
+            ]
+            : null;
+    @endphp
 
     <script>
         function reviewSystem() {
@@ -911,10 +1760,68 @@
                 reviews: @js($reviews),
                 averageRating: {{ $averageRating }},
                 reviewsCount: {{ $reviewsCount }},
+                // Per-star totals for the breakdown bars (server-computed, so they
+                // stay accurate even though only 5 reviews are loaded at a time).
+                ratingCounts: @js($ratingCounts),
+                activeRating: 0,      // 0 = latest; 1-5 = filter by that star rating
+                loadingReviews: false,
+                allAiSuggestions: @js(app(\App\Services\ReviewSuggestionService::class)->getAllForCategory($vendor->category?->slug)),
+                activeAiSuggestions: [],
+                // Index of the suggestion currently sitting in the review box
+                // (null once the reviewer types over it, so the tick never lies).
+                selectedSuggestion: null,
+                commentFlash: false,
+
+                /*
+                | Drop a suggestion into the review box, mark it as the chosen
+                | one, and bring the box into view — the field sits below the
+                | fold on most screens, so without the scroll the tap looks
+                | like nothing happened.
+                */
+                applySuggestion(suggestion, index) {
+                    this.comment = suggestion;
+                    this.selectedSuggestion = index;
+                    this.commentFlash = true;
+                    setTimeout(() => this.commentFlash = false, 1200);
+
+                    this.$nextTick(() => {
+                        const box = this.$refs.commentBox;
+                        if (!box) return;
+                        (this.$refs.commentSection || box).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // preventScroll so focus doesn't fight the smooth scroll.
+                        box.focus({ preventScroll: true });
+                        box.setSelectionRange(box.value.length, box.value.length);
+                    });
+                },
+
+                refreshSuggestions() {
+                    this.selectedSuggestion = null;
+                    if (this.rating === 0) {
+                        this.activeAiSuggestions = [];
+                        return;
+                    }
+                    const pool = this.allAiSuggestions[this.rating] || [];
+                    if (pool.length <= 3) {
+                        this.activeAiSuggestions = pool;
+                        return;
+                    }
+                    // Shuffle and take 3
+                    const shuffled = [...pool].sort(() => 0.5 - Math.random());
+                    this.activeAiSuggestions = shuffled.slice(0, 3);
+                },
 
                 // Optional Google identity
                 googleClientId: @js(config('services.google.client_id')),
-                googleUser: null,
+                // The signed-in customer's details, or null for a guest. Held
+                // separately from `googleUser` so "post anonymously" can drop the
+                // identity from one review without losing the account behind it.
+                account: @js($reviewAccount),
+                googleUser: @js($reviewAccount),
+                signedIn: @js((bool) $reviewAccount),
+                // Set when a signed-in reviewer explicitly chooses to stay
+                // unnamed; sent to the server so it ignores the session identity.
+                postAnonymously: false,
+                signingIn: false,
                 googleCredential: null,
                 googleRendered: false,
 
@@ -926,7 +1833,8 @@
                 openModal() {
                     this.error = '';
                     this.showModal = true;
-                    if (this.googleClientId) {
+                    // Nothing to sign into when they already are.
+                    if (this.googleClientId && !this.signedIn) {
                         this.$nextTick(() => this.initGoogleButton());
                     }
                 },
@@ -938,6 +1846,16 @@
                         window.google.accounts.id.initialize({
                             client_id: this.googleClientId,
                             callback: (resp) => this.handleGoogleCredential(resp),
+                            /*
+                            | Fires when Google refuses before any credential
+                            | exists — most often because this page's origin is
+                            | not on the OAuth client's Authorized JavaScript
+                            | origins list. Without it the only sign of trouble
+                            | is a bare popup from accounts.google.com: nothing
+                            | reaches our server, so nothing reaches our logs
+                            | either, and the modal just sits there.
+                            */
+                            error_callback: (err) => this.handleGoogleError(err),
                         });
                         window.google.accounts.id.renderButton(this.$refs.googleBtn, {
                             theme: 'filled_blue', size: 'large', shape: 'pill', text: 'continue_with', width: 280,
@@ -953,30 +1871,192 @@
                     }, 150);
                 },
 
-                handleGoogleCredential(resp) {
+                /*
+                | Google declined to hand over a credential.
+                |
+                | The reader gets a plain "not available" — the cause is a
+                | server-side configuration matter and means nothing to them,
+                | and they can still post the review unnamed. The precise
+                | diagnosis, including the exact origin to authorise, goes to
+                | the console where whoever is configuring it will look.
+                */
+                handleGoogleError(err) {
+                    const type = err?.type || 'unknown';
+
+                    if (type === 'unregistered_origin') {
+                        console.error(
+                            'GOOGLE SIGN-IN: this origin is not authorised for the OAuth client.\n' +
+                            'Add exactly this to the client\'s "Authorized JavaScript origins":\n  ' +
+                            window.location.origin + '\n' +
+                            'Client ID: ' + this.googleClientId + '\n' +
+                            'Note: scheme, host and port must all match, with no trailing slash, and ' +
+                            'Google only permits http:// for localhost / 127.0.0.1 — every other origin must be https.'
+                        );
+                    } else {
+                        console.error('GOOGLE SIGN-IN: Google declined the request', err);
+                    }
+
+                    this.error = 'Google sign-in is not available here right now. '
+                        + 'You can still post your review with just your name.';
+                    this.signingIn = false;
+                },
+
+                async handleGoogleCredential(resp) {
                     const payload = this.decodeJwt(resp.credential);
                     if (!payload) {
                         this.error = 'Could not read your Google account. Please try again.';
                         return;
                     }
                     this.googleCredential = resp.credential;
+                    // Shape only, never the token itself. A Google ID token is
+                    // always three dot-separated segments; anything else means
+                    // the button handed back something we cannot use.
+                    console.info('GOOGLE SIGN-IN: credential segments =',
+                        String(resp.credential || '').split('.').length);
                     this.googleUser = {
                         name: payload.name || payload.email,
                         email: payload.email,
                         picture: payload.picture,
+                        verified: true,
                     };
                     // Auto-fill the (now read-only) name field from the verified account.
                     this.name = this.googleUser.name;
+                    this.postAnonymously = false;
                     this.error = '';
+
+                    // Spend the same credential on a real session, so they end up
+                    // signed in rather than merely identified for this one review.
+                    await this.signInWithGoogle();
                 },
 
+                /*
+                | Turn the Google credential into a customer session.
+                |
+                | The review is never held hostage to this: if it fails for any
+                | reason the credential still travels with the review and still
+                | verifies server-side, exactly as it did before sign-in existed.
+                */
+                async signInWithGoogle() {
+                    if (!this.googleCredential) return;
+
+                    this.signingIn = true;
+                    try {
+                        const res = await fetch('{{ route('auth.google') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken(),
+                            },
+                            body: JSON.stringify({
+                                credential: this.googleCredential,
+                                // This device's push address, when it already has
+                                // one. Sent so the shop's confirmed / cancelled /
+                                // your-turn notifications reach the new account.
+                                fcm_token: window.__fcmToken || null,
+                            }),
+                        });
+                        /*
+                        | Read the body as text first.
+                        |
+                        | A 419 (expired session) or a 500 comes back as an HTML
+                        | error page, and res.json() throws on it — which used to
+                        | surface as the same vague message as everything else,
+                        | hiding the status code that actually explains it.
+                        */
+                        const raw = await res.text();
+                        let data = null;
+                        try { data = JSON.parse(raw); } catch (e) { /* not JSON — handled below */ }
+
+                        if (!data) {
+                            console.error('GOOGLE SIGN-IN: non-JSON response', res.status, raw.slice(0, 500));
+                            this.error = res.status === 419
+                                ? 'Your session expired. Please refresh the page and try again.'
+                                : 'Sign-in failed (error ' + res.status + '). You can still post this review.';
+                            return;
+                        }
+
+                        if (!res.ok || !data.success) {
+                            console.error('GOOGLE SIGN-IN: rejected', res.status, data);
+                            this.error = data.message
+                                || 'We could not sign you in, but you can still post this review.';
+                            return;
+                        }
+
+                        /*
+                        | Signing in rotates the session id, and Laravel rotates
+                        | the CSRF token with it. The page is still holding the
+                        | old one, so swap it in or the very next POST — this
+                        | review, or a booking — comes back 419 Page Expired.
+                        */
+                        if (data.csrf_token) this.applyCsrfToken(data.csrf_token);
+
+                        this.signedIn = true;
+                        this.account = data.user;
+                        this.googleUser = data.user;
+                        this.name = data.user.name || this.name;
+                        if (data.user.phone) this.phone = data.user.phone;
+                        this.error = '';
+
+                        /*
+                        | Re-run the silent FCM registration against the account
+                        | we just signed into. Covers the case where the token
+                        | had not arrived yet when they clicked: without this it
+                        | would stay parked on the guest session until reload.
+                        */
+                        if (typeof window.__registerFcmTokenSilently === 'function') {
+                            window.__registerFcmTokenSilently();
+                        }
+
+                        window.dispatchEvent(new CustomEvent('toast', {
+                            detail: { message: data.message, type: 'success' }
+                        }));
+                    } catch (e) {
+                        console.error('GOOGLE SIGN-IN ERROR', e);
+                        this.error = 'We could not sign you in, but you can still post this review.';
+                    } finally {
+                        this.signingIn = false;
+                    }
+                },
+
+                /*
+                | Drop the identity from this review only.
+                |
+                | A signed-in reviewer stays signed in — this is not a logout. It
+                | sets the anonymous flag so the server ignores the session
+                | identity it would otherwise stamp on the review.
+                */
                 signOutGoogle() {
-                    this.googleUser = null;
-                    this.googleCredential = null;
-                    this.name = '';
                     if (window.google?.accounts?.id) {
                         window.google.accounts.id.disableAutoSelect();
                     }
+                    if (this.signedIn) {
+                        this.postAnonymously = true;
+                    }
+                    this.googleUser = null;
+                    this.googleCredential = null;
+                    this.name = '';
+                },
+
+                // Undo the above — post as themselves again.
+                useAccountIdentity() {
+                    if (!this.account) return;
+                    this.postAnonymously = false;
+                    this.googleUser = this.account;
+                    this.name = this.account.name || '';
+                    if (this.account.phone) this.phone = this.account.phone;
+                },
+
+                csrfToken() {
+                    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                },
+
+                // Keep every CSRF holder on the page in step with a rotated token:
+                // the meta tag AJAX reads, and the hidden field in every form.
+                applyCsrfToken(token) {
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    if (meta) meta.setAttribute('content', token);
+                    document.querySelectorAll('input[name="_token"]').forEach(i => { i.value = token; });
                 },
 
                 decodeJwt(token) {
@@ -1013,20 +2093,52 @@
                     this.rating = 0;
                     this.hoverRating = 0;
                     this.comment = '';
+                    this.selectedSuggestion = null;
+                    this.commentFlash = false;
                     if (!this.googleUser) this.name = '';
-                    this.phone = '';
+                    // Keep the number that came off their account; only a typed
+                    // one is cleared.
+                    this.phone = (this.googleUser && this.account?.phone) ? this.account.phone : '';
                     this.previews.forEach(URL.revokeObjectURL);
                     this.images = [];
                     this.previews = [];
                 },
 
                 ratingCount(n) {
-                    return this.reviews.filter(r => r.rating === n).length;
+                    // Server-computed totals — not derived from the 5 loaded reviews.
+                    return this.ratingCounts[n] ?? 0;
                 },
 
                 ratingPercent(n) {
                     if (this.reviewsCount === 0) return 0;
                     return Math.round((this.ratingCount(n) / this.reviewsCount) * 100);
+                },
+
+                // Toggle a star-rating filter and fetch the matching reviews (max 5).
+                async filterByRating(n) {
+                    this.activeRating = (this.activeRating === n) ? 0 : n;
+                    await this.loadReviews();
+                },
+
+                // Reset to the latest reviews.
+                showLatest() {
+                    if (this.activeRating === 0) return;
+                    this.activeRating = 0;
+                    this.loadReviews();
+                },
+
+                async loadReviews() {
+                    this.loadingReviews = true;
+                    try {
+                        const url = new URL('{{ route('vendor.reviews.list', $vendor->slug) }}', window.location.origin);
+                        if (this.activeRating) url.searchParams.set('rating', this.activeRating);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        this.reviews = data.reviews || [];
+                    } catch (e) {
+                        console.error('LOAD REVIEWS ERROR', e);
+                    }
+                    this.loadingReviews = false;
                 },
 
                 async submit() {
@@ -1043,6 +2155,8 @@
                     if (this.phone) form.append('reviewer_phone', this.phone);
                     if (this.comment) form.append('comment', this.comment);
                     if (this.googleCredential) form.append('google_credential', this.googleCredential);
+                    // Signed in, but they chose to stay unnamed on this one.
+                    if (this.postAnonymously) form.append('anonymous', '1');
                     this.images.forEach(file => form.append('images[]', file));
 
                     this.submitting = true;
@@ -1051,17 +2165,22 @@
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                // Read live: signing in rotates this token.
+                                'X-CSRF-TOKEN': this.csrfToken()
                             },
                             body: form
                         });
                         const data = await res.json();
                         if (res.ok && data.success) {
-                            this.reviews.unshift(data.review);
                             this.averageRating = data.average_rating;
                             this.reviewsCount = data.reviews_count;
+                            // Reflect the new review in the breakdown bars, then refresh
+                            // the visible list (respecting any active star filter).
+                            const rk = String(this.rating);
+                            this.ratingCounts[rk] = (this.ratingCounts[rk] || 0) + 1;
                             this.showModal = false;
                             this.resetForm();
+                            await this.loadReviews();
                             window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.message, type: 'success' } }));
                         } else {
                             this.error = (data.errors ? Object.values(data.errors)[0][0] : null) || data.message || 'Could not post review';

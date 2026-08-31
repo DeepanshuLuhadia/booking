@@ -46,6 +46,11 @@
 
                     <div class="flex gap-4">
                         <a href="{{ route('vendor.employees.edit', $employee) }}" class="flex-grow h-14 bg-white/5 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center italic text-center px-2">Modify Protocol</a>
+                        @if($employee->qr_code_path)
+                            <a href="{{ asset('storage/' . $employee->qr_code_path) }}" download="qr-{{ $employee->slug }}.svg" title="Download QR Code" class="w-14 h-14 bg-sky-500/20 text-sky-300 rounded-xl hover:bg-sky-500/30 transition-all flex items-center justify-center border border-sky-500/30">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2a2 2 0 002-2v-5a2 2 0 00-2-2H4a2 2 0 00-2 2v5a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            </a>
+                        @endif
                         <form action="{{ route('vendor.employees.destroy', $employee) }}" method="POST" onsubmit="return confirm('Decommission specialist?')">
                             @csrf @method('DELETE')
                             <button class="w-14 h-14 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all flex items-center justify-center border border-rose-100">

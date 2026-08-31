@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 420" width="1440" height="420" preserveAspectRatio="xMidYMax slice" role="presentation" aria-hidden="true">
+  <!--
+    Decorative crowd of professional silhouettes used behind the landing-page
+    hero search console. Two body shapes repeated at varying scale so the row
+    reads as a crowd rather than a pattern. Everything fades out toward the top
+    (vertical gradient fill) and toward the left/right edges (luminance mask),
+    so the artwork blends into the deep-navy hero background with no hard seam.
+  -->
+  <defs>
+    <!-- Vertical fade: nearly invisible at shoulder height, solid at the base. -->
+    <linearGradient id="bodyFill" gradientUnits="userSpaceOnUse" x1="0" y1="200" x2="0" y2="420">
+      <stop offset="0" stop-color="#3a4a86" stop-opacity="0.58"/>
+      <stop offset="0.5" stop-color="#1f2a58" stop-opacity="0.82"/>
+      <stop offset="1" stop-color="#0b1230" stop-opacity="0.98"/>
+    </linearGradient>
+
+    <!-- Horizontal edge fade, applied as a mask so the crowd dissolves sideways. -->
+    <linearGradient id="edgeMask" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1440" y2="0">
+      <stop offset="0" stop-color="#000000"/>
+      <stop offset="0.16" stop-color="#ffffff"/>
+      <stop offset="0.84" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+
+    <mask id="edgeFade">
+      <rect x="0" y="0" width="1440" height="420" fill="url(#edgeMask)"/>
+    </mask>
+
+    <!-- Figure A: narrower shoulders. Baseline sits at y=0 so instances are
+         simply translated to the artboard floor. -->
+    <g id="figA">
+      <circle cx="0" cy="-152" r="33"/>
+      <path d="M-64 0 V-86 C-64 -120 -36 -138 0 -138 C36 -138 64 -120 64 -86 V0 Z"/>
+    </g>
+
+    <!-- Figure B: broader, slightly squarer shoulders (coat/jacket silhouette). -->
+    <g id="figB">
+      <circle cx="0" cy="-148" r="31"/>
+      <path d="M-73 0 V-78 C-73 -117 -41 -134 0 -134 C41 -134 73 -117 73 -78 V0 Z"/>
+    </g>
+  </defs>
+
+  <g mask="url(#edgeFade)" fill="url(#bodyFill)">
+    <use href="#figA" transform="translate(58,420) scale(0.80)"/>
+    <use href="#figB" transform="translate(172,420) scale(0.92)"/>
+    <use href="#figA" transform="translate(284,420) scale(0.84)"/>
+    <use href="#figB" transform="translate(398,420) scale(1.00)"/>
+    <use href="#figA" transform="translate(508,420) scale(0.88)"/>
+    <use href="#figB" transform="translate(622,420) scale(0.96)"/>
+    <use href="#figA" transform="translate(736,420) scale(0.82)"/>
+    <use href="#figB" transform="translate(848,420) scale(1.00)"/>
+    <use href="#figA" transform="translate(962,420) scale(0.88)"/>
+    <use href="#figB" transform="translate(1076,420) scale(0.94)"/>
+    <use href="#figA" transform="translate(1188,420) scale(0.84)"/>
+    <use href="#figB" transform="translate(1300,420) scale(0.96)"/>
+    <use href="#figA" transform="translate(1398,420) scale(0.80)"/>
+  </g>
+</svg>

@@ -2,7 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Booking;
+use App\Models\Employee;
+use App\Models\Vendor;
+use App\Services\BookingNotifier;
+use App\Services\ShiftService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class ResetDailyTokens extends Command
 {
@@ -18,59 +24,170 @@ class ResetDailyTokens extends Command
      *
      * @var string
      */
-    protected $description = 'Reset vendor tokens and expire uncompleted bookings daily';
+    protected $description = 'Return every closed shop to a clean queue: tokens back to 0, pauses cleared, leftover bookings expired';
 
     /**
      * Execute the console command.
+     *
+     * Runs continuously (every minute) rather than once at midnight. Midnight
+     * is the wrong moment for two reasons: a shop trading 22:00 → 02:00 was
+     * having its queue wiped halfway through the night's service, and a shop
+     * that shut at 8 PM carried a stale "now serving #14" for four more hours.
+     *
+     * The rule is simply: a shop that is not currently trading has no queue.
+     * Its token counter reads 0, nobody is paused, and any booking left
+     * standing on a shift that has already finished is expired. So whenever a
+     * shop opens again, everything starts from zero — in both token mode and
+     * time-slot mode.
      */
-    public function handle()
+    public function handle(ShiftService $shifts)
     {
         $now = now();
-        $nowTime = $now->format('H:i:s');
 
-        $this->info('Resetting daily queue counters...');
+        $tokensReset   = 0;
+        $pausesCleared = 0;
+        $expired       = 0;
+        $shopsReset    = 0;
 
-        // Reset token counter for ALL employees (new day = fresh queue)
-        \App\Models\Employee::query()->update(['now_serving_token' => 0]);
-        $this->info('Employee token counters reset to 0.');
-
-        // Only reset bookings_paused for vendors NOT currently in their operating window.
-        // A vendor open 11 PM → 2 AM should NOT have their pause flag cleared mid-shift.
-        $vendorsToClearPause = \App\Models\Vendor::whereNotNull('global_opening_time')
-            ->whereNotNull('global_closing_time')
+        // Every business date still holding a live booking, for every vendor,
+        // in one query — this command runs each minute, so the per-vendor
+        // lookup it replaces would have been 1 query per shop per minute.
+        $datesByVendor = Booking::whereIn('status', ['pending', 'confirmed'])
+            ->select('vendor_id', 'booking_date')
+            ->distinct()
             ->get()
-            ->filter(function ($vendor) use ($nowTime) {
-                $open  = $vendor->global_opening_time;
-                $close = $vendor->global_closing_time;
-                // Is vendor currently in their operating window?
-                if ($open < $close) {
-                    $inWindow = ($nowTime >= $open && $nowTime <= $close);
-                } else {
-                    // Midnight-crossing window (e.g. 22:00 → 02:00)
-                    $inWindow = ($nowTime >= $open || $nowTime <= $close);
-                }
-                // Only clear pause if they are NOT currently in an active window
-                return !$inWindow;
-            })
-            ->pluck('id');
+            ->groupBy('vendor_id')
+            ->map(fn ($rows) => $rows->pluck('booking_date')->all());
 
-        if ($vendorsToClearPause->isNotEmpty()) {
-            \App\Models\Vendor::whereIn('id', $vendorsToClearPause)
-                ->update(['bookings_paused' => false]);
-            $this->info("Cleared pause state for {$vendorsToClearPause->count()} vendors outside their operating hours.");
+        // Shops carrying queue state worth clearing. Without this the steady
+        // state — every shop shut, nothing to do — would still fire two UPDATEs
+        // per shop per minute for no rows.
+        $dirtyVendorIds = Employee::query()
+            ->where(function ($q) {
+                $q->where('now_serving_token', '>', 0)->orWhere('is_paused', true);
+            })
+            ->distinct()
+            ->pluck('vendor_id')
+            ->flip();
+
+        Vendor::query()->chunkById(100, function ($vendors) use (
+            $shifts, $now, $datesByVendor, $dirtyVendorIds, &$tokensReset, &$pausesCleared, &$expired, &$shopsReset
+        ) {
+            foreach ($vendors as $vendor) {
+                // Leftovers are expired for open and closed shops alike — an
+                // open shop can still be carrying yesterday's no-shows.
+                $expired += $this->expireFinishedShifts(
+                    $vendor,
+                    $datesByVendor->get($vendor->id, []),
+                    $shifts,
+                    $now
+                );
+
+                if (!$shifts->isShiftOver($vendor, $now)) {
+                    continue; // Mid-shift (or inside the post-close grace): leave the queue alone.
+                }
+
+                $shopReset = false;
+
+                if ($dirtyVendorIds->has($vendor->id)) {
+                    // Token counters back to their default.
+                    $dirtyTokens = Employee::where('vendor_id', $vendor->id)
+                        ->where('now_serving_token', '>', 0)
+                        ->update(['now_serving_token' => 0]);
+
+                    if ($dirtyTokens) {
+                        $tokensReset += $dirtyTokens;
+                        $shopReset = true;
+                    }
+
+                    // A pause is a "not right now" for the shift it was set in;
+                    // it must not silently carry into the next opening.
+                    $dirtyPauses = Employee::where('vendor_id', $vendor->id)
+                        ->where('is_paused', true)
+                        ->update(['is_paused' => false]);
+
+                    if ($dirtyPauses) {
+                        $pausesCleared += $dirtyPauses;
+                        $shopReset = true;
+                    }
+                }
+
+                if ($vendor->bookings_paused) {
+                    $vendor->updateQuietly(['bookings_paused' => false]);
+                    $shopReset = true;
+                }
+
+                if ($shopReset) {
+                    $shopsReset++;
+
+                    // Counters back at zero and pauses cleared: any page still
+                    // open on this shop is showing last night's queue until it
+                    // hears about it.
+                    app(BookingNotifier::class)->shopStatusChanged($vendor, 'reset');
+                }
+            }
+        });
+
+        if ($tokensReset || $expired || $pausesCleared) {
+            // The listing caches a 60-second candidate set that carries the
+            // live queue count with it; drop it so the reset shows immediately.
+            Cache::forget('default_discovery_candidates');
         }
 
-        // NOTE: is_open is intentionally NOT reset here.
-        // It is the vendor's own intent flag (Open/Pause/Close buttons on dashboard).
-        // A vendor working a night shift (e.g. 10 PM → 3 AM) should remain is_open=true
-        // across midnight. Vendors must explicitly close their shop via the dashboard.
+        $this->info("Queues reset for {$shopsReset} closed shop(s): {$tokensReset} token counter(s), {$pausesCleared} pause flag(s).");
+        $this->info("Expired {$expired} booking(s) left over from finished shifts.");
 
-        $this->info('Expiring uncompleted old bookings...');
-        $affected = \App\Models\Booking::where('booking_date', '<', $now->toDateString())
+        return self::SUCCESS;
+    }
+
+    /**
+     * Expire bookings still sitting on a shift whose window has already closed.
+     *
+     * $dates are this vendor's business dates that still hold a live booking,
+     * pre-fetched by the caller. Each is resolved through the vendor's own
+     * hours, so an overnight sheet is only expired once its night has actually
+     * finished — never at midnight, halfway through it.
+     */
+    private function expireFinishedShifts(Vendor $vendor, array $dates, ShiftService $shifts, $now): int
+    {
+        if (empty($dates)) {
+            return 0;
+        }
+
+        $finished = collect($dates)
+            ->map(fn ($date) => \Carbon\Carbon::parse($date)->toDateString())
+            ->filter(function ($date) use ($vendor, $shifts, $now) {
+                $end = $shifts->shiftEndFor($vendor, $date)
+                    ->addMinutes(ShiftService::CLOSE_GRACE_MINUTES);
+
+                return $now->gt($end);
+            })
+            ->values();
+
+        if ($finished->isEmpty()) {
+            return 0;
+        }
+
+        // Read the rows before expiring them: once the UPDATE lands there is no
+        // way to tell which bookings were affected, and these customers are
+        // owed a notification — their appointment ended without ever happening.
+        $bookings = Booking::where('vendor_id', $vendor->id)
             ->whereIn('status', ['pending', 'confirmed'])
-            ->update(['status' => 'expired']);
+            ->whereIn('booking_date', $finished->all())
+            ->with(['employee.vendor', 'vendor'])
+            ->get();
 
-        $this->info("Expired {$affected} bookings.");
-        $this->info('Daily reset complete.');
+        if ($bookings->isEmpty()) {
+            return 0;
+        }
+
+        Booking::whereIn('id', $bookings->pluck('id'))->update(['status' => 'expired']);
+
+        // Re-read so the broadcast payload carries 'expired', not the stale status.
+        $bookings->each->refresh();
+
+        app(BookingNotifier::class)->expired($bookings);
+
+        return $bookings->count();
     }
 }

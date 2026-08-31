@@ -16,9 +16,14 @@ class CustomerRegistrationController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'mobile' => 'required|string|max:15|unique:users',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            // Both columns, for the same reason as the vendor form: a number
+            // already answering for a business cannot also be a customer's.
+            'mobile' => 'required|string|max:15|unique:users,mobile|unique:vendors,contact_number',
             'password' => 'required|string|min:8|confirmed',
+        ], [
+            'email.unique'  => 'That email address is already registered. Please sign in instead.',
+            'mobile.unique' => 'That mobile number is already registered with us.',
         ]);
 
         $user = \App\Models\User::create([
@@ -30,7 +35,10 @@ class CustomerRegistrationController extends Controller
             'status' => 'active',
         ]);
 
-        \Illuminate\Support\Facades\Auth::login($user);
+        // Registered with a password of their own choosing.
+        $user->forceFill(['password_set_at' => now()])->save();
+
+        \Illuminate\Support\Facades\Auth::login($user, true);
 
         return redirect('/')->with('success', 'Registration successful!');
     }

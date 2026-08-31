@@ -30,9 +30,14 @@ return [
     | to expire immediately when the browser is closed then you may
     | indicate that via the expire_on_close configuration option.
     |
+    | A signed-in user should only ever be signed out by pressing Logout, so
+    | the default here is five years rather than the framework's two hours.
+    | Every login also sets the "remember me" cookie (see SessionController),
+    | which restores the session even if this cookie is somehow lost.
+    |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    'lifetime' => (int) env('SESSION_LIFETIME', 2628000),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

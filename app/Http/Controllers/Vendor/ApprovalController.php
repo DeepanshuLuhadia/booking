@@ -7,32 +7,44 @@ use App\Http\Controllers\Controller;
 class ApprovalController extends Controller
 {
     /**
-     * "Approval pending" holding screen for vendors awaiting admin confirmation.
-     *
-     * This gate only applies while OTP verification is disabled — in that mode
-     * admin approval replaces OTP as the entry check for the vendor panel. Once
-     * the admin approves the vendor (status 'active') they are sent on to the
-     * dashboard.
+     * Holding screen for vendors & employees when vendor account is pending, rejected, or suspended.
      */
     public function pending()
     {
         $user = auth()->user();
 
-        // Only vendors have an approval flow; send everyone else to their place.
-        if (!$user->isVendor()) {
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        $vendor = null;
+        $isEmployee = false;
+
+        if ($user->isVendor()) {
+            $vendor = $user->vendor;
+        } elseif ($user->isEmployee()) {
+            $isEmployee = true;
+            $vendor = $user->employee?->vendor;
+        } else {
             return redirect('/');
         }
 
-        $vendor = $user->vendor;
-
-        // If OTP is the active gate, or the vendor is already approved, there is
-        // nothing to wait for — hand them back to the panel.
-        if (config('otp.enabled') || ($vendor && $vendor->status === 'active')) {
-            return redirect()->route('vendor.dashboard');
+        // If the vendor account is active, send vendor/employee to their respective dashboard
+        if ($vendor && $vendor->status === 'active') {
+            if ($user->isVendor()) {
+                return redirect()->route('vendor.dashboard');
+            } elseif ($user->isEmployee()) {
+                return redirect()->route('employee.dashboard');
+            }
         }
+
+        $status = $vendor ? $vendor->status : 'pending';
 
         return view('vendor.approval-pending', [
             'vendor'      => $vendor,
+            'status'      => $status,
+            'isEmployee'  => $isEmployee,
+            'user'        => $user,
             'adminEmail'  => config('support.admin_email'),
             'adminPhone'  => config('support.admin_phone'),
         ]);

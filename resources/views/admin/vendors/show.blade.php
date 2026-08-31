@@ -154,6 +154,113 @@
             </div>
         @endif
 
+        <!-- Bookings — this shop's full history, paginated -->
+        <div class="glass-card overflow-hidden" id="bookings">
+            <div class="p-6 border-b border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-black text-white">Bookings</h3>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                        {{ number_format($bookings->total()) }}
+                        {{ $bookingStatus === 'all' ? 'total' : $statuses[$bookingStatus] }}
+                        {{ Str::plural('booking', $bookings->total()) }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    {{-- Status filter. Keeps the anchor so the page lands back on
+                         the table instead of the top of the vendor profile. --}}
+                    <form method="GET" action="{{ route('admin.vendors.show', $vendor) }}#bookings" class="m-0">
+                        <select name="booking_status" onchange="this.form.submit()"
+                                class="h-11 pl-4 pr-9 rounded-xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest focus:border-blue-600 focus:outline-none">
+                            @foreach($statuses as $key => $label)
+                                <option value="{{ $key }}" class="bg-slate-900" @selected($bookingStatus === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                    <a href="{{ route('admin.bookings.index', ['vendor' => $vendor->id]) }}"
+                       class="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors whitespace-nowrap">
+                        Open in All Bookings →
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive-wrapper">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-white/10 bg-white/5/50">
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Date</th>
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Customer</th>
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hidden md:table-cell">Specialist</th>
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">Slot</th>
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hidden lg:table-cell">Source</th>
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                            <th class="p-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Paid</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($bookings as $booking)
+                            <tr class="border-b border-white/10 hover:bg-white/5/30 transition-all">
+                                <td class="p-4">
+                                    <div class="text-xs font-black text-white">{{ $booking->appointment_date_label }}</div>
+                                    @if($booking->token_number)
+                                        <div class="text-[10px] text-blue-400 font-black mt-0.5">Token #{{ $booking->token_number }}</div>
+                                    @endif
+                                </td>
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-200 text-xs uppercase">{{ $booking->customer_name }}</div>
+                                    <div class="text-[10px] text-slate-400 font-bold mt-0.5">{{ $booking->customer_phone }}</div>
+                                </td>
+                                <td class="p-4 hidden md:table-cell">
+                                    <span class="font-bold text-slate-300 text-xs uppercase">{{ $booking->employee?->name ?? '—' }}</span>
+                                </td>
+                                <td class="p-4 hidden sm:table-cell">
+                                    <span class="text-[11px] text-slate-300 font-bold whitespace-nowrap">
+                                        {{ $booking->appointment_at?->format('h:i A') ?? $booking->slot_start_time }}
+                                        –
+                                        {{ $booking->appointment_end_at?->format('h:i A') ?? $booking->slot_end_time }}
+                                    </span>
+                                </td>
+                                <td class="p-4 hidden lg:table-cell">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        {{ $booking->vendor_booked ? 'Walk-in' : ucfirst($booking->booking_type ?? 'online') }}
+                                    </span>
+                                </td>
+                                <td class="p-4">
+                                    @php
+                                        $color = match($booking->status) {
+                                            'confirmed' => 'bg-emerald-500/15 text-emerald-300',
+                                            'completed' => 'bg-blue-500/15 text-blue-300',
+                                            'cancelled' => 'bg-rose-500/15 text-rose-300',
+                                            'skipped'   => 'bg-amber-500/15 text-amber-300',
+                                            default     => 'bg-white/5 text-slate-400',
+                                        };
+                                    @endphp
+                                    <span class="px-3 py-1.5 {{ $color }} rounded-lg text-[9px] font-black uppercase tracking-widest">{{ $booking->status }}</span>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <span class="text-xs font-black text-white">₹{{ number_format((float) $booking->online_paid_amount, 2) }}</span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="p-16 text-center">
+                                    <div class="flex flex-col items-center opacity-20">
+                                        <svg class="h-12 w-12 mb-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        <p class="text-xs font-black uppercase tracking-widest text-slate-400">
+                                            {{ $bookingStatus === 'all' ? 'No bookings yet' : 'No ' . $statuses[$bookingStatus] . ' bookings' }}
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <x-admin-pagination :paginator="$bookings" label="bookings" />
+        </div>
+
         <!-- Recent Settlements -->
         @if($vendor->settlements->count() > 0)
             <div class="glass-card overflow-hidden">

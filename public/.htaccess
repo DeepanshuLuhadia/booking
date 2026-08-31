@@ -3,6 +3,31 @@
     AddType application/manifest+json .webmanifest
 </IfModule>
 
+# Upload limits for payment-proof screenshots, for the mod_php case.
+#
+# PHP rejects an oversized upload before any application code runs, so without
+# this a 10MB screenshot is discarded by the server and Laravel receives an
+# empty request — the customer sees an error for a photo they did attach.
+#
+# Guarded by <IfModule>: php_value is a fatal "Internal Server Error" on a
+# server running PHP-FPM rather than mod_php. FPM reads public/.user.ini
+# instead, which carries the same two values.
+<IfModule mod_php.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+    php_value memory_limit 256M
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+    php_value memory_limit 256M
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+    php_value memory_limit 256M
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

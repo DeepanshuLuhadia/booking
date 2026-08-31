@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vendor;
+use App\Services\BookingReportService;
 use Illuminate\Http\Request;
 
 class VendorController extends Controller
@@ -15,19 +16,53 @@ class VendorController extends Controller
         $vendors = Vendor::with('user', 'subscriptionPlan')
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->latest()
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         $pendingCount = Vendor::where('status', 'pending')->count();
 
         return view('admin.vendors.index', compact('vendors', 'status', 'pendingCount'));
     }
 
-    public function show(Vendor $vendor)
+    public function show(Request $request, Vendor $vendor)
     {
         $vendor->load(['user', 'subscriptionPlan', 'employees', 'settlements' => function($query) {
             $query->latest()->limit(5);
         }]);
-        return view('admin.vendors.show', compact('vendor'));
+
+        $bookingStatus = (string) $request->query('booking_status', 'all');
+
+        if (!\array_key_exists($bookingStatus, BookingReportService::STATUSES)) {
+            $bookingStatus = 'all';
+        }
+
+        // This shop's bookings, newest first. Always paginated — an established
+        // shop's history is thousands of rows, and this page carries the whole
+        // vendor profile above it.
+        //
+        // `bookings` as the page name keeps the URL self-describing and leaves
+        // the plain `page` key free for anything else added to this page later.
+        $bookings = $vendor->bookings()
+            ->with('employee')
+            ->when($bookingStatus !== 'all', fn ($q) => $q->where('status', $bookingStatus))
+            ->orderByDesc('booking_date')
+            ->orderByDesc('slot_start_time')
+            ->orderByDesc('id')
+            ->paginate(15, ['*'], 'bookings')
+            ->withQueryString()
+            ->fragment('bookings');
+
+        // The appointment_at accessor reads the shop's opening time to place
+        // after-midnight slots; handing each row the vendor we already have
+        // avoids one lazy load per booking.
+        $bookings->getCollection()->each(fn ($booking) => $booking->setRelation('vendor', $vendor));
+
+        return view('admin.vendors.show', [
+            'vendor'        => $vendor,
+            'bookings'      => $bookings,
+            'bookingStatus' => $bookingStatus,
+            'statuses'      => BookingReportService::STATUSES,
+        ]);
     }
 
     public function update(Request $request, Vendor $vendor)
