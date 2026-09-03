@@ -527,8 +527,8 @@
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: rgba(var(--rgb), 0.06);
+            border: 2px solid rgba(var(--rgb), 0.35);
             border-radius: 999px;
             padding: 7px 16px 7px 7px;
             text-decoration: none;
@@ -537,16 +537,16 @@
         }
 
         .bv-cat-pill:hover {
-            background: rgba(var(--cr), var(--cg), var(--cb), 0.15);
-            border-color: rgba(var(--cr), var(--cg), var(--cb), 0.5);
+            background: rgba(var(--rgb), 0.15);
+            border-color: rgba(var(--rgb), 0.5);
             transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(var(--cr), var(--cg), var(--cb), 0.25);
+            box-shadow: 0 6px 18px rgba(var(--rgb), 0.25);
         }
 
         .bv-cat-pill.active {
-            background: rgba(var(--cr), var(--cg), var(--cb), 0.18);
-            border-color: rgba(var(--cr), var(--cg), var(--cb), 0.75);
-            box-shadow: 0 0 0 3px rgba(var(--cr), var(--cg), var(--cb), 0.18), 0 6px 20px rgba(var(--cr), var(--cg), var(--cb), .3);
+            background: rgba(var(--rgb), 0.18);
+            border-color: rgba(var(--rgb), 0.75);
+            box-shadow: 0 0 0 3px rgba(var(--rgb), 0.18), 0 6px 20px rgba(var(--rgb), .3);
         }
 
         .bv-cat-icon {
@@ -577,7 +577,7 @@
             font-size: 10px;
             line-height: 1.3;
             margin-top: 2px;
-            color: rgba(var(--cr), var(--cg), var(--cb), 0.9);
+            color: rgba(var(--rgb), 0.9);
         }
         /* Desktop container visible on desktop, hidden on mobile */
         .bv-cat-desktop-wrap {
@@ -633,8 +633,8 @@
                 align-items: center;
                 justify-content: center;
                 gap: 8px;
-                background: rgba(255, 255, 255, 0.05);
-                border: 2px solid rgba(255, 255, 255, 0.1);
+                background: rgba(var(--rgb), 0.06);
+                border: 2px solid rgba(var(--rgb), 0.35);
                 border-radius: 18px;
                 padding: 14px 6px;
                 text-decoration: none;
@@ -656,9 +656,9 @@
             }
 
             .bv-cat-mobile-pill.active {
-                background: rgba(var(--cr), var(--cg), var(--cb), 0.15);
-                border-color: rgba(var(--cr), var(--cg), var(--cb), 0.75);
-                box-shadow: 0 0 0 3px rgba(var(--cr), var(--cg), var(--cb), 0.15), 0 8px 25px rgba(var(--cr), var(--cg), var(--cb), 0.35);
+                background: rgba(var(--rgb), 0.15);
+                border-color: rgba(var(--rgb), 0.75);
+                box-shadow: 0 0 0 3px rgba(var(--rgb), 0.15), 0 8px 25px rgba(var(--rgb), 0.35);
             }
 
             .bv-cat-mobile-icon {
@@ -931,8 +931,8 @@
 
         .bv-hcard:hover {
             transform: translateY(-4px);
-            box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(var(--cr),var(--cg),var(--cb),0.35);
-            border-color: rgba(var(--cr),var(--cg),var(--cb),0.45);
+            box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(var(--rgb),0.35);
+            border-color: rgba(var(--rgb),0.45);
         }
 
         /* Left pane — image */
@@ -1010,9 +1010,9 @@
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: .14em;
-            color: rgba(var(--cr),var(--cg),var(--cb),0.9);
-            background: rgba(var(--cr),var(--cg),var(--cb),0.12);
-            border: 1px solid rgba(var(--cr),var(--cg),var(--cb),0.25);
+            color: rgba(var(--rgb),0.9);
+            background: rgba(var(--rgb),0.12);
+            border: 1px solid rgba(var(--rgb),0.25);
             padding: 3px 10px;
             border-radius: 999px;
         }
@@ -1086,11 +1086,11 @@
             margin-left: auto;
             font-size: 10px;
             font-weight: 800;
-            color: rgba(var(--cr),var(--cg),var(--cb),0.9);
+            color: rgba(var(--rgb),0.9);
             text-transform: uppercase;
             letter-spacing: .05em;
-            background: rgba(var(--cr),var(--cg),var(--cb),0.10);
-            border: 1px solid rgba(var(--cr),var(--cg),var(--cb),0.22);
+            background: rgba(var(--rgb),0.10);
+            border: 1px solid rgba(var(--rgb),0.22);
             padding: 3px 9px;
             border-radius: 999px;
         }
@@ -1159,13 +1159,13 @@
             background: linear-gradient(135deg, var(--c1, #ff6d00), var(--c2, #ffab40));
             border-radius: 14px;
             color: #fff;
-            box-shadow: 0 6px 18px rgba(var(--cr),var(--cg),var(--cb),0.45);
+            box-shadow: 0 6px 18px rgba(var(--rgb),0.45);
             transition: transform .2s, box-shadow .2s;
         }
 
         .bv-hcard:hover .bv-hcard-cta {
             transform: scale(1.12);
-            box-shadow: 0 8px 22px rgba(var(--cr),var(--cg),var(--cb),0.65);
+            box-shadow: 0 8px 22px rgba(var(--rgb),0.65);
         }
 
         /* ── Mobile: keep left-right split, narrow the image column ─────── */
@@ -1233,7 +1233,7 @@
                 height: 210px;
                 border-width: 2px;
                 border-radius: 14px;
-                box-shadow: 0 4px 16px rgba(var(--cr), var(--cg), var(--cb), 0.3);
+                box-shadow: 0 4px 16px rgba(var(--rgb), 0.3);
             }
             .bv-grid:not(.bv-list-mode) .bv-card-sports-overlay {
                 padding: 8px;
@@ -1465,7 +1465,7 @@
         /* 1. Barber Card */
         .bv-card-barber {
             height: 380px;
-            border: 1px solid rgba(var(--cr), var(--cg), var(--cb), 0.25);
+            border: 1px solid rgba(var(--rgb), 0.25);
             background: rgba(10, 15, 30, 0.7);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
@@ -1475,8 +1475,8 @@
 
         .bv-card-barber:hover {
             transform: translateY(-8px) scale(1.02);
-            border-color: rgba(var(--cr), var(--cg), var(--cb), 0.6);
-            box-shadow: inset 0 0 20px rgba(var(--cr), var(--cg), var(--cb), 0.15), 0 15px 40px rgba(var(--cr), var(--cg), var(--cb), 0.3);
+            border-color: rgba(var(--rgb), 0.6);
+            box-shadow: inset 0 0 20px rgba(var(--rgb), 0.15), 0 15px 40px rgba(var(--rgb), 0.3);
         }
 
         .bv-card-barber-img-wrap {
@@ -1539,7 +1539,7 @@
         /* 2. Consultant Card */
         .bv-card-consultant {
             height: 380px;
-            border: 1px solid rgba(var(--cr), var(--cg), var(--cb), 0.25);
+            border: 1px solid rgba(var(--rgb), 0.25);
             background: rgba(14, 18, 40, 0.85);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
@@ -1549,8 +1549,8 @@
 
         .bv-card-consultant:hover {
             transform: translateY(-8px) scale(1.02);
-            border-color: rgba(var(--cr), var(--cg), var(--cb), 0.6);
-            box-shadow: 0 15px 40px rgba(var(--cr), var(--cg), var(--cb), 0.3);
+            border-color: rgba(var(--rgb), 0.6);
+            box-shadow: 0 15px 40px rgba(var(--rgb), 0.3);
         }
 
         .bv-card-consultant-img-wrap {
@@ -1600,15 +1600,15 @@
             height: 380px;
             padding: 0;
             overflow: hidden;
-            border: 4px solid rgba(var(--cr), var(--cg), var(--cb), 0.6);
-            box-shadow: 0 0 50px rgba(var(--cr), var(--cg), var(--cb), 0.4);
+            border: 4px solid rgba(var(--rgb), 0.6);
+            box-shadow: 0 0 50px rgba(var(--rgb), 0.4);
             background: #000;
         }
 
         .bv-card-sports:hover {
             transform: translateY(-8px);
-            border-color: rgba(var(--cr), var(--cg), var(--cb), 0.8);
-            box-shadow: 0 0 60px rgba(var(--cr), var(--cg), var(--cb), 0.5);
+            border-color: rgba(var(--rgb), 0.8);
+            box-shadow: 0 0 60px rgba(var(--rgb), 0.5);
         }
 
         .bv-card-sports img {
@@ -1643,7 +1643,7 @@
             height: 380px;
             background: linear-gradient(135deg, rgba(20, 30, 50, 0.9) 0%, rgba(10, 15, 30, 0.95) 100%);
             color: #f8fafc;
-            border: 1px solid rgba(var(--cr), var(--cg), var(--cb), 0.3);
+            border: 1px solid rgba(var(--rgb), 0.3);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             position: relative;
@@ -1654,7 +1654,7 @@
         .bv-card-doctor:hover {
             transform: translateY(-6px);
             border-color: var(--c1);
-            box-shadow: 0 12px 30px rgba(var(--cr), var(--cg), var(--cb), 0.25);
+            box-shadow: 0 12px 30px rgba(var(--rgb), 0.25);
         }
 
         .bv-card-doctor-img-wrap {
@@ -1701,7 +1701,7 @@
         /* 5. Training Card */
         .bv-card-training {
             height: 380px;
-            border: 1px solid rgba(var(--cr), var(--cg), var(--cb), 0.25);
+            border: 1px solid rgba(var(--rgb), 0.25);
             background: rgba(14, 18, 40, 0.85);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
@@ -1711,8 +1711,8 @@
 
         .bv-card-training:hover {
             transform: translateY(-8px) scale(1.02);
-            border-color: rgba(var(--cr), var(--cg), var(--cb), 0.6);
-            box-shadow: 0 15px 40px rgba(var(--cr), var(--cg), var(--cb), 0.3);
+            border-color: rgba(var(--rgb), 0.6);
+            box-shadow: 0 15px 40px rgba(var(--rgb), 0.3);
         }
 
         .bv-card-training-img-wrap {
@@ -1769,7 +1769,7 @@
         .bv-card-general:hover {
             transform: translateY(-5px);
             border-color: var(--c1);
-            box-shadow: 0 10px 30px rgba(var(--cr), var(--cg), var(--cb), 0.2);
+            box-shadow: 0 10px 30px rgba(var(--rgb), 0.2);
         }
 
         .bv-card-general img {

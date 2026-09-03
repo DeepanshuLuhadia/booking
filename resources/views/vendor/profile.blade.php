@@ -187,7 +187,7 @@
                                 @endphp
                                 <div id="field-vendor_type" class="relative field-anchor" x-data="{
                                     open: false,
-                                    selected: '{{ $vendor->vendor_type ?? 'doctor' }}',
+                                    selected: '{{ $vendor->vendor_type ?? 'health' }}',
                                     options: {{ Js::from($categoryOptions) }},
                                     get selectedLabel() {
                                         return this.options[this.selected]?.label || 'Select Category';

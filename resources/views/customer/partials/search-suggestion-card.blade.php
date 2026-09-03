@@ -8,38 +8,26 @@
 
      Expects $vendor and $allThemes. --}}
 @php
-    $sgType = $vendor->category?->slug ?? 'consultant';
-
-    $sgTheme = array_merge([
-        'primary'      => '#2979ff',
-        'primary_dark' => '#00b0ff',
-        'label'        => ucfirst($sgType),
-    ], $allThemes[$sgType] ?? ($allThemes['consultant'] ?? []));
+    $sgType = $vendor->category?->slug ?? $vendor->vendor_type ?? 'consultant';
+    $sgTheme = \App\Services\ThemeService::getTheme($sgType);
+    $sgKey   = $sgTheme['key'] ?? $sgType;
 
     $sgOpen = (bool) ($vendor->is_bookable_now ?? $vendor->isEffectivelyOpen()) && (bool) $vendor->is_open;
 
-    $sgRgb = match($sgType) {
-        'health','doctor'   => '0,200,83',
-        'beauty','barber'   => '255,109,0',
-        'sports','activity' => '255,214,0',
-        'consultant'        => '41,121,255',
-        'training'          => '124,58,237',
-        default             => '26,35,126'
+    $sgRgb = match($sgKey) {
+        'health'     => '0,200,83',
+        'beauty'     => '255,109,0',
+        'sports'     => '255,214,0',
+        'consultant' => '41,121,255',
+        'education'  => '124,58,237',
+        default      => '26,35,126'
     };
 
-    if ($vendor->shop_photo) {
-        $sgImg = asset('storage/' . $vendor->shop_photo);
-    } elseif (in_array($sgType, ['health','doctor'])) {
-        $sgImg = asset('images/placeholders/health.svg');
-    } elseif (in_array($sgType, ['beauty','barber'])) {
-        $sgImg = asset('images/placeholders/beauty.svg');
-    } elseif (in_array($sgType, ['sports','activity'])) {
-        $sgImg = asset('images/placeholders/sports.svg');
-    } elseif ($sgType === 'training') {
-        $sgImg = asset('images/placeholders/training.svg');
-    } else {
-        $sgImg = asset('images/placeholders/default.svg');
-    }
+    $sgImg = $vendor->shop_photo
+        ? asset('storage/' . $vendor->shop_photo)
+        : asset('images/placeholders/' . (
+            in_array($sgKey, ['health', 'beauty', 'sports', 'education']) ? $sgKey : 'default'
+        ) . '.svg');
 
     $sgAddress = trim((string) $vendor->address);
     $sgActive  = $vendor->isSubscriptionActive();

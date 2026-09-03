@@ -14,7 +14,9 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
         $vendor = $user->vendor;
-        $vendorCategories = \App\Models\VendorCategory::all();
+        $vendorCategories = \App\Models\VendorCategory::all()->unique(function ($cat) {
+            return \App\Services\ThemeService::getTheme($cat->slug)['key'] ?? $cat->slug;
+        });
 
         /*
         | Onboarding, staged — and this screen shows exactly one stage at a time.
@@ -187,6 +189,13 @@ class ProfileController extends Controller
         $data['address'] = trim((string) $request->input('address')) ?: null;
         $data['upi_id'] = trim((string) $request->input('upi_id')) ?: null;
         $data['upi_name'] = trim((string) $request->input('upi_name')) ?: null;
+
+        if ($request->filled('vendor_type')) {
+            $cat = \App\Models\VendorCategory::where('slug', $request->input('vendor_type'))->first();
+            if ($cat) {
+                $data['vendor_category_id'] = $cat->id;
+            }
+        }
 
 
         if ($request->hasFile('shop_photo')) {

@@ -11,7 +11,7 @@
          to run through whenRealtimeReady), so it hands the outcome over by event. --}}
     <div x-data="employeeBookingSystem()"
         @booking-closed.window="closedBooking = $event.detail"
-        class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['label'] ?? 'default')) }}">
+        class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['key'] ?? $theme['label'] ?? 'default')) }}">
 
         <!-- EMPLOYEE HEADER SECTION -->
         <section class="relative z-10 pt-28 pb-10 px-5 md:pt-32 md:pb-16 md:px-6">

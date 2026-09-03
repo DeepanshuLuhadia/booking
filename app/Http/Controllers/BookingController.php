@@ -423,12 +423,12 @@ class BookingController extends Controller
                     $greeting = 'Evening plans set! 🌙';
                 }
 
-                $cat = strtolower($vendor->category?->slug ?? '');
-                if (in_array($cat, ['salon', 'barber', 'beauty'])) {
+                $cat = strtolower($vendor->category?->slug ?? $vendor->vendor_type ?? '');
+                if ($cat === 'beauty') {
                     $title = "{$greeting} Your grooming appointment is confirmed. ✂️";
-                } elseif (in_array($cat, ['clinic', 'doctor', 'health'])) {
+                } elseif ($cat === 'health') {
                     $title = "{$greeting} Your checkup at {$vendor->business_name} is booked. 🩺";
-                } elseif (in_array($cat, ['sports', 'gym', 'turf'])) {
+                } elseif ($cat === 'sports') {
                     $title = "{$greeting} Game on! Your slot at {$vendor->business_name} is confirmed. ⚽";
                 } else {
                     $title = "{$greeting} Your slot with {$employee->name} is confirmed.";

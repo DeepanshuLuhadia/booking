@@ -51,7 +51,7 @@ class ReviewSuggestionService
         ];
 
         return match (true) {
-            in_array($cat, ['barber', 'salon', 'beauty']) => [
+            $cat === 'beauty' => [
                 'Amazing transformation! The stylist really understood what I wanted.',
                 'Perfect haircut and such a relaxing atmosphere. My new go-to place!',
                 'Top-notch grooming experience. Clean, professional, and friendly staff.',
@@ -60,7 +60,7 @@ class ReviewSuggestionService
                 'Beautiful results and excellent customer care. Highly recommend!',
                 'Flawless service. The ambiance is perfect and the staff are incredibly talented.'
             ],
-            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => [
+            $cat === 'health' => [
                 'Excellent doctor. Very thorough examination and clear explanations.',
                 'Minimal wait time and very caring staff. Best clinic experience ever.',
                 'Felt truly heard and well taken care of. Highly recommend this clinic.',
@@ -69,7 +69,7 @@ class ReviewSuggestionService
                 'Fast, efficient, and compassionate care. 10/10 recommendation.',
                 'The diagnosis and treatment plan were explained perfectly. Very reassuring.'
             ],
-            in_array($cat, ['sports', 'gym', 'fitness', 'turf']) => [
+            $cat === 'sports' => [
                 'Great facilities and well-maintained equipment. Worth every rupee!',
                 'Amazing sports experience! The booking was seamless and the venue is top-class.',
                 'Clean, professional, and the staff are very helpful. Will be back!',
@@ -78,7 +78,7 @@ class ReviewSuggestionService
                 'Extremely well managed sports facility. Booking was quick and easy.',
                 'Perfect venue for our game. The pitch quality was exceptional.'
             ],
-            in_array($cat, ['training', 'consultant', 'coaching']) => [
+            in_array($cat, ['education', 'consultant']) => [
                 'Incredibly knowledgeable trainer. Learned so much in just one session!',
                 'Expert guidance and personalised attention. Money well spent.',
                 'The consultation was thorough, practical, and truly eye-opening.',
@@ -94,7 +94,7 @@ class ReviewSuggestionService
     protected function fourStarSuggestions(string $cat): array
     {
         return match (true) {
-            in_array($cat, ['barber', 'salon', 'beauty']) => [
+            $cat === 'beauty' => [
                 'Really good service overall. Just a tiny bit of wait, but worth it.',
                 'Great styling work! The ambiance could be slightly better, but very happy.',
                 'Skilled professionals and fair pricing. Would recommend with confidence.',
@@ -102,7 +102,7 @@ class ReviewSuggestionService
                 'Nice salon and good staff. Will likely return for my next cut.',
                 'Solid experience. The service was good but lacked a bit of premium feel.'
             ],
-            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => [
+            $cat === 'health' => [
                 'Good consultation. The doctor was knowledgeable and attentive.',
                 'Well-organized clinic. Slight delay but the care was excellent.',
                 'Professional service and clean environment. Very satisfied overall.',
@@ -110,7 +110,7 @@ class ReviewSuggestionService
                 'Efficient medical service. Staff were helpful and the process was smooth.',
                 'Felt well cared for. Just minor administrative hiccups during check-in.'
             ],
-            in_array($cat, ['sports', 'gym', 'fitness', 'turf']) => [
+            $cat === 'sports' => [
                 'Good facilities and friendly staff. Minor improvements needed but solid.',
                 'Enjoyed the session! Booking process was smooth and venue was clean.',
                 'Great value for money. Would be perfect with slightly better maintenance.',
@@ -132,7 +132,7 @@ class ReviewSuggestionService
     protected function threeStarSuggestions(string $cat): array
     {
         return match (true) {
-            in_array($cat, ['barber', 'salon', 'beauty']) => [
+            $cat === 'beauty' => [
                 'Decent service but the wait was longer than expected.',
                 'Average experience. The result was okay but not what I had in mind.',
                 'Fair pricing but could improve on attention to detail.',
@@ -140,7 +140,7 @@ class ReviewSuggestionService
                 'Met my basic needs but lacked the finishing touches I expected.',
                 'Not bad, but I have had better experiences elsewhere.'
             ],
-            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => [
+            $cat === 'health' => [
                 'The doctor was okay but felt a bit rushed during consultation.',
                 'Average experience. Wait time was long but treatment was decent.',
                 'Acceptable service. Could improve communication and follow-up.',
@@ -162,7 +162,7 @@ class ReviewSuggestionService
     protected function twoStarSuggestions(string $cat): array
     {
         return match (true) {
-            in_array($cat, ['barber', 'salon', 'beauty']) => [
+            $cat === 'beauty' => [
                 'The result wasn\'t what I asked for. Expected better communication.',
                 'Long wait and underwhelming service. Needs improvement.',
                 'Not satisfied with the quality. Would have appreciated more care.',
@@ -170,7 +170,7 @@ class ReviewSuggestionService
                 'Unprofessional atmosphere and the end result was below average.',
                 'They didn\'t listen to my instructions. Wouldn\'t recommend.'
             ],
-            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => [
+            $cat === 'health' => [
                 'Very long wait time and felt rushed during the consultation.',
                 'Expected better hygiene standards and more attentive staff.',
                 'The experience was below expectations. Needs significant improvement.',
@@ -192,7 +192,7 @@ class ReviewSuggestionService
     protected function oneStarSuggestions(string $cat): array
     {
         return match (true) {
-            in_array($cat, ['barber', 'salon', 'beauty']) => [
+            $cat === 'beauty' => [
                 'Very poor experience. The service did not match what was promised.',
                 'Unhygienic conditions and unprofessional behaviour. Would not return.',
                 'Extremely disappointed. The result was nothing like what I requested.',
@@ -200,7 +200,7 @@ class ReviewSuggestionService
                 'Rude staff and completely unacceptable hygiene standards.',
                 'A complete waste of money and time. Do not recommend at all.'
             ],
-            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => [
+            $cat === 'health' => [
                 'Unacceptable wait time and the staff were dismissive and unhelpful.',
                 'Poor hygiene and unprofessional conduct. Would not recommend.',
                 'Very disappointing experience. Expected much better care standards.',

@@ -31,7 +31,7 @@
         $mapIsExact   = $vendor->hasMapCoordinates();
     @endphp
     <div x-data="bookingSystem()"
-        class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['label'] ?? 'default')) }}">
+        class="relative min-h-screen text-white vendor-theme--{{ strtolower(str_replace(' ', '-', $theme['key'] ?? $theme['label'] ?? 'default')) }}">
 
         <!-- PROFILE HERO -->
         <section class="relative z-10 pt-28 pb-10 px-5 md:pt-32 md:pb-16 md:px-6">
@@ -43,20 +43,12 @@
                     <div
                         class="w-40 h-40 sm:w-56 sm:h-56 md:w-80 md:h-80 rounded-[2rem] md:rounded-[3rem] overflow-hidden theme-glow-border transition-transform duration-1000 group-hover:scale-105 mx-auto">
                         @php
-                            $vType = $vendor->category?->slug ?? 'consultant';
-                            if ($vendor->shop_photo) {
-                                $img = asset('storage/' . $vendor->shop_photo);
-                            } elseif (in_array($vType, ['health', 'doctor'])) {
-                                $img = asset('images/placeholders/health.svg');
-                            } elseif (in_array($vType, ['beauty', 'barber'])) {
-                                $img = asset('images/placeholders/beauty.svg');
-                            } elseif (in_array($vType, ['sports', 'activity'])) {
-                                $img = asset('images/placeholders/sports.svg');
-                            } elseif ($vType === 'training') {
-                                $img = asset('images/placeholders/training.svg');
-                            } else {
-                                $img = asset('images/placeholders/default.svg');
-                            }
+                            $vType = $vendor->category?->slug ?? $vendor->vendor_type ?? 'consultant';
+                            $img = $vendor->shop_photo
+                                ? asset('storage/' . $vendor->shop_photo)
+                                : asset('images/placeholders/' . (
+                                    in_array($vType, ['health', 'beauty', 'sports', 'education']) ? $vType : 'default'
+                                ) . '.svg');
                         @endphp
                         <img src="{{ $img }}"
                             class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
@@ -1765,7 +1757,7 @@
                 ratingCounts: @js($ratingCounts),
                 activeRating: 0,      // 0 = latest; 1-5 = filter by that star rating
                 loadingReviews: false,
-                allAiSuggestions: @js(app(\App\Services\ReviewSuggestionService::class)->getAllForCategory($vendor->category?->slug)),
+                allAiSuggestions: @js(app(\App\Services\ReviewSuggestionService::class)->getAllForCategory($vendor->category?->slug ?? $vendor->vendor_type)),
                 activeAiSuggestions: [],
                 // Index of the suggestion currently sitting in the review box
                 // (null once the reviewer types over it, so the tick never lies).

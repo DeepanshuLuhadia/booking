@@ -45,6 +45,26 @@ class Vendor extends Model
      */
     protected $appends = ['is_currently_open'];
 
+    /**
+     * Normalize legacy vendor_type values to canonical category slugs.
+     */
+    public function setVendorTypeAttribute($value): void
+    {
+        $map = [
+            'doctor'      => 'health',
+            'clinic'      => 'health',
+            'barber'      => 'beauty',
+            'salon'       => 'beauty',
+            'activity'    => 'sports',
+            'gym'         => 'sports',
+            'training'    => 'education',
+            'consultancy' => 'consultant',
+        ];
+
+        $normalized = strtolower(trim((string) $value));
+        $this->attributes['vendor_type'] = $map[$normalized] ?? $normalized;
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -54,6 +74,18 @@ class Vendor extends Model
         });
 
         static::saving(function ($vendor) {
+            if (!empty($vendor->vendor_type) && empty($vendor->vendor_category_id)) {
+                $cat = \App\Models\VendorCategory::where('slug', $vendor->vendor_type)->first();
+                if ($cat) {
+                    $vendor->vendor_category_id = $cat->id;
+                }
+            } elseif (empty($vendor->vendor_type) && $vendor->vendor_category_id) {
+                $cat = \App\Models\VendorCategory::find($vendor->vendor_category_id);
+                if ($cat) {
+                    $vendor->vendor_type = $cat->slug;
+                }
+            }
+
             $vendor->is_profile_complete = $vendor->isProfileComplete();
         });
 
@@ -173,18 +205,18 @@ class Vendor extends Model
             return $this->attributes['description'];
         }
 
-        $cat = strtolower($this->category?->slug ?? 'professional');
+        $cat = strtolower($this->category?->slug ?? $this->vendor_type ?? 'professional');
         $name = $this->business_name;
         $fee = number_format($this->service_fee);
 
         return match (true) {
-            in_array($cat, ['salon', 'barber', 'beauty']) => 
+            $cat === 'beauty' => 
                 "Premium grooming and styling services at {$name}. Experience top-tier professional care starting at ₹{$fee}.",
-            in_array($cat, ['clinic', 'doctor', 'health', 'dental']) => 
+            $cat === 'health' => 
                 "Trusted healthcare and medical consultations at {$name}. Professional care prioritizing your well-being, with visits starting at ₹{$fee}.",
-            in_array($cat, ['sports', 'gym', 'fitness', 'turf']) => 
+            $cat === 'sports' => 
                 "Top-class sports and fitness facilities at {$name}. Book your slot today starting at ₹{$fee}.",
-            in_array($cat, ['training', 'consultant', 'coaching']) => 
+            in_array($cat, ['education', 'consultant']) => 
                 "Expert guidance and professional consultations at {$name}. Elevate your skills starting at ₹{$fee}.",
             default => 
                 "Professional services offered at {$name}. Book your appointment today starting at ₹{$fee}."

@@ -169,8 +169,7 @@ class EmployeePublicBookingController extends Controller
             fn() => ThemeService::getAllThemes()
         );
 
-        $theme = $allThemes[$vendor->category?->slug]
-            ?? ThemeService::getTheme('consultant');
+        $theme = ThemeService::getTheme($vendor->category?->slug ?? $vendor->vendor_type ?? 'consultant');
 
         /*
         | `service_fee`, not `base_service_fee` — there is no such column, so

@@ -7,11 +7,16 @@ class ThemeService
     /**
      * All role-based theme configurations.
      * Each theme defines colors, backgrounds, card styles, and UI identity.
+     *
+     * The array key is the category's one and only name: it matches
+     * vendor_categories.slug, the vendors.vendor_type enum member, the
+     * /category/{slug} URL and the `vendor-theme--*` styles. Keep the five in
+     * step — adding a theme here is what adds a category to the site.
      */
     protected static array $themes = [
 
-        'doctor' => [
-            'key'             => 'doctor',
+        'health' => [
+            'key'             => 'health',
             'label'           => 'Health',
             'description'     => 'Expert Medical Consultations',
             'icon'            => '🏥',
@@ -50,8 +55,8 @@ class ThemeService
             'nav_blur_bg'     => 'rgba(15, 23, 42, 0.8)',
         ],
 
-        'barber' => [
-            'key'             => 'barber',
+        'beauty' => [
+            'key'             => 'beauty',
             'label'           => 'Beauty',
             'description'     => 'Premium Grooming & Aesthetics',
             'icon'            => '💇',
@@ -90,8 +95,8 @@ class ThemeService
             'nav_blur_bg'     => 'rgba(15, 23, 42, 0.8)',
         ],
 
-        'activity' => [
-            'key'             => 'activity',
+        'sports' => [
+            'key'             => 'sports',
             'label'           => 'Sports',
             'description'     => 'Athletic Training & Performance',
             'icon'            => '⚡',
@@ -130,8 +135,8 @@ class ThemeService
             'nav_blur_bg'     => 'rgba(15, 23, 42, 0.8)',
         ],
 
-        'training' => [
-            'key'             => 'training',
+        'education' => [
+            'key'             => 'education',
             'label'           => 'Education',
             'description'     => 'Educational & Skill Development',
             'icon'            => '🎓',
@@ -229,10 +234,31 @@ class ThemeService
     ];
 
     /**
+     * Legacy category slug aliases mapped to canonical theme keys.
+     */
+    protected static array $aliases = [
+        'doctor'      => 'health',
+        'barber'      => 'beauty',
+        'salon'       => 'beauty',
+        'activity'    => 'sports',
+        'training'    => 'education',
+        'consultancy' => 'consultant',
+    ];
+
+    /**
      * Get theme config for a given vendor role.
      */
-    public static function getTheme(string $role = 'consultant'): array
+    public static function getTheme(?string $role = 'consultant'): array
     {
+        $role = strtolower(trim((string) $role));
+        if ($role === '') {
+            $role = 'consultant';
+        }
+
+        if (isset(static::$aliases[$role])) {
+            $role = static::$aliases[$role];
+        }
+
         $theme = static::$themes[$role] ?? static::$themes['consultant'];
         return array_merge(static::$baseConfig, $theme);
     }

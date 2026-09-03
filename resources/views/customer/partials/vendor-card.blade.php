@@ -4,49 +4,38 @@
        • .bv-hcard             — new horizontal card (hidden on desktop, shown on mobile via CSS)
      Expects $vendor, $allThemes and an optional $eager flag. --}}
 @php
-    $vType = $vendor->category?->slug ?? 'consultant';
-
-    $vTheme = array_merge([
-        'primary'      => '#2979ff',
-        'primary_dark' => '#00b0ff',
-        'label'        => ucfirst($vType),
-        'emoji'        => '✨',
-    ], $allThemes[$vType] ?? ($allThemes['consultant'] ?? []));
+    $vType = $vendor->category?->slug ?? $vendor->vendor_type ?? 'consultant';
+    $vTheme = \App\Services\ThemeService::getTheme($vType);
+    $vKey   = $vTheme['key'] ?? $vType;
 
     $isOpen = (bool) ($vendor->is_bookable_now ?? $vendor->isEffectivelyOpen()) && (bool) $vendor->is_open;
 
     $c1 = $vTheme['primary'];
     $c2 = $vTheme['primary_dark'];
-    $rgbStr = match($vType) {
-        'health','doctor'   => '0,200,83',
-        'beauty','barber'   => '255,109,0',
-        'sports','activity' => '255,214,0',
-        'consultant'        => '41,121,255',
-        'training'          => '124,58,237',
-        default             => '26,35,126'
+    $rgbStr = match($vKey) {
+        'health'     => '0,200,83',
+        'beauty'     => '255,109,0',
+        'sports'     => '255,214,0',
+        'consultant' => '41,121,255',
+        'education'  => '124,58,237',
+        default      => '26,35,126'
     };
     [$cr,$cg,$cb] = explode(',', $rgbStr);
 
-    if ($vendor->shop_photo) {
-        $img = asset('storage/' . $vendor->shop_photo);
-    } elseif (in_array($vType, ['health','doctor'])) {
-        $img = asset('images/placeholders/health.svg');
-    } elseif (in_array($vType, ['beauty','barber'])) {
-        $img = asset('images/placeholders/beauty.svg');
-    } elseif (in_array($vType, ['sports','activity'])) {
-        $img = asset('images/placeholders/sports.svg');
-    } elseif ($vType === 'training') {
-        $img = asset('images/placeholders/training.svg');
-    } else {
-        $img = asset('images/placeholders/default.svg');
-    }
+    // The placeholder is named after the category, so the five known ones map
+    // straight to a file and anything else falls back.
+    $catCode = in_array($vKey, ['health', 'beauty', 'sports', 'education', 'consultant'])
+        ? $vKey
+        : 'general';
 
-    $catCode = 'general';
-    if (in_array($vType, ['health','doctor']))      $catCode = 'doctor';
-    elseif (in_array($vType, ['beauty','barber']))  $catCode = 'barber';
-    elseif (in_array($vType, ['sports','activity']))$catCode = 'sports';
-    elseif ($vType === 'consultant')                $catCode = 'consultant';
-    elseif ($vType === 'training')                  $catCode = 'training';
+    // consultant and anything unrecognised share the generic artwork.
+    $placeholder = in_array($catCode, ['health', 'beauty', 'sports', 'education'])
+        ? $catCode
+        : 'default';
+
+    $img = $vendor->shop_photo
+        ? asset('storage/' . $vendor->shop_photo)
+        : asset('images/placeholders/' . $placeholder . '.svg');
 
     $routeUrl   = route('vendor.show', $vendor->slug);
     $priceStr   = '₹' . number_format($vendor->starting_fee);
@@ -64,10 +53,10 @@
     $catLabel   = $vTheme['label'] ?? ucfirst($vType);
 
     $priceLabel = match($catCode) {
-        'doctor'     => 'Consultation',
-        'barber'     => 'Starts From',
+        'health'     => 'Consultation',
+        'beauty'     => 'Starts From',
         'consultant' => 'Session',
-        'training'   => 'Session',
+        'education'  => 'Session',
         'sports'     => 'Entry / Pass',
         default      => 'Starts From'
     };
@@ -87,7 +76,7 @@
      ═══════════════════════════════════════════════════════════ --}}
 <div class="bv-desktop-card-wrap">
     <a href="{{ $routeUrl }}" class="bv-dynamic-card bv-card-sports {{ $isOpen ? '' : 'bv-closed pointer-events-none' }}"
-        style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};"
+        style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};--rgb:{{ $cr }},{{ $cg }},{{ $cb }};"
         @click="handleVendorClick($event, '{{ $routeUrl }}')">
         <img src="{{ $img }}" alt="{{ $name }}" loading="{{ ($eager ?? false) ? 'eager' : 'lazy' }}">
         @if($vendor->isSubscriptionActive() && ($vendor->reviews_count ?? 0) > 0)
@@ -118,7 +107,7 @@
                 <span class="bv-rc-addr" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ $address }}</span>
                 @endif
                 @if($vendor->isSubscriptionActive() && $vendor->distance_km !== null)
-                <span class="bv-rc-dist" style="margin-left:auto; font-weight:700; color:rgba(var(--cr),var(--cg),var(--cb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">{{ $vendor->distance_km < 1 ? round($vendor->distance_km * 1000) . ' m' : '~' . number_format($vendor->distance_km, 1) . ' km' }}</span>
+                <span class="bv-rc-dist" style="margin-left:auto; font-weight:700; color:rgba(var(--rgb),0.9); font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">{{ $vendor->distance_km < 1 ? round($vendor->distance_km * 1000) . ' m' : '~' . number_format($vendor->distance_km, 1) . ' km' }}</span>
                 @endif
             </div>
             <div class="bv-rc-pricebar"
@@ -144,7 +133,7 @@
                             @endif
                         </div>
                         <div
-                            style="width:36px; height:36px; background:var(--c1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; box-shadow:0 6px 16px rgba(var(--cr),var(--cg),var(--cb),0.4);">
+                            style="width:36px; height:36px; background:var(--c1); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#000; box-shadow:0 6px 16px rgba(var(--rgb),0.4);">
                             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -171,7 +160,7 @@
      ═══════════════════════════════════════════════════════════ --}}
 <a href="{{ $routeUrl }}"
    class="bv-hcard {{ $isOpen ? '' : 'bv-closed' }}"
-   style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};"
+   style="--c1:{{ $c1 }};--c2:{{ $c2 }};--cr:{{ $cr }};--cg:{{ $cg }};--cb:{{ $cb }};--rgb:{{ $cr }},{{ $cg }},{{ $cb }};"
    @click="handleVendorClick($event, '{{ $routeUrl }}')">
 
     {{-- LEFT: Image --}}

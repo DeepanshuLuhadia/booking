@@ -195,14 +195,11 @@
                     {{-- ── Category Pills ── --}}
                     @php
                     $catMeta = [
-                    'health' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Green Care'],
-                    'doctor' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Doctors & Clinics'],
+                    'health' => ['g'=>['#00c853','#64dd17'], 'rgb'=>'0,200,83', 'sub'=>'Doctors & Clinics'],
                     'beauty' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Best Stylists'],
-                    'barber' => ['g'=>['#ff6d00','#ffab40'], 'rgb'=>'255,109,0', 'sub'=>'Mens Grooming'],
                     'sports' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
-                    'activity' => ['g'=>['#ffd600','#ffea00'], 'rgb'=>'255,214,0', 'sub'=>'Active Routine'],
+                    'education' => ['g'=>['#7c3aed','#a78bfa'], 'rgb'=>'124,58,237', 'sub'=>'Learn & Grow'],
                     'consultant' => ['g'=>['#2979ff','#00b0ff'], 'rgb'=>'41,121,255', 'sub'=>'Pro & Prime'],
-                    'training' => ['g'=>['#7c3aed','#a78bfa'], 'rgb'=>'124,58,237', 'sub'=>'Get Stronger'],
                     'default' => ['g'=>['#1a237e','#3949ab'], 'rgb'=>'26,35,126', 'sub'=>'All Experts'],
                     ];
                     
@@ -267,7 +264,7 @@
                                 @endphp
                                 <a href="{{ $catHref }}"
                                     class="bv-cat-pill {{ $isActive ? 'active' : '' }}"
-                                    style="--cr:{{ trim($cr) }};--cg:{{ trim($cg) }};--cb:{{ trim($cb) }};">
+                                    style="--cr:{{ trim($cr) }};--cg:{{ trim($cg) }};--cb:{{ trim($cb) }};--rgb:{{ trim($cr) }},{{ trim($cg) }},{{ trim($cb) }};">
                                     <div class="bv-cat-icon" style="{{ $iconStyle }}">{{ $cat['emoji'] }}</div>
                                     <div class="bv-cat-text">
                                         <span class="bv-cat-name">{{ $cat['label'] }}</span>
@@ -301,8 +298,8 @@
                                 $catHref = route('category.show', $cat['key']);
                                 @endphp
                                 <a href="{{ $catHref }}" 
-                                   class="bv-cat-mobile-pill {{ $isActive ? 'active' : '' }}" 
-                                   style="--cr:{{ trim($cr) }}; --cg:{{ trim($cg) }}; --cb:{{ trim($cb) }};">
+                                   class="bv-cat-mobile-pill {{ $isActive ? 'active' : ''}}" 
+                                   style="--cr:{{ trim($cr) }}; --cg:{{ trim($cg) }}; --cb:{{ trim($cb) }}; --rgb:{{ trim($cr) }},{{ trim($cg) }},{{ trim($cb) }};">
                                     <div class="bv-cat-mobile-icon" style="{{ $iconStyle }}">
                                         {{ $cat['emoji'] }}
                                     </div>

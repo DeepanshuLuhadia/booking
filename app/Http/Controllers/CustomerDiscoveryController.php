@@ -380,7 +380,7 @@ public function category(Request $request, string $slug)
         }
     }
 
-    $theme      = $isAllCategories ? [] : ($allThemes[$slug] ?? ThemeService::getTheme('consultant'));
+    $theme      = $isAllCategories ? [] : ThemeService::getTheme($slug);
     $terms      = $this->searchTerms($request);
     $candidates = $this->categoryCandidates($request, $slug, $terms);
 
@@ -634,8 +634,11 @@ private function discoverCandidates(Request $request, array $filters = []): \Ill
         array_key_exists($filterType, $allThemes)
         || \App\Models\VendorCategory::where('slug', $filterType)->exists()
     )) {
-        $query->whereHas('category', function ($q) use ($filterType) {
-            $q->where('slug', $filterType);
+        $query->where(function ($q) use ($filterType) {
+            $q->where('vendor_type', $filterType)
+              ->orWhereHas('category', function ($sub) use ($filterType) {
+                  $sub->where('slug', $filterType);
+              });
         });
     }
 
@@ -1106,8 +1109,7 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
         fn() => ThemeService::getAllThemes()
     );
 
-    $theme = $allThemes[$vendor->category?->slug]
-        ?? ThemeService::getTheme('consultant');
+    $theme = ThemeService::getTheme($vendor->category?->slug ?? $vendor->vendor_type ?? 'consultant');
 
     /*
     |--------------------------------------------------------------------------

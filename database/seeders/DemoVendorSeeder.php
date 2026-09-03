@@ -52,11 +52,11 @@ class DemoVendorSeeder extends Seeder
 
     /** Business-name flavour per category slug. */
     private const NAME_PARTS = [
-        'barber' => ['Hair Studio', 'Salon & Spa', 'Grooming Lounge', 'Barber House', 'Style Bar'],
-        'doctor' => ['Clinic', 'Health Care', 'Poly Clinic', 'Medical Centre', 'Dental Care'],
+        'beauty' => ['Hair Studio', 'Salon & Spa', 'Grooming Lounge', 'Barber House', 'Style Bar'],
+        'health' => ['Clinic', 'Health Care', 'Poly Clinic', 'Medical Centre', 'Dental Care'],
         'consultant' => ['Advisory', 'Consulting', 'Legal Associates', 'Tax Chambers', 'Financial Services'],
-        'activity' => ['Turf & Sports', 'Fitness Club', 'Sports Arena', 'Yoga Studio', 'Gym & Wellness'],
-        'training' => ['Academy', 'Institute', 'Learning Hub', 'Coaching Classes', 'Skill Centre'],
+        'sports' => ['Turf & Sports', 'Fitness Club', 'Sports Arena', 'Yoga Studio', 'Gym & Wellness'],
+        'education' => ['Academy', 'Institute', 'Learning Hub', 'Coaching Classes', 'Skill Centre'],
     ];
 
     /** Cities with real coordinates so the distance chip has something to work with. */
@@ -81,7 +81,7 @@ class DemoVendorSeeder extends Seeder
 
         $categories = VendorCategory::orderBy('id')->get();
         if ($categories->isEmpty()) {
-            $this->command?->error('No vendor categories found — seed vendor_categories first.');
+            $this->command?->error('No vendor categories found — run VendorCategorySeeder first.');
             return;
         }
 
@@ -298,10 +298,15 @@ class DemoVendorSeeder extends Seeder
             ->format('H:i:00');
     }
 
+    /**
+     * The business type is the category's own name — the enum holds the same
+     * five words. A slug the theme matrix does not know falls back to the
+     * consultant trade.
+     */
     private function vendorTypeFor(string $categorySlug): string
     {
         return match ($categorySlug) {
-            'doctor', 'training', 'barber', 'activity', 'consultant' => $categorySlug,
+            'health', 'beauty', 'sports', 'education', 'consultant' => $categorySlug,
             default => 'consultant',
         };
     }

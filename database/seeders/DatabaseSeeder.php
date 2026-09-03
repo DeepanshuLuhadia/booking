@@ -15,7 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // A fresh install has no subscription plans and no vendor categories,
+        // and without either the sign-up form and the category listing come up
+        // empty. Both are keyed on natural identifiers, so this is re-runnable.
+        $this->call([
+            InitialDataSeeder::class,
+            VendorCategorySeeder::class,
+        ]);
 
         User::factory()->create([
             'name' => 'Test User',

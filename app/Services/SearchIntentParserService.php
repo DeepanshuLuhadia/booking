@@ -6,23 +6,29 @@ class SearchIntentParserService
 {
     /**
      * Category mapping dictionary for common natural language search terms.
+     *
+     * Every value is one of the five category names, so what a customer types
+     * resolves to the same word the database, the URLs and the theme matrix
+     * use.
      */
     protected array $categoryMap = [
-        'haircut'     => 'barber',
-        'shave'       => 'barber',
-        'beard'       => 'barber',
-        'salon'       => 'salon',
-        'facial'      => 'salon',
-        'spa'         => 'salon',
-        'makeup'      => 'salon',
-        'doctor'      => 'clinic',
-        'clinic'      => 'clinic',
-        'dentist'     => 'clinic',
-        'dental'      => 'clinic',
-        'checkup'     => 'clinic',
+        'haircut'     => 'beauty',
+        'shave'       => 'beauty',
+        'beard'       => 'beauty',
+        'salon'       => 'beauty',
+        'facial'      => 'beauty',
+        'spa'         => 'beauty',
+        'makeup'      => 'beauty',
+        'doctor'      => 'health',
+        'clinic'      => 'health',
+        'dentist'     => 'health',
+        'dental'      => 'health',
+        'checkup'     => 'health',
         'consultant'  => 'consultant',
         'advisory'    => 'consultant',
-        'trainer'     => 'training',
+        'trainer'     => 'education',
+        'coaching'    => 'education',
+        'tuition'     => 'education',
         'gym'         => 'sports',
         'badminton'   => 'sports',
         'turf'        => 'sports',

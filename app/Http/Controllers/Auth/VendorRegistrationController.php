@@ -15,7 +15,9 @@ class VendorRegistrationController extends Controller
     public function create()
     {
         $plans = SubscriptionPlan::where('is_active', true)->orderBy('price', 'asc')->get();
-        $vendorCategories = \App\Models\VendorCategory::all();
+        $vendorCategories = \App\Models\VendorCategory::all()->unique(function ($cat) {
+            return \App\Services\ThemeService::getTheme($cat->slug)['key'] ?? $cat->slug;
+        });
         return view('auth.vendor-register', compact('plans', 'vendorCategories'));
     }
 
