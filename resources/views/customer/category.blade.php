@@ -12,6 +12,22 @@
             padding-bottom: 40px;
         }
 
+        /* ── Desktop/tablet only (≥601px) ────────────────────────────────
+           The footer curve is a fixed 230px on the listing page, sized for
+           its much taller hero (stat counters, steps, CTA). This hero has
+           none of that, so the same fixed curve ate most of the shrunk box
+           and cut the background image off before its own fade-out mask
+           even started. Scaling the curve down with the hero — instead of
+           growing the hero to fit the curve — keeps the tight "grid follows
+           the pills" layout intact across every category page and no
+           content-height combination reintroduces dead space or shifts the
+           grid into the curve. */
+        @media (min-width: 601px) {
+            .bv-cat-hero .bv-hero-curve {
+                height: 130px;
+            }
+        }
+
         .bv-cat-back {
             display: inline-flex;
             align-items: center;

@@ -143,12 +143,15 @@
             transform: translateY(-50%) rotate(180deg) !important;
         }
 
+        /* Fixed rather than absolute, and re-parented to <body> by the script
+           (see listing-scripts): .bv-hero clips its own overflow (its glow
+           orbs rely on that), so on a short hero — the category page's, with
+           no stat row or CTA to fill it out — an in-flow menu with six-plus
+           items would be cut off before all of them fit. Same fix already
+           used for the search-suggest panel below. */
         .custom-dropdown-menu {
-            position: absolute;
-            top: calc(100% + 10px);
-            left: 0;
+            position: fixed;
             width: max-content;
-            min-width: 100%;
             background: rgba(13, 19, 51, 0.98);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -156,14 +159,16 @@
             border-radius: 16px;
             padding: 8px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            max-height: 70vh;
+            overflow-y: auto;
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 100;
+            z-index: 250;
         }
 
-        .custom-dropdown-wrap.open .custom-dropdown-menu {
+        .custom-dropdown-menu.open {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);

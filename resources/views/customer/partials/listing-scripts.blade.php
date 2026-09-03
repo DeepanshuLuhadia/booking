@@ -26,13 +26,37 @@
             const dropdownWrap = document.getElementById('specialty-dropdown-wrap');
             const dropdownLabel = document.getElementById('specialty-label');
             const dropdownInput = document.getElementById('specialty-input');
+            const dropdownMenu = dropdownWrap ? dropdownWrap.querySelector('.custom-dropdown-menu') : null;
             const dropdownItems = document.querySelectorAll('.custom-dropdown-item');
 
-            if(dropdownWrap) {
+            if(dropdownWrap && dropdownMenu) {
+                /* .bv-hero clips its own overflow (its glow orbs rely on
+                   that), so a menu left nested inside the dropdown wrap gets
+                   cut off on any hero too short to fit it — the category
+                   page's, in particular. Re-parented to <body> and anchored
+                   to the trigger's rect instead, same fix as the search
+                   panel below. */
+                document.body.appendChild(dropdownMenu);
+
+                const placeDropdown = () => {
+                    const rect = dropdownWrap.getBoundingClientRect();
+                    dropdownMenu.style.top      = (rect.bottom + 10) + 'px';
+                    dropdownMenu.style.left     = rect.left + 'px';
+                    dropdownMenu.style.minWidth = rect.width + 'px';
+                };
+
+                const closeDropdown = () => {
+                    dropdownWrap.classList.remove('open');
+                    dropdownMenu.classList.remove('open');
+                };
+
                 dropdownWrap.addEventListener('click', function(e) {
                     if (e.target.closest('.custom-dropdown-item')) return;
                     e.stopPropagation();
-                    dropdownWrap.classList.toggle('open');
+                    const opening = !dropdownWrap.classList.contains('open');
+                    if (opening) placeDropdown();
+                    dropdownWrap.classList.toggle('open', opening);
+                    dropdownMenu.classList.toggle('open', opening);
                 });
 
                 dropdownItems.forEach(item => {
@@ -41,22 +65,22 @@
                         // Update input
                         const val = this.getAttribute('data-value');
                         dropdownInput.value = val;
-                        
+
                         // Update label
                         dropdownLabel.innerHTML = this.innerHTML.trim();
-                        
+
                         // Update selected class
                         dropdownItems.forEach(i => i.classList.remove('selected'));
                         this.classList.add('selected');
-                        
+
                         // Close dropdown
-                        dropdownWrap.classList.remove('open');
+                        closeDropdown();
                     });
                 });
 
                 document.addEventListener('click', function(e) {
-                    if (!dropdownWrap.contains(e.target)) {
-                        dropdownWrap.classList.remove('open');
+                    if (!dropdownWrap.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                        closeDropdown();
                     }
                 });
             }
