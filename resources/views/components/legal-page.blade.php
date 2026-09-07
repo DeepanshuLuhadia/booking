@@ -47,7 +47,7 @@
 
     <!-- Hero -->
     <section class="relative pt-36 pb-16 md:pt-44 md:pb-20 overflow-hidden" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
-        <div style="position:absolute; top:-10%; left:25%; width:500px; height:500px; background:rgba(255,109,0,.07); border-radius:50%; filter:blur(130px); pointer-events:none;"></div>
+        <div style="position:absolute; top:-10%; left:25%; width:500px; height:500px; background:radial-gradient(circle, rgba(255,109,0,.07) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-25"></div>
 
         <div class="relative z-10 container mx-auto px-4 md:px-8">

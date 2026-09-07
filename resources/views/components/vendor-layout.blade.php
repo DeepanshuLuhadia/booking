@@ -92,6 +92,7 @@
                 </svg>
                 <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Website</span>
             </a>
+            <x-install-app-button variant="mobile" />
             <div class="h-px bg-white/10 mx-6 my-2"></div>
             @php $vendor = auth()->user()->vendor; @endphp
             @if($vendor)
@@ -127,11 +128,11 @@
                 </div>
 
                 <div class="flex items-center gap-4 p-2">
-                        <img src="{{ asset('storage/' . $vendor->qr_code_path) }}" class="w-12 h-12 rounded-xl border border-white/10 shadow-sm">
+                        <img src="{{ $vendor->qr_code_url }}" class="w-12 h-12 rounded-xl border border-white/10 shadow-sm">
                         <div class="flex flex-col gap-1">
                             <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest italic">MATRIX ID</span>
                             <span class="text-[10px] font-black text-white mono">#{{ $vendor->id }}</span>
-                            <a href="{{ asset('storage/' . $vendor->qr_code_path) }}" download="QR_{{ $vendor->business_name }}.png" class="text-[9px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest italic flex items-center gap-1 mt-1 transition-colors">
+                            <a href="{{ route('vendor.qr-poster') }}" class="text-[9px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest italic flex items-center gap-1 mt-1 transition-colors">
                             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             Download
                             </a>
@@ -235,6 +236,8 @@
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                         <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Website</span>
                     </a>
+
+                    <x-install-app-button variant="desktop" />
                 </div>
 
                 <div class="flex flex-col gap-6 mt-6">
@@ -269,11 +272,11 @@
                     </div>
 
                     <div class="flex items-center gap-4 px-4 pb-2">
-                         <img src="{{ asset('storage/' . $vendor->qr_code_path) }}" class="w-16 h-16 rounded-xl border border-white/10 shadow-sm">
+                         <img src="{{ $vendor->qr_code_url }}" class="w-16 h-16 rounded-xl border border-white/10 shadow-sm">
                          <div class="flex flex-col gap-1">
                              <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest italic">MATRIX ID</span>
                              <span class="text-[10px] font-black text-white mono">#{{ $vendor->id }}</span>
-                             <a href="{{ asset('storage/' . $vendor->qr_code_path) }}" download="QR_{{ $vendor->business_name }}.png" class="text-[9px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest italic flex items-center gap-1 mt-1 transition-colors">
+                             <a href="{{ route('vendor.qr-poster') }}" class="text-[9px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-widest italic flex items-center gap-1 mt-1 transition-colors">
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                 Download
                              </a>

@@ -22,6 +22,7 @@
                     <span class="ml-auto px-2 py-0.5 rounded-md bg-blue-500 text-white text-[9px] font-black tabular-nums">{{ $menuUnreadNotifications }}</span>
                 @endif
             </a>
+            <x-install-app-button variant="mobile" />
         </div>
     </x-slot>
 
@@ -55,8 +56,10 @@
                             <span class="ml-auto px-2 py-0.5 rounded-md bg-blue-500 text-white text-[9px] font-black tabular-nums">{{ $sidebarUnreadNotifications }}</span>
                         @endif
                     </a>
+
+                    <x-install-app-button variant="desktop" />
                 </div>
-                
+
                 <div class="mt-auto p-4 flex flex-col items-center">
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf

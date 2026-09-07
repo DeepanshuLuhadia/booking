@@ -18,9 +18,8 @@
             left: 25%;
             width: 500px;
             height: 500px;
-            background: rgba(255, 109, 0, .08);
+            background: radial-gradient(circle, rgba(255, 109, 0, .08) 0%, rgba(255, 109, 0, 0) 70%);
             border-radius: 50%;
-            filter: blur(120px);
             pointer-events: none;
         }
 
@@ -30,9 +29,8 @@
             right: 25%;
             width: 600px;
             height: 600px;
-            background: rgba(255, 109, 0, .04);
+            background: radial-gradient(circle, rgba(255, 109, 0, .04) 0%, rgba(255, 109, 0, 0) 70%);
             border-radius: 50%;
-            filter: blur(150px);
             pointer-events: none;
         }
 
@@ -164,7 +162,7 @@
             opacity: 0;
             visibility: hidden;
             transform: translateY(-10px);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 250;
         }
 
@@ -188,10 +186,12 @@
             white-space: nowrap;
         }
 
-        .custom-dropdown-item:hover {
-            background: rgba(255, 109, 0, 0.15);
-            color: #fff;
-            transform: translateX(4px);
+        @media (hover: hover) {
+            .custom-dropdown-item:hover {
+                background: rgba(255, 109, 0, 0.15);
+                color: #fff;
+                transform: translateX(4px);
+            }
         }
 
         .custom-dropdown-item.selected {
@@ -260,9 +260,11 @@
             color: #fff;
         }
 
-        .bv-nearme:hover .bv-nearme-arrow {
-            transform: translateX(3px);
-            background: rgba(255, 140, 66, 0.24);
+        @media (hover: hover) {
+            .bv-nearme:hover .bv-nearme-arrow {
+                transform: translateX(3px);
+                background: rgba(255, 140, 66, 0.24);
+            }
         }
 
         .bv-nearme-icon {
@@ -343,7 +345,7 @@
             border-radius: 12px;
             padding: 16px 32px;
             cursor: pointer;
-            transition: all .3s ease;
+            transition: color .3s ease, background-color .3s ease, border-color .3s ease, box-shadow .3s ease, opacity .3s ease, transform .3s ease, filter .3s ease;
             letter-spacing: .04em;
             transition: filter .2s, transform .2s;
             box-shadow: 0 6px 20px rgba(255, 109, 0, .4);
@@ -367,7 +369,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: all .25s ease;
+            transition: color .25s ease, background-color .25s ease, border-color .25s ease, box-shadow .25s ease, opacity .25s ease, transform .25s ease, filter .25s ease;
         }
 
         .bv-reset-btn:hover {
@@ -466,9 +468,11 @@
             }
         }
 
-        .bv-search-btn:hover {
-            filter: brightness(1.1);
-            transform: scale(1.02);
+        @media (hover: hover) {
+            .bv-search-btn:hover {
+                filter: brightness(1.1);
+                transform: scale(1.02);
+            }
         }
 
         /* ── Category Pills ──────────────────────────────────────────── */
@@ -541,11 +545,13 @@
             cursor: pointer;
         }
 
-        .bv-cat-pill:hover {
-            background: rgba(var(--rgb), 0.15);
-            border-color: rgba(var(--rgb), 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(var(--rgb), 0.25);
+        @media (hover: hover) {
+            .bv-cat-pill:hover {
+                background: rgba(var(--rgb), 0.15);
+                border-color: rgba(var(--rgb), 0.5);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 18px rgba(var(--rgb), 0.25);
+            }
         }
 
         .bv-cat-pill.active {
@@ -644,7 +650,7 @@
                 padding: 14px 6px;
                 text-decoration: none;
                 flex: 0 0 calc((100% - 20px) / 3);
-                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
                 scroll-snap-align: start;
                 box-sizing: border-box;
@@ -890,7 +896,7 @@
                 pointer-events: auto;
                 position: relative;
                 z-index: 10;
-                transition: all .2s ease;
+                transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, opacity .2s ease, transform .2s ease, filter .2s ease;
                 letter-spacing: .03em;
                 -webkit-tap-highlight-color: transparent;
                 user-select: none;
@@ -934,10 +940,12 @@
             box-shadow: 0 6px 28px rgba(0,0,0,.35);
         }
 
-        .bv-hcard:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(var(--rgb),0.35);
-            border-color: rgba(var(--rgb),0.45);
+        @media (hover: hover) {
+            .bv-hcard:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(var(--rgb),0.35);
+                border-color: rgba(var(--rgb),0.45);
+            }
         }
 
         /* Left pane — image */
@@ -956,8 +964,10 @@
             transition: transform .5s cubic-bezier(.16,1,.3,1);
         }
 
-        .bv-hcard:hover .bv-hcard-img img {
-            transform: scale(1.07);
+        @media (hover: hover) {
+            .bv-hcard:hover .bv-hcard-img img {
+                transform: scale(1.07);
+            }
         }
 
         /* Subtle gradient overlay on the image so the left edge blends */
@@ -1168,9 +1178,11 @@
             transition: transform .2s, box-shadow .2s;
         }
 
-        .bv-hcard:hover .bv-hcard-cta {
-            transform: scale(1.12);
-            box-shadow: 0 8px 22px rgba(var(--rgb),0.65);
+        @media (hover: hover) {
+            .bv-hcard:hover .bv-hcard-cta {
+                transform: scale(1.12);
+                box-shadow: 0 8px 22px rgba(var(--rgb),0.65);
+            }
         }
 
         /* ── Mobile: keep left-right split, narrow the image column ─────── */
@@ -1323,9 +1335,11 @@
             transition: opacity .3s;
         }
 
-        .bv-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+        @media (hover: hover) {
+            .bv-card:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+            }
         }
 
         .bv-card:hover::after {
@@ -1450,8 +1464,10 @@
             transition: transform .2s;
         }
 
-        .bv-card-cta:hover {
-            transform: scale(1.1);
+        @media (hover: hover) {
+            .bv-card-cta:hover {
+                transform: scale(1.1);
+            }
         }
 
         /* ── Category-Specific Cards ─────────────────────────────────── */
@@ -1478,10 +1494,12 @@
             box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 8px 30px rgba(0, 0, 0, 0.4);
         }
 
-        .bv-card-barber:hover {
-            transform: translateY(-8px) scale(1.02);
-            border-color: rgba(var(--rgb), 0.6);
-            box-shadow: inset 0 0 20px rgba(var(--rgb), 0.15), 0 15px 40px rgba(var(--rgb), 0.3);
+        @media (hover: hover) {
+            .bv-card-barber:hover {
+                transform: translateY(-8px) scale(1.02);
+                border-color: rgba(var(--rgb), 0.6);
+                box-shadow: inset 0 0 20px rgba(var(--rgb), 0.15), 0 15px 40px rgba(var(--rgb), 0.3);
+            }
         }
 
         .bv-card-barber-img-wrap {
@@ -1498,9 +1516,11 @@
             transition: transform 0.6s cubic-bezier(.16, 1, .3, 1), filter 0.6s;
         }
 
-        .bv-card-barber:hover .bv-card-barber-img-wrap img {
-            transform: scale(1.08);
-            filter: brightness(0.7);
+        @media (hover: hover) {
+            .bv-card-barber:hover .bv-card-barber-img-wrap img {
+                transform: scale(1.08);
+                filter: brightness(0.7);
+            }
         }
 
         .bv-card-barber-hover-overlay {
@@ -1552,10 +1572,12 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
         }
 
-        .bv-card-consultant:hover {
-            transform: translateY(-8px) scale(1.02);
-            border-color: rgba(var(--rgb), 0.6);
-            box-shadow: 0 15px 40px rgba(var(--rgb), 0.3);
+        @media (hover: hover) {
+            .bv-card-consultant:hover {
+                transform: translateY(-8px) scale(1.02);
+                border-color: rgba(var(--rgb), 0.6);
+                box-shadow: 0 15px 40px rgba(var(--rgb), 0.3);
+            }
         }
 
         .bv-card-consultant-img-wrap {
@@ -1573,9 +1595,11 @@
             transition: transform 0.6s cubic-bezier(.16, 1, .3, 1), filter 0.6s;
         }
 
-        .bv-card-consultant:hover .bv-card-consultant-img-wrap img {
-            transform: scale(1.05);
-            filter: brightness(0.8);
+        @media (hover: hover) {
+            .bv-card-consultant:hover .bv-card-consultant-img-wrap img {
+                transform: scale(1.05);
+                filter: brightness(0.8);
+            }
         }
 
         .bv-card-consultant-overlay {
@@ -1610,10 +1634,12 @@
             background: #000;
         }
 
-        .bv-card-sports:hover {
-            transform: translateY(-8px);
-            border-color: rgba(var(--rgb), 0.8);
-            box-shadow: 0 0 60px rgba(var(--rgb), 0.5);
+        @media (hover: hover) {
+            .bv-card-sports:hover {
+                transform: translateY(-8px);
+                border-color: rgba(var(--rgb), 0.8);
+                box-shadow: 0 0 60px rgba(var(--rgb), 0.5);
+            }
         }
 
         .bv-card-sports img {
@@ -1627,9 +1653,11 @@
             opacity: 0.8;
         }
 
-        .bv-card-sports:hover img {
-            transform: scale(1.08);
-            opacity: 1;
+        @media (hover: hover) {
+            .bv-card-sports:hover img {
+                transform: scale(1.08);
+                opacity: 1;
+            }
         }
 
         .bv-card-sports-overlay {
@@ -1656,10 +1684,12 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
         }
 
-        .bv-card-doctor:hover {
-            transform: translateY(-6px);
-            border-color: var(--c1);
-            box-shadow: 0 12px 30px rgba(var(--rgb), 0.25);
+        @media (hover: hover) {
+            .bv-card-doctor:hover {
+                transform: translateY(-6px);
+                border-color: var(--c1);
+                box-shadow: 0 12px 30px rgba(var(--rgb), 0.25);
+            }
         }
 
         .bv-card-doctor-img-wrap {
@@ -1677,9 +1707,11 @@
             transition: transform 0.6s cubic-bezier(.16, 1, .3, 1), filter 0.6s;
         }
 
-        .bv-card-doctor:hover .bv-card-doctor-img-wrap img {
-            transform: scale(1.05);
-            filter: brightness(0.85);
+        @media (hover: hover) {
+            .bv-card-doctor:hover .bv-card-doctor-img-wrap img {
+                transform: scale(1.05);
+                filter: brightness(0.85);
+            }
         }
 
         .bv-card-doctor-overlay {
@@ -1714,10 +1746,12 @@
             box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
         }
 
-        .bv-card-training:hover {
-            transform: translateY(-8px) scale(1.02);
-            border-color: rgba(var(--rgb), 0.6);
-            box-shadow: 0 15px 40px rgba(var(--rgb), 0.3);
+        @media (hover: hover) {
+            .bv-card-training:hover {
+                transform: translateY(-8px) scale(1.02);
+                border-color: rgba(var(--rgb), 0.6);
+                box-shadow: 0 15px 40px rgba(var(--rgb), 0.3);
+            }
         }
 
         .bv-card-training-img-wrap {
@@ -1735,9 +1769,11 @@
             transition: transform 0.6s cubic-bezier(.16, 1, .3, 1), filter 0.6s;
         }
 
-        .bv-card-training:hover .bv-card-training-img-wrap img {
-            transform: scale(1.05);
-            filter: brightness(0.85);
+        @media (hover: hover) {
+            .bv-card-training:hover .bv-card-training-img-wrap img {
+                transform: scale(1.05);
+                filter: brightness(0.85);
+            }
         }
 
         .bv-card-training-overlay {
@@ -1771,10 +1807,12 @@
             background: rgba(14, 18, 40, 0.85);
         }
 
-        .bv-card-general:hover {
-            transform: translateY(-5px);
-            border-color: var(--c1);
-            box-shadow: 0 10px 30px rgba(var(--rgb), 0.2);
+        @media (hover: hover) {
+            .bv-card-general:hover {
+                transform: translateY(-5px);
+                border-color: var(--c1);
+                box-shadow: 0 10px 30px rgba(var(--rgb), 0.2);
+            }
         }
 
         .bv-card-general img {
@@ -1879,10 +1917,12 @@
             transition: transform .3s cubic-bezier(.16, 1, .3, 1), box-shadow .3s;
         }
 
-        .bv-step-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
-            border-color: rgba(255, 109, 0, .3);
+        @media (hover: hover) {
+            .bv-step-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+                border-color: rgba(255, 109, 0, .3);
+            }
         }
 
         .bv-step-icon-wrap {
@@ -1906,8 +1946,10 @@
             transition: transform .4s cubic-bezier(.16, 1, .3, 1);
         }
 
-        .bv-step-card:hover .bv-step-icon-wrap img {
-            transform: scale(1.08) translateY(-8px);
+        @media (hover: hover) {
+            .bv-step-card:hover .bv-step-icon-wrap img {
+                transform: scale(1.08) translateY(-8px);
+            }
         }
 
         .bv-step-num {
@@ -1971,8 +2013,8 @@
             width: 800px;
             height: 800px;
             border-radius: 50%;
-            background: rgba(255, 109, 0, .09);
-            filter: blur(120px);
+            background: radial-gradient(circle, rgba(255, 109, 0, .09) 0%, rgba(255, 109, 0, 0) 70%);
+            border-radius: 50%;
             pointer-events: none;
         }
 
@@ -2038,9 +2080,11 @@
             transition: filter .2s, transform .2s;
         }
 
-        .bv-cta-btn:hover {
-            filter: brightness(1.1);
-            transform: translateY(-2px);
+        @media (hover: hover) {
+            .bv-cta-btn:hover {
+                filter: brightness(1.1);
+                transform: translateY(-2px);
+            }
         }
 
         /* ══════════════════════════════════════════════════════════════

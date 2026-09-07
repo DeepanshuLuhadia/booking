@@ -50,18 +50,22 @@ class AppServiceProvider extends ServiceProvider
             $bookings   = app(CustomerBookingService::class);
             $identified = $bookings->isIdentified();
 
+            $vendorUser = auth()->user();
+
             $view->with([
                 'myBookingCount' => $identified ? $bookings->liveBookingCount() : 0,
 
                 /*
                 | True when this device is holding a booking we currently have no
-                | way to notify about. Browsers will not hand over a push token
-                | without permission, and permission is only asked for once — so a
-                | customer who dismissed the prompt (or booked before it appeared)
-                | is silently unreachable for the rest of that booking. This lets
-                | the layout re-offer it at the one moment it plainly matters.
+                | way to notify about, OR a signed-in vendor has never granted push
+                | permission. Browsers will not hand over a push token without
+                | permission, and permission is only asked for once — so a customer
+                | who dismissed the prompt (or booked before it appeared), or a
+                | vendor who never saw the prompt during signup, is silently
+                | unreachable until re-offered here.
                 */
-                'pushSetupNeeded' => $identified && $bookings->hasLiveBookingsMissingPush(),
+                'pushSetupNeeded' => ($identified && $bookings->hasLiveBookingsMissingPush())
+                    || ($vendorUser && $vendorUser->isVendor() && !$vendorUser->fcm_token),
             ]);
         });
     }

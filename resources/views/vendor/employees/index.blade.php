@@ -47,10 +47,40 @@
                     <div class="flex gap-4">
                         <a href="{{ route('vendor.employees.edit', $employee) }}" class="flex-grow h-14 bg-white/5 text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center italic text-center px-2">Modify Protocol</a>
                         @if($employee->qr_code_path)
-                            <a href="{{ asset('storage/' . $employee->qr_code_path) }}" download="qr-{{ $employee->slug }}.svg" title="Download QR Code" class="w-14 h-14 bg-sky-500/20 text-sky-300 rounded-xl hover:bg-sky-500/30 transition-all flex items-center justify-center border border-sky-500/30">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2a2 2 0 002-2v-5a2 2 0 00-2-2H4a2 2 0 00-2 2v5a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            <a href="{{ route('vendor.employees.qr-poster', $employee) }}" title="Download QR Poster" class="w-14 h-14 bg-sky-500/20 text-sky-300 rounded-xl hover:bg-sky-500/30 transition-all flex items-center justify-center border border-sky-500/30">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             </a>
                         @endif
+                        {{-- Start this specialist's queue over. Everyone still
+                             waiting is cancelled and pushed a notification, so
+                             the confirm names how many people that actually is
+                             rather than asking a vague "are you sure?" — the
+                             answer differs entirely between nobody and eleven
+                             people sitting in the waiting room. --}}
+                        @php
+                            $waiting = $employee->waiting_count ?? 0;
+                            $restartWarning = $waiting > 0
+                                ? $waiting . ' ' . ($waiting === 1 ? 'person is' : 'people are')
+                                    . ' waiting in ' . $employee->name . "'s queue right now.\\n\\n"
+                                    . 'Restarting will CANCEL ' . ($waiting === 1 ? 'them' : 'all of them')
+                                    . ' and notify ' . ($waiting === 1 ? 'them' : 'them')
+                                    . ' that their appointment is off, and set the token counter back to 0.'
+                                    . "\\n\\nThis cannot be undone. Continue?"
+                                : 'Nobody is waiting in ' . $employee->name . "'s queue right now.\\n\\n"
+                                    . 'Restarting just sets the token counter back to 0. Continue?';
+                        @endphp
+                        <form action="{{ route('vendor.restart-queue') }}" method="POST"
+                              onsubmit="return confirm('{{ addslashes($restartWarning) }}')">
+                            @csrf
+                            <input type="hidden" name="employee_id" value="{{ $employee->id }}">
+                            <button type="submit" title="Restart queue{{ $waiting > 0 ? ' (' . $waiting . ' waiting)' : '' }}"
+                                    class="relative w-14 h-14 bg-amber-500/20 text-amber-300 rounded-xl hover:bg-amber-500/30 transition-all flex items-center justify-center border border-amber-500/30">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                @if($waiting > 0)
+                                    <span class="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-amber-500 text-slate-900 text-[9px] font-black flex items-center justify-center tabular-nums">{{ $waiting > 99 ? '99+' : $waiting }}</span>
+                                @endif
+                            </button>
+                        </form>
                         <form action="{{ route('vendor.employees.destroy', $employee) }}" method="POST" onsubmit="return confirm('Decommission specialist?')">
                             @csrf @method('DELETE')
                             <button class="w-14 h-14 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-all flex items-center justify-center border border-rose-100">

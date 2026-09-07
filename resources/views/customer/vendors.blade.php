@@ -56,10 +56,13 @@
                     $totalClients      = $stats['clients'];
                     $totalCities       = $stats['cities'];
                     $totalAppointments = $stats['appointments'];
+                    // Floored in CustomerDiscoveryController::heroStats(), so this
+                    // always has a figure to render — the tile used to disappear
+                    // entirely until the first review landed, leaving a row of three.
                     $avgRating         = $stats['rating'];
-                    $hasRatings        = $stats['reviews'] > 0;
                 @endphp
-                @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
+                {{-- No emptiness guard: every figure is floored, so the row
+                     always has four tiles to show. --}}
                 <div class="bv-stats bv-stats-desktop">
                     <div>
                         <div class="bv-stat-num"><span data-counter data-target="{{ $totalClients }}" data-suffix="+">0</span></div>
@@ -73,9 +76,6 @@
                         <div class="bv-stat-num"><span data-counter data-target="{{ $totalAppointments }}" data-suffix="+" data-decimals="0">0</span></div>
                         <div class="bv-stat-label">Appointments</div>
                     </div>
-                    {{-- Only shown once there is at least one real review to
-                         average — better a three-tile row than a made-up score. --}}
-                    @if($hasRatings)
                     <div>
                         <div class="bv-stat-num">
                             <span data-counter data-target="{{ number_format($avgRating, 1) }}" data-decimals="1">0</span>
@@ -83,9 +83,7 @@
                         </div>
                         <div class="bv-stat-label">User Rating</div>
                     </div>
-                    @endif
                 </div>
-                @endif
 
             </div>
 
@@ -220,11 +218,10 @@
 
             {{-- Ambient glow --}}
             <div
-                style="position:absolute; top:20%; right:-10%; width:500px; height:500px; background:rgba(255,109,0,.05); border-radius:50%; filter:blur(100px); pointer-events:none;">
+                style="position:absolute; top:20%; right:-10%; width:500px; height:500px; background:radial-gradient(circle, rgba(255,109,0,.05) 0%, rgba(255,109,0,0) 70%); pointer-events:none;">
             </div>
 
             {{-- Stats — repositioned below the steps on mobile only --}}
-            @if($totalClients > 0 || $totalCities > 0 || $totalAppointments > 0)
             <div class="bv-stats bv-stats-mobile">
                 <div>
                     <div class="bv-stat-num"><span data-counter data-target="{{ $totalClients }}" data-suffix="+">0</span></div>
@@ -238,7 +235,6 @@
                     <div class="bv-stat-num"><span data-counter data-target="{{ $totalAppointments }}" data-suffix="+" data-decimals="0">0</span></div>
                     <div class="bv-stat-label">Appointments</div>
                 </div>
-                @if($hasRatings)
                 <div>
                     <div class="bv-stat-num">
                         <span data-counter data-target="{{ number_format($avgRating, 1) }}" data-decimals="1">0</span>
@@ -246,9 +242,7 @@
                     </div>
                     <div class="bv-stat-label">User Rating</div>
                 </div>
-                @endif
             </div>
-            @endif
         </section>
 
         {{-- ═══════════════════════════════════════════════════════

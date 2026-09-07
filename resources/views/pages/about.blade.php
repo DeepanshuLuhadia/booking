@@ -23,8 +23,8 @@
 
     <!-- Hero -->
     <section class="relative pt-36 pb-20 md:pt-44 md:pb-28 overflow-hidden" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
-        <div style="position:absolute; top:-10%; left:20%; width:520px; height:520px; background:rgba(255,109,0,.09); border-radius:50%; filter:blur(130px); pointer-events:none;"></div>
-        <div style="position:absolute; bottom:-20%; right:15%; width:600px; height:600px; background:rgba(255,109,0,.05); border-radius:50%; filter:blur(150px); pointer-events:none;"></div>
+        <div style="position:absolute; top:-10%; left:20%; width:520px; height:520px; background:radial-gradient(circle, rgba(255,109,0,.09) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
+        <div style="position:absolute; bottom:-20%; right:15%; width:600px; height:600px; background:radial-gradient(circle, rgba(255,109,0,.05) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
         <div class="relative z-10 container mx-auto px-4 md:px-8">

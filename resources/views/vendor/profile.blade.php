@@ -516,6 +516,24 @@
                         </button>
                     </div>
 
+                    @if($vendor->qr_code_url)
+                        <div class="glass-card p-6 sm:p-10">
+                            <h3 class="text-xl font-black italic uppercase italic text-white tracking-tight mb-8">Shop QR</h3>
+                            <div class="flex items-center gap-5">
+                                <img src="{{ $vendor->qr_code_url }}" alt="Shop QR code"
+                                     class="w-20 h-20 shrink-0 rounded-2xl border border-white/10 bg-white p-1.5 shadow-lg">
+                                <p class="text-[10px] font-medium text-slate-300 leading-relaxed">
+                                    Customers scan this to book. Download the printable poster to display at your counter.
+                                </p>
+                            </div>
+                            <a href="{{ route('vendor.qr-poster') }}"
+                               class="btn-primary w-full h-14 justify-center gap-2 mt-6">
+                                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                                Download QR Poster (JPG)
+                            </a>
+                        </div>
+                    @endif
+
                     <div class="glass-card p-6 sm:p-10">
                         <h3 class="text-xl font-black italic uppercase italic text-white tracking-tight mb-2">Tier
                             Sync</h3>

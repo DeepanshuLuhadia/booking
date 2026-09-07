@@ -46,6 +46,17 @@ class Vendor extends Model
     protected $appends = ['is_currently_open'];
 
     /**
+     * Get the full URL to the vendor's QR code image.
+     * Auto-generates the QR code if qr_code_path is missing or unusable.
+     */
+    public function getQrCodeUrlAttribute(): string
+    {
+        $path = app(\App\Services\QRCodeService::class)->ensureForVendor($this);
+
+        return asset('storage/' . $path);
+    }
+
+    /**
      * Normalize legacy vendor_type values to canonical category slugs.
      */
     public function setVendorTypeAttribute($value): void
@@ -74,18 +85,6 @@ class Vendor extends Model
         });
 
         static::saving(function ($vendor) {
-            if (!empty($vendor->vendor_type) && empty($vendor->vendor_category_id)) {
-                $cat = \App\Models\VendorCategory::where('slug', $vendor->vendor_type)->first();
-                if ($cat) {
-                    $vendor->vendor_category_id = $cat->id;
-                }
-            } elseif (empty($vendor->vendor_type) && $vendor->vendor_category_id) {
-                $cat = \App\Models\VendorCategory::find($vendor->vendor_category_id);
-                if ($cat) {
-                    $vendor->vendor_type = $cat->slug;
-                }
-            }
-
             $vendor->is_profile_complete = $vendor->isProfileComplete();
         });
 
@@ -205,7 +204,7 @@ class Vendor extends Model
             return $this->attributes['description'];
         }
 
-        $cat = strtolower($this->category?->slug ?? $this->vendor_type ?? 'professional');
+        $cat = strtolower($this->category?->slug ?? 'professional');
         $name = $this->business_name;
         $fee = number_format($this->service_fee);
 

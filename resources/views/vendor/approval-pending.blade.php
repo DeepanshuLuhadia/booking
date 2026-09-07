@@ -49,8 +49,8 @@
 <x-app-layout :page-title="$pageTitle . ' | Appointment Platform'">
     <div class="relative min-h-[85vh] md:min-h-[90vh] flex items-center justify-center pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-16 md:pb-24 px-3 sm:px-6 overflow-hidden" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
         <!-- Glowing Orbs -->
-        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:500px; height:500px; background:rgba(255,109,0,.08); border-radius:50%; filter:blur(120px); pointer-events:none;"></div>
-        <div style="position:absolute; bottom:0; right:10%; width:100%; max-width:600px; height:600px; background:rgba(255,109,0,.04); border-radius:50%; filter:blur(150px); pointer-events:none;"></div>
+        <div style="position:absolute; top:0; left:50%; transform:translateX(-50%); width:100%; max-width:500px; height:500px; background:radial-gradient(circle, rgba(255,109,0,.08) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
+        <div style="position:absolute; bottom:0; right:10%; width:100%; max-width:600px; height:600px; background:radial-gradient(circle, rgba(255,109,0,.04) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
@@ -197,4 +197,54 @@
         </div>
     </div>
     @endif
+
+    @auth
+    <script>
+        window.whenRealtimeReady(function (Echo) {
+            var vendorId = {{ $vendor->id ?? 0 }};
+            var userId = {{ auth()->id() }};
+            var isEmployee = {{ $isEmployee ? 'true' : 'false' }};
+
+            var handleStatusUpdate = function (e) {
+                if (!e) return;
+                if (e.status === 'active' || e.action === 'approved' || e.action === 'reinstated') {
+                    window.location.href = isEmployee ? '{{ route("employee.dashboard") }}' : '{{ route("vendor.dashboard") }}';
+                } else if (e.status === 'rejected' || e.status === 'suspended') {
+                    window.location.reload();
+                }
+            };
+
+            if (vendorId > 0) {
+                Echo.private('vendor.' + vendorId)
+                    .listen('.vendor.status.changed', handleStatusUpdate);
+            }
+
+            Echo.private('App.Models.User.' + userId)
+                .listen('.vendor.status.changed', handleStatusUpdate);
+        });
+
+        // Fallback polling: if WebSockets are down or disconnected, check status every 6 seconds.
+        (function () {
+            var isEmployee = {{ $isEmployee ? 'true' : 'false' }};
+            setInterval(function () {
+                fetch(window.location.href, { credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (res.redirected) {
+                            window.location.href = res.url;
+                        } else if (res.ok) {
+                            return res.text();
+                        }
+                    })
+                    .then(function (html) {
+                        if (!html) return;
+                        // If page no longer contains "Approval Pending" or contains redirect indicator
+                        if (html.indexOf('Approval Pending') === -1 && html.indexOf('Account Suspended') === -1 && html.indexOf('Approval Rejected') === -1) {
+                            window.location.href = isEmployee ? '{{ route("employee.dashboard") }}' : '{{ route("vendor.dashboard") }}';
+                        }
+                    })
+                    .catch(function () {});
+            }, 6000);
+        })();
+    </script>
+    @endauth
 </x-app-layout>

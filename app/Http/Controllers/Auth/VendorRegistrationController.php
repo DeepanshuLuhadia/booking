@@ -18,6 +18,13 @@ class VendorRegistrationController extends Controller
         $vendorCategories = \App\Models\VendorCategory::all()->unique(function ($cat) {
             return \App\Services\ThemeService::getTheme($cat->slug)['key'] ?? $cat->slug;
         });
+
+        // Whether the setup-walkthrough modal has been seen is tracked client
+        // side (sessionStorage — see the Alpine component in the view), not
+        // via the PHP session: this page reloads itself once the shared
+        // geolocation prompt in the layout resolves, and a flag set here at
+        // render time would already read as "seen" by the time that reload's
+        // *second* render is what the visitor actually sees.
         return view('auth.vendor-register', compact('plans', 'vendorCategories'));
     }
 

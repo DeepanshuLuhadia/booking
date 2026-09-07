@@ -239,6 +239,51 @@
                             <svg class="w-5 h-5 transition-transform group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </button>
                     </div>
+
+                    {{-- Start the whole shop over in one action — a power cut, a
+                         late open, a counter that has drifted out of step with
+                         the room. Per-specialist restarts live on the Employees
+                         page; this is the blunt one, so it says exactly what it
+                         will do and confirms before firing. --}}
+                    @if($vendor->employees->count() > 0)
+                    <div class="glass-card p-6 sm:p-8 mt-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-amber-500/20">
+                        <div class="space-y-2">
+                            <h3 class="text-lg font-black text-white uppercase tracking-tight flex items-center gap-3">
+                                <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                Restart All Queues
+                            </h3>
+                            <p class="text-slate-400 text-sm font-semibold italic">
+                                @if(($stats['waiting_now'] ?? 0) > 0)
+                                    <span class="text-amber-300 font-black not-italic">{{ $stats['waiting_now'] }}</span>
+                                    {{ $stats['waiting_now'] === 1 ? 'person is' : 'people are' }} waiting right now.
+                                    Restarting cancels {{ $stats['waiting_now'] === 1 ? 'them' : 'them all' }},
+                                    notifies {{ $stats['waiting_now'] === 1 ? 'them' : 'them' }}, and sets every token counter back to 0.
+                                @else
+                                    Nobody is waiting right now — this just sets every token counter back to 0.
+                                @endif
+                            </p>
+                        </div>
+                        @php
+                            $shopWaiting = $stats['waiting_now'] ?? 0;
+                            $shopWarning = $shopWaiting > 0
+                                ? $shopWaiting . ' ' . ($shopWaiting === 1 ? 'person is' : 'people are')
+                                    . " waiting across the shop right now.\\n\\n"
+                                    . 'Restarting EVERY queue will CANCEL ' . ($shopWaiting === 1 ? 'them' : 'all of them')
+                                    . " and notify them that their appointment is off, across all specialists."
+                                    . " Every token counter goes back to 0.\\n\\nThis cannot be undone. Continue?"
+                                : "Nobody is waiting across the shop right now.\\n\\n"
+                                    . 'Restarting just sets every token counter back to 0. Continue?';
+                        @endphp
+                        <form action="{{ route('vendor.restart-all-queues') }}" method="POST" class="w-full md:w-auto shrink-0"
+                              onsubmit="return confirm('{{ addslashes($shopWarning) }}')">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full md:w-auto px-8 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25">
+                                Restart All
+                            </button>
+                        </form>
+                    </div>
+                    @endif
                 </div>
 
                 <div class="lg:col-span-2">
@@ -594,6 +639,14 @@
             Echo.channel(`shop.${vendorId}`)
                 .listen('.shop.status', () => window.Realtime.refresh('#vendor-live'));
         });
+
+        // Fallback polling: if WebSockets are down or disconnected, refresh every 10 seconds.
+        (function () {
+            setInterval(function () {
+                if (window.Realtime?.connected()) return;
+                window.Realtime.refresh('#vendor-live');
+            }, 10000);
+        })();
     </script>
 </x-vendor-layout>
 

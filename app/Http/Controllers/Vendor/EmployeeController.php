@@ -12,10 +12,29 @@ use Illuminate\Support\Facades\Mail;
 
 class EmployeeController extends Controller
 {
-    public function index()
+    public function index(\App\Services\ShiftService $shifts)
     {
         $vendor = auth()->user()->vendor;
-        $employees = $vendor->employees;
+
+        // The shift being worked now, not the calendar day — an overnight rota
+        // is still on yesterday's date at 00:30, which is where that night's
+        // queue lives.
+        $today = $shifts->businessDate($vendor);
+
+        /*
+        | How many people are standing in each specialist's queue right now.
+        |
+        | One aggregate query for the whole roster rather than a count inside
+        | the card loop, and it is what the "Restart queue" confirmation names
+        | before it cancels anybody.
+        */
+        $employees = $vendor->employees()
+            ->withCount(['bookings as waiting_count' => function ($query) use ($today) {
+                $query->whereIn('status', ['pending', 'confirmed'])
+                    ->where('booking_date', $today);
+            }])
+            ->get();
+
         return view('vendor.employees.index', compact('employees', 'vendor'));
     }
 
@@ -23,7 +42,7 @@ class EmployeeController extends Controller
     {
         $vendor = auth()->user()->vendor;
         $planLimit = $vendor->subscriptionPlan->max_employees ?? 0;
-        
+
         if ($vendor->employees()->count() >= $planLimit) {
             return redirect()->route('vendor.employees.index')->with('error', "You have reached the maximum employee limit ({$planLimit}) for your plan. Please upgrade to add more.");
         }

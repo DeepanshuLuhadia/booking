@@ -108,6 +108,7 @@
                 </svg>
                 <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Site Settings</span>
             </a>
+            <x-install-app-button variant="mobile" />
             <div class="h-px bg-white/10 mx-6 my-2"></div>
         </div>
     </x-slot>
@@ -201,8 +202,10 @@
                     </svg>
                     <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Site Settings</span>
                 </a>
+
+                <x-install-app-button variant="desktop" />
             </div>
-            
+
             <div class="mt-auto p-4 flex flex-col items-center">
                  <div class="w-16 h-1 rounded-full bg-white/10 mb-4"></div>
                  <p class="text-[8px] font-black text-slate-300 uppercase tracking-[0.3em]">ADMIN CORE</p>

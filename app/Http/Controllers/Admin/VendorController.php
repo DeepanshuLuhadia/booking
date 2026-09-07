@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\VendorStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\Vendor;
 use App\Services\BookingReportService;
@@ -68,6 +69,11 @@ class VendorController extends Controller
     public function update(Request $request, Vendor $vendor)
     {
         $vendor->update($request->only('status'));
+        try {
+            event(new VendorStatusChanged($vendor, $vendor->status));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to broadcast vendor status change', ['error' => $e->getMessage()]);
+        }
         return back()->with('success', 'Vendor status updated');
     }
 
@@ -91,6 +97,12 @@ class VendorController extends Controller
         ]);
         $vendor->user?->update(['status' => 'active']);
 
+        try {
+            event(new VendorStatusChanged($vendor, 'approved'));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to broadcast vendor status change', ['error' => $e->getMessage()]);
+        }
+
         return back()->with('success', "Vendor '{$vendor->business_name}' approved.");
     }
 
@@ -99,12 +111,24 @@ class VendorController extends Controller
         $vendor->update(['status' => 'rejected', 'is_open' => false]);
         $vendor->user?->update(['status' => 'inactive']);
 
+        try {
+            event(new VendorStatusChanged($vendor, 'rejected'));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to broadcast vendor status change', ['error' => $e->getMessage()]);
+        }
+
         return back()->with('success', "Vendor '{$vendor->business_name}' rejected.");
     }
 
     public function suspend(Vendor $vendor)
     {
         $vendor->update(['status' => 'suspended', 'is_open' => false]);
+
+        try {
+            event(new VendorStatusChanged($vendor, 'suspended'));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to broadcast vendor status change', ['error' => $e->getMessage()]);
+        }
 
         return back()->with('success', "Vendor '{$vendor->business_name}' suspended.");
     }
@@ -116,6 +140,12 @@ class VendorController extends Controller
 
         $vendor->update(['status' => 'active', 'is_verified' => $isPaidPlan]);
         $vendor->user?->update(['status' => 'active']);
+
+        try {
+            event(new VendorStatusChanged($vendor, 'reinstated'));
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to broadcast vendor status change', ['error' => $e->getMessage()]);
+        }
 
         return back()->with('success', "Vendor '{$vendor->business_name}' reinstated.");
     }

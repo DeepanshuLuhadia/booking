@@ -191,6 +191,7 @@ class NotificationService
             'status'     => $newStatus,
             'old_status' => $oldStatus,
             'vendor_id'  => $vendor->id,
+            'url'        => route('vendor.dashboard'),
         ]);
     }
 
@@ -212,7 +213,8 @@ class NotificationService
             $this->sendWebPush($user, $title, $message, [
                 'booking_id' => $booking->id,
                 'is_premium' => $isPremium,
-                'fee' => $booking->emergency_fee
+                'fee' => $booking->emergency_fee,
+                'url' => route('vendor.bookings.index'),
             ]);
         } else {
             Log::warning("Vendor #{$vendor->id} has no linked user.");
@@ -224,6 +226,7 @@ class NotificationService
             $empTitle = $isPremium ? "🔥 NEW PRIORITY APPOINTMENT" : "New Appointment Assigned";
             $this->sendWebPush($employeeUser, $empTitle, $message, [
                 'booking_id' => $booking->id,
+                'url' => route('employee.dashboard'),
             ]);
         }
     }
@@ -267,7 +270,7 @@ class NotificationService
         // No fcm_token pre-checks: sendWebPush stores the notification-tab
         // copy for any real account and only skips the push itself.
         if ($owner) {
-            $this->sendWebPush($owner, $title, $message, $data);
+            $this->sendWebPush($owner, $title, $message, $data + ['url' => route('vendor.bookings.index')]);
         } elseif ($vendor) {
             Log::info("Vendor #{$vendor->id} has no linked user; shop notification skipped.");
         }
@@ -275,7 +278,7 @@ class NotificationService
         $employeeUser = $booking?->employee?->user;
 
         if ($employeeUser && $employeeUser->id !== ($owner->id ?? 0)) {
-            $this->sendWebPush($employeeUser, $title, $message, $data);
+            $this->sendWebPush($employeeUser, $title, $message, $data + ['url' => route('employee.dashboard')]);
         }
     }
 
@@ -411,6 +414,7 @@ class NotificationService
         return (bool) $this->sendWebPush($recipient, $title, $message, $data + [
             'booking_id'   => $booking->id,
             'token_number' => $booking->token_number,
+            'url'          => route('bookings.mine'),
         ]);
     }
 
@@ -507,6 +511,7 @@ class NotificationService
             'booking_id'   => $booking->id,
             'token_number' => $token,
             'type'         => $kind === 'turn' ? 'your_turn' : 'up_next',
+            'url'          => route('bookings.mine'),
         ]);
 
         if ($sent) {

@@ -509,17 +509,35 @@ private function categoryCandidates(Request $request, string $slug, array $terms
 }
 
 /**
- * Platform totals behind the hero counters.
+ * Floors for the hero counters.
+ *
+ * The row is the first thing a visitor reads, and a platform that admits to
+ * three appointments and no rating at all reads as one nobody is using. These
+ * are the numbers the row will not go below; the moment the real figures pass
+ * them the real figures are what show, and they only ever climb from there.
+ */
+private const STAT_FLOORS = [
+    'clients'      => 100,
+    'cities'       => 10,
+    'appointments' => 200,
+    'rating'       => 4.0,
+];
+
+/**
+ * Platform totals behind the hero counters, never below {@see self::STAT_FLOORS}.
  */
 private function heroStats(): array
 {
     return Cache::remember('discovery_hero_stats', 300, function () {
         return [
-            'clients'      => (int) Booking::distinct('customer_phone')->count('customer_phone'),
-            'cities'       => (int) Vendor::distinct('address')->count('address'),
-            'appointments' => (int) Booking::count(),
+            'clients'      => max(self::STAT_FLOORS['clients'], (int) Booking::distinct('customer_phone')->count('customer_phone')),
+            'cities'       => max(self::STAT_FLOORS['cities'], (int) Vendor::distinct('address')->count('address')),
+            'appointments' => max(self::STAT_FLOORS['appointments'], (int) Booking::count()),
             'reviews'      => (int) \App\Models\VendorReview::count(),
-            'rating'       => round((float) \App\Models\VendorReview::avg('rating'), 1),
+            // Floored like the rest, so the fourth tile has something to show
+            // before the first review is ever written — an unrated platform
+            // rendering a three-tile row is what this replaces.
+            'rating'       => max(self::STAT_FLOORS['rating'], round((float) \App\Models\VendorReview::avg('rating'), 1)),
         ];
     });
 }

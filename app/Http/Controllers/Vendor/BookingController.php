@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Employee;
 use App\Services\BookingNotifier;
+use App\Services\QueueRestartService;
 use App\Services\ShiftService;
 use Illuminate\Http\Request;
 
@@ -172,6 +173,53 @@ class BookingController extends Controller
             : $booking->customer_name . "'s appointment";
 
         return back()->with('success', $label . ' skipped — the customer has been asked to rebook.');
+    }
+
+    /**
+     * Start one specialist's queue over: everyone still waiting is cancelled
+     * and told, and the token counter goes back to zero.
+     *
+     * Destructive and outward-facing — the confirmation lives in the dashboard
+     * UI, so nothing here fires without the operator having agreed to it.
+     */
+    public function restartQueue(Request $request, QueueRestartService $queues)
+    {
+        $vendor = auth()->user()->vendor;
+        $request->validate(['employee_id' => 'required|exists:employees,id']);
+
+        $employee = Employee::findOrFail($request->employee_id);
+        if ($employee->vendor_id !== $vendor->id) {
+            abort(403);
+        }
+
+        $cancelled = $queues->restart($employee, 'vendor');
+
+        return back()->with('success', $this->restartMessage($employee->name . "'s queue", $cancelled));
+    }
+
+    /** The same thing across every specialist in the shop, in one action. */
+    public function restartAllQueues(QueueRestartService $queues)
+    {
+        $vendor = auth()->user()->vendor;
+
+        $cancelled = $queues->restartShop($vendor, 'vendor');
+
+        return back()->with('success', $this->restartMessage('All queues', $cancelled));
+    }
+
+    /**
+     * Say plainly how many people were turned away — a restart that quietly
+     * cancelled a room full of customers should never read as "done".
+     */
+    private function restartMessage(string $subject, int $cancelled): string
+    {
+        if ($cancelled === 0) {
+            return "{$subject} restarted. There was nobody waiting.";
+        }
+
+        return "{$subject} restarted. {$cancelled} waiting "
+            . ($cancelled === 1 ? 'customer was' : 'customers were')
+            . ' cancelled and notified.';
     }
 
     /**

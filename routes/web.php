@@ -152,6 +152,12 @@ Route::middleware(['auth'])->group(function () {
 // For saving FCM token (accessible for guests and authenticated users via JS)
 Route::post('/fcm/token', [\App\Http\Controllers\FcmTokenController::class, 'save'])->name('fcm.token.save');
 
+// Onboarding walkthrough clips, streamed from local storage. Public and
+// unauthenticated on purpose — they play on the registration page before an
+// account exists. See VendorSetupVideoController.
+Route::get('/videos/vendor-setup/{clip}', [\App\Http\Controllers\VendorSetupVideoController::class, 'show'])
+    ->name('videos.vendor-setup');
+
 // Guest Authentication & Registration
 Route::middleware(['redirect.role.auth'])->group(function () {
     Route::get('/login', [SessionController::class, 'create'])->name('login');
@@ -193,6 +199,14 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::delete('/bookings/{booking}', [\App\Http\Controllers\Vendor\BookingController::class, 'destroy'])->name('vendor.bookings.destroy');
     Route::post('/next-token', [\App\Http\Controllers\Vendor\BookingController::class, 'nextToken'])->name('vendor.next-token');
     Route::post('/skip-token/{booking}', [\App\Http\Controllers\Vendor\BookingController::class, 'skipToken'])->name('vendor.skip-token');
+
+    /*
+    | Starting a queue over mid-service. Cancels everyone still waiting (and
+    | tells them) before zeroing the token counter, so both routes are POST
+    | and both are confirmed in the UI before they fire.
+    */
+    Route::post('/restart-queue', [\App\Http\Controllers\Vendor\BookingController::class, 'restartQueue'])->name('vendor.restart-queue');
+    Route::post('/restart-all-queues', [\App\Http\Controllers\Vendor\BookingController::class, 'restartAllQueues'])->name('vendor.restart-all-queues');
     
     /*
     | Direct-to-vendor UPI payments — the shop's own ledger.
@@ -245,6 +259,11 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::resource('/employees', \App\Http\Controllers\Vendor\EmployeeController::class, ['as' => 'vendor']);
     Route::post('/plans/{plan}/checkout', [\App\Http\Controllers\PaymentController::class, 'planCheckout'])->name('vendor.plan.checkout');
     Route::post('/plans/callback', [\App\Http\Controllers\PaymentController::class, 'planCallback'])->name('vendor.plan.callback');
+
+    // Printable QR posters — presentation only, built from the QR codes
+    // QRCodeService already generated. See QrPosterController.
+    Route::get('/qr-poster', [\App\Http\Controllers\QrPosterController::class, 'vendor'])->name('vendor.qr-poster');
+    Route::get('/employees/{employee}/qr-poster', [\App\Http\Controllers\QrPosterController::class, 'employee'])->name('vendor.employees.qr-poster');
 });
 
 // Admin Panel
@@ -312,11 +331,16 @@ Route::middleware(['auth', 'ensure.vendor.active'])->prefix('employee')->name('e
     // as cancel; different message to the customer (rebook / call the shop).
     Route::post('/skip', [\App\Http\Controllers\Employee\DashboardController::class, 'skip'])->name('skip');
     Route::post('/toggle-pause', [\App\Http\Controllers\Employee\DashboardController::class, 'togglePause'])->name('toggle-pause');
+    // Clears this specialist's own queue only — no employee id is accepted.
+    Route::post('/restart-queue', [\App\Http\Controllers\Employee\DashboardController::class, 'restartQueue'])->name('restart-queue');
 
     // Notification tab — the employee-panel twin of vendor.notifications.*.
     Route::get('/notifications', [\App\Http\Controllers\NotificationCenterController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationCenterController::class, 'readAll'])->name('notifications.readAll');
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationCenterController::class, 'read'])->name('notifications.read');
+
+    // Printable QR poster for the specialist's own QR code. See QrPosterController.
+    Route::get('/qr-poster', [\App\Http\Controllers\QrPosterController::class, 'employeeSelf'])->name('qr-poster');
 });
 
 Route::get('/employee/{employee}', [\App\Http\Controllers\EmployeePublicBookingController::class, 'show'])->name('employee.public.show');

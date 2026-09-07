@@ -99,6 +99,13 @@ class FcmService
                         'sound' => '/audio/notification.wav',
                         'icon' => '/favicon.ico',
                     ],
+                    // The URL the browser opens/focuses when the user taps the
+                    // system notification. Without this, tapping a background
+                    // push does nothing — the whole point of the notification
+                    // (get vendor/customer to the screen it's about) is lost.
+                    'fcm_options' => [
+                        'link' => $data['url'] ?? url('/'),
+                    ],
                 ],
             ],
         ];

@@ -32,13 +32,23 @@ class DashboardController extends Controller
             'active_employees' => Employee::where('vendor_id', $vendor->id)->where('is_active', true)->count(),
             'plan_limit' => $vendor->subscriptionPlan->max_employees ?? 0,
             'today_revenue' => Booking::where('vendor_id', $vendor->id)->where('booking_date', $today)->where('status', 'confirmed')->sum('online_paid_amount'),
+
+            /*
+            | People currently standing in a queue, shop-wide. Feeds the
+            | "Restart All Queues" confirmation, which has to name the number
+            | it is about to cancel — "are you sure?" is not a fair question
+            | when the answer depends on whether that is nobody or eleven
+            | people sitting in the waiting room.
+            */
+            'waiting_now' => Booking::where('vendor_id', $vendor->id)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->where('booking_date', $today)
+                ->count(),
         ];
 
-        // Ensure QR code exists
-        if (!$vendor->qr_code_path || !file_exists(storage_path('app/public/' . $vendor->qr_code_path))) {
-            $vendor->qr_code_path = $qrService->generateForVendor($vendor);
-            $vendor->save();
-        }
+        // Ensure a current QR code exists (regenerated for anyone still on
+        // the pre-JPEG SVG).
+        $qrService->ensureForVendor($vendor);
 
         $recentBookings = Booking::where('vendor_id', $vendor->id)
             ->visibleToShop()

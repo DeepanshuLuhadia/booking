@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
+use App\Models\SiteSetting;
 
 class ApprovalController extends Controller
 {
@@ -45,8 +46,18 @@ class ApprovalController extends Controller
             'status'      => $status,
             'isEmployee'  => $isEmployee,
             'user'        => $user,
-            'adminEmail'  => config('support.admin_email'),
-            'adminPhone'  => config('support.admin_phone'),
+            /*
+            | Support contacts come from the admin panel's Site Settings
+            | screen, not from config: the platform team changes these without
+            | a deploy, and a vendor locked out of their panel has nothing but
+            | this screen to reach them on. The support address is the one
+            | meant for inbound help, falling back to the general company
+            | address when an admin has left it blank; SiteSetting itself falls
+            | back to the shipped config values, so a site whose settings were
+            | never touched renders exactly what it did before.
+            */
+            'adminEmail'  => SiteSetting::get('company_support_email') ?: SiteSetting::get('company_email'),
+            'adminPhone'  => SiteSetting::get('company_phone'),
         ]);
     }
 }

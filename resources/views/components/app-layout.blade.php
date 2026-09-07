@@ -75,10 +75,15 @@
         // Register the service worker on every load (independent of notifications) so the
         // browser considers the site installable and can fire `beforeinstallprompt`.
         // Uses the same URL the FCM code reuses later, so it dedupes to one registration.
+        //
+        // Registered here rather than on `load`: the browser only judges the site
+        // installable once a service worker is registered, so waiting for every image
+        // and font to finish first pushed `beforeinstallprompt` several seconds into
+        // the visit on a phone. Anyone who opened the menu and tapped Install App
+        // inside that window got written instructions instead of the real dialog.
+        // register() is async and does not block rendering.
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('/firebase-messaging-sw.js?v=7').catch(function () {});
-            });
+            navigator.serviceWorker.register('/firebase-messaging-sw.js?v=7').catch(function () {});
         }
     </script>
 
@@ -149,8 +154,9 @@
     </script>
 
     <!-- Styles + Scripts -->
+    {{-- Alpine ships inside app.js. Livewire's tags used to sit here too,
+         costing every page a 515 KB script for a framework with no components. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @livewireStyles
 
     <style>
         {!! \App\Services\ThemeService::getCssVars($theme) !!}
@@ -1148,6 +1154,105 @@
         </div>
     </div>
 
+    {{--
+        "How to install" steps — the last resort behind the Install App button
+        (components/install-app-button.blade.php), raised by the `install-help`
+        event only once the real browser dialog has been ruled out: iOS, which
+        has no install API, an in-app browser that cannot install at all, or a
+        browser that never offered one.
+
+        Lives here, at layout top level, rather than inside the button: the
+        mobile menu is a transformed container, and a `position: fixed` panel
+        rendered inside one is positioned against that container instead of the
+        viewport. Same reason the toast lives out here.
+
+        Deliberately NOT a toast: a toast clears itself after four seconds,
+        which is no use to someone who has to go and find a menu while reading.
+        This stays until it is dismissed.
+    --}}
+    <div x-data="{
+             open: false,
+             platform: 'android',
+             titles: {
+                 android: 'Install on Android',
+                 ios: 'Install on iPhone',
+                 desktop: 'Install on your computer',
+                 inapp: 'Open in your browser first',
+             },
+             steps: {
+                 android: [
+                     'Tap the ⋮ menu button at the top-right of your browser.',
+                     'Tap “Install app” — on some phones it reads “Add to Home screen”.',
+                     'Tap “Install” to confirm. The icon appears with your other apps.',
+                 ],
+                 ios: [
+                     'Tap the Share button at the bottom of Safari (a square with an arrow).',
+                     'Scroll down the list and tap “Add to Home Screen”.',
+                     'Tap “Add” at the top-right. The icon appears on your home screen.',
+                 ],
+                 desktop: [
+                     'Click the install icon at the right-hand end of the address bar.',
+                     'Click “Install” to confirm.',
+                 ],
+                 inapp: [
+                     'Tap the ⋯ menu in this window and choose “Open in browser”.',
+                     'When the page reopens in Chrome or Safari, tap “Install App” again.',
+                 ],
+             },
+             init() {
+                 window.addEventListener('install-help', (e) => {
+                     this.platform = (e.detail && e.detail.platform) || 'android';
+                     this.open = true;
+                 });
+             },
+         }"
+         x-show="open"
+         x-cloak
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2147483646; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
+    >
+        <div @click="open = false" style="position: absolute; inset: 0;"></div>
+
+        <div @click.stop
+             style="background-color: #0a0f2c;"
+             class="relative max-w-md w-full border border-white/10 rounded-3xl p-7 shadow-2xl">
+
+            <div class="flex items-center gap-4 mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                    <svg class="w-6 h-6 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </div>
+                <h2 class="text-lg font-black text-white tracking-tight" x-text="titles[platform]"></h2>
+            </div>
+
+            <p class="text-sm text-white/60 leading-relaxed mb-5">
+                Your browser did not offer the one-tap install here, so it takes
+                two or three taps instead:
+            </p>
+
+            <ol class="space-y-3 mb-7">
+                <template x-for="(step, i) in steps[platform]" :key="i">
+                    <li class="flex items-start gap-3">
+                        <span class="w-7 h-7 rounded-full bg-white/10 text-white text-sm font-black flex items-center justify-center shrink-0"
+                              x-text="i + 1"></span>
+                        <span class="text-sm text-white/80 leading-relaxed pt-0.5" x-text="step"></span>
+                    </li>
+                </template>
+            </ol>
+
+            <button @click="open = false"
+                    class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-colors hover:bg-white/10">
+                Got it
+            </button>
+        </div>
+    </div>
+
     @if(!request()->cookie('a2hs_decided'))
     <!-- Add to Home Screen prompt — shown after a booking when the page is running in a
          normal mobile browser (NOT already installed). Android/desktop get a native install
@@ -1521,15 +1626,14 @@
                             @endif
 
                             <div class="flex flex-col gap-3">
-                                {{-- Only labelled once there is a link under it —
-                                     with About/Contact living in the footer, a
-                                     signed-out visitor with no bookings would
-                                     otherwise get a heading over nothing but the
-                                     sign-in buttons. --}}
-                                @php
-                                    $hasPlatformLinks = ($myBookingCount ?? 0) > 0
-                                        || (auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isVendor()));
-                                @endphp
+                                {{-- Was conditional on having a link under it — with
+                                     About/Contact living in the footer, a signed-out
+                                     visitor with no bookings used to get a heading
+                                     over nothing but the sign-in buttons. Install App
+                                     is now offered to every visitor unconditionally
+                                     (it hides itself client-side once installed), so
+                                     there is always at least one item here. --}}
+                                @php $hasPlatformLinks = true; @endphp
                                 @if($hasPlatformLinks)
                                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2 mb-1">Platform</h4>
                                 @endif
@@ -1545,6 +1649,11 @@
                                         <span class="ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full theme-gradient-bg text-white text-[10px] font-black flex items-center justify-center not-italic">{{ $myBookingCount }}</span>
                                     </a>
                                 @endif
+
+                                {{-- Available to every visitor, guest or signed in — it is a
+                                     device feature, not an account one. Hides itself via
+                                     x-show once already installed. --}}
+                                <x-install-app-button variant="guest" />
 
                                 {{-- About Us / Contact Us deliberately absent here:
                                      both sit in the footer, which is on every
@@ -1771,8 +1880,6 @@
             <p class="font-black text-sm tracking-tight" x-text="message"></p>
         </div>
     </div>
-
-    @livewireScripts
 
     <script>
         // This device's FCM registration token, once we have one. Null until the

@@ -177,8 +177,16 @@ class BookingController extends Controller
                 ], 422);
             }
 
-            // Time-slot bookings carry a real customer-chosen slot; enforce its
-            // format. Token bookings ignore the submitted slot entirely.
+            /*
+            | Time-slot bookings carry a real customer-chosen slot; enforce its
+            | format. Token bookings ignore the submitted slot entirely.
+            |
+            | `hybrid` deliberately sits on the time-slot side, matching the
+            | customer views, which all branch on `=== 'token'` and so render a
+            | slot picker for a hybrid shop. Routing hybrid to the token
+            | allocator here would issue a token number to somebody who had
+            | just chosen 3 o'clock.
+            */
             if ($vendor->appointment_mode !== 'token') {
                 $request->validate([
                     'slot_start' => 'required|date_format:H:i',
@@ -207,7 +215,23 @@ class BookingController extends Controller
 
             $baseServiceFee = $employee->service_fee_override ?? $vendor->service_fee;
             $premiumFee = $request->booking_type === 'premium' ? ($employee->premium_fee ?? 0) : 0;
-            $tokenAmount = ($vendor->appointment_mode === 'token') ? $vendor->token_amount : 0;
+            /*
+            | The token fee, copied onto the booking.
+            |
+            | `vendors.token_amount` is nullable and starts life NULL — a shop
+            | that has never set a token fee simply has not got one. But
+            | `bookings.token_amount` is NOT NULL, so passing that NULL through
+            | failed the insert outright ("Column 'token_amount' cannot be
+            | null"), which the catch below then reported to the customer as
+            | "this slot was just booked by another customer".
+            |
+            | Every token-mode booking for such a shop failed, every time; only
+            | token mode was affected because the other branch already yielded
+            | a hard 0. No fee set means no fee.
+            */
+            $tokenAmount = ($vendor->appointment_mode === 'token')
+                ? (float) ($vendor->token_amount ?? 0)
+                : 0;
             $totalToPay = $tokenAmount + $premiumFee;
 
             /*
@@ -248,14 +272,18 @@ class BookingController extends Controller
             $avgTime = $vendor->avg_consultation_time ?: 15;
 
             // Time-slot mode persists the customer's chosen slot. Token-mode slot
-            // times are derived from the token number inside the transaction (each
-            // token gets a distinct estimated time — this also keeps the
-            // (employee, date, slot_start_time) unique index collision-free).
+            // times are derived from the token number inside the transaction, so
+            // each token carries its own estimated start time.
+            //
+            // The unique index that actually guards this table is
+            // unique_emp_token_per_day (employee_id, booking_date, token_number)
+            // — NOT one on slot_start_time. Two token-mode bookings sharing a
+            // start time is fine and expected; two sharing a token number is not.
             $requestedStart = $request->slot_start;
             $requestedEnd   = $request->slot_end;
 
             // 5 & 6. Transaction & Token Cap
-            $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee, $recordedName, $recordedPhone, $customerEmail, $guestKey, $advanceAmount, $collectsAdvance) {
+            $allocateBooking = function (int $attempt = 0) use ($vendor, $employee, $request, $bookingDate, $avgTime, $requestedStart, $requestedEnd, $tokenAmount, $premiumFee, $totalToPay, $baseServiceFee, $recordedName, $recordedPhone, $customerEmail, $guestKey, $advanceAmount, $collectsAdvance) {
                 $tokenNumber = null;
 
                 if ($vendor->appointment_mode === 'token') {
@@ -274,8 +302,23 @@ class BookingController extends Controller
 
                     $tokenNumber = $lastToken + 1;
 
-                    // Estimated start = now + (position in queue) * avg service time.
-                    $estStart  = Carbon::now()->addMinutes(($tokenNumber - 1) * $avgTime);
+                    /*
+                    | Estimated start = now + (position in queue) * avg service
+                    | time, nudged one second per retry.
+                    |
+                    | The nudge is what lets a retry actually escape. A database
+                    | still carrying the original
+                    | unique(employee_id, booking_date, slot_start_time) — one
+                    | where 2026_07_26_210000_fix_bookings_unique_slot_index has
+                    | not run — can reject this row on the slot time rather than
+                    | the token number. Retrying re-reads the same MAX and the
+                    | clock has barely moved, so without an offset the second
+                    | attempt recomputes the identical time and collides again,
+                    | and the customer is refused for something a retry was
+                    | supposed to absorb. A second either way is invisible in an
+                    | estimate measured in fifteen-minute steps.
+                    */
+                    $estStart  = Carbon::now()->addMinutes(($tokenNumber - 1) * $avgTime)->addSeconds($attempt);
                     $slotStart = $estStart->format('H:i:s');
                     $slotEnd   = $estStart->copy()->addMinutes($avgTime)->format('H:i:s');
                 } else {
@@ -356,7 +399,37 @@ class BookingController extends Controller
                     'razorpay_payment_id'  => $request->payment_id,
                     'notes'                => "Service Fee: ₹{$baseServiceFee}"
                 ]);
-            });
+            };
+
+            /*
+            | Claim the token, retrying the one collision that is a race rather
+            | than a real conflict.
+            |
+            | `MAX(token_number) … FOR UPDATE` cannot lock rows that do not exist
+            | yet. On a shop's first bookings of the day — a brand-new vendor,
+            | every time — two concurrent requests both read MAX = 0, both claim
+            | token 1, and the loser hits unique_emp_token_per_day. Nothing is
+            | actually double-booked: the second request just needs to re-read
+            | the counter and take the next number, which is what this does.
+            */
+            $attempts = 0;
+
+            while (true) {
+                try {
+                    $booking = \Illuminate\Support\Facades\DB::transaction(
+                        fn () => $allocateBooking($attempts)
+                    );
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if (++$attempts >= 3 || !$this->isTokenCollision($e)) {
+                        throw $e;
+                    }
+
+                    \Illuminate\Support\Facades\Log::info(
+                        "Token collision for employee #{$employee->id} on {$bookingDate}; retrying (attempt {$attempts})."
+                    );
+                }
+            }
 
             \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 86400);
 
@@ -511,9 +584,21 @@ class BookingController extends Controller
 
         } catch (\Illuminate\Database\QueryException $e) {
             \Illuminate\Support\Facades\Log::warning('BookingController@store database conflict: ' . $e->getMessage());
+
+            /*
+            | Only a time-slot shop can lose a slot to somebody else. A token
+            | shop hands out sequential numbers — there is no time to choose and
+            | nothing for a customer to do differently — so telling them to
+            | "choose a different time" sent them back to a screen with no
+            | alternative on it, for what is really a server-side fault.
+            */
+            $isTokenMode = isset($vendor) && $vendor->appointment_mode === 'token';
+
             return response()->json([
                 'success' => false,
-                'error'   => 'This slot was just booked by another customer. Please choose a different time.',
+                'error'   => $isTokenMode
+                    ? 'Could not issue a token just now. Please try again.'
+                    : 'This slot was just booked by another customer. Please choose a different time.',
             ], 409);
 
         } catch (\Throwable $e) {
@@ -526,5 +611,27 @@ class BookingController extends Controller
                 'error'   => $e->getMessage() ?: 'Booking could not be completed. Please try again.',
             ], $code);
         }
+    }
+
+    /**
+     * Is this a duplicate-key clash the allocator can simply try again?
+     *
+     * A duplicate entry only — never any other integrity failure. SQLSTATE
+     * 23000 covers NOT NULL violations too, and those repeat identically on
+     * every attempt: retrying one just fails three times over and delays the
+     * error the caller needs to see. (That is not hypothetical — a NULL
+     * token_amount was doing exactly this in production.)
+     *
+     * Which unique index fires is deliberately not named. It depends on
+     * whether 2026_07_26_210000_fix_bookings_unique_slot_index has run on a
+     * given database: without it the original
+     * unique(employee_id, booking_date, slot_start_time) is still present and
+     * collides on the slot time rather than the token number. Both are escaped
+     * the same way — a fresh token number and a nudged slot time.
+     */
+    private function isTokenCollision(\Illuminate\Database\QueryException $e): bool
+    {
+        return $e->getCode() === '23000'
+            && str_contains($e->getMessage(), 'Duplicate entry');
     }
 }

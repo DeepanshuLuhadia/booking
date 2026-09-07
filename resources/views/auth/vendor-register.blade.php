@@ -1,8 +1,27 @@
 <x-app-layout page-title="Vendor Onboarding | Appointment Platform">
-    <div class="relative min-h-screen pb-32 overflow-hidden" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
+    <div x-data="{
+            showVideoModal: false,
+            // sessionStorage, not the PHP session: this page reloads itself
+            // once the layout's own geolocation prompt resolves (see
+            // app-layout's location modal), and a flag read only from the
+            // initial server render would already look 'seen' by the time
+            // that reload's second render is what the visitor actually sees.
+            // sessionStorage survives the reload and clears when the tab/
+            // browser session ends, matching 'shown once per session'.
+            init() {
+                if (!sessionStorage.getItem('vendor_register_video_seen')) {
+                    this.showVideoModal = true;
+                }
+            },
+            dismissVideoModal() {
+                sessionStorage.setItem('vendor_register_video_seen', '1');
+                this.showVideoModal = false;
+            }
+        }"
+         class="relative min-h-screen pb-32 overflow-hidden" style="background: linear-gradient(180deg,#0a0f2c 0%,#0d1333 100%);">
         <!-- Glowing Orbs (From Index) -->
-        <div style="position:absolute; top:0; left:25%; width:500px; height:500px; background:rgba(255,109,0,.08); border-radius:50%; filter:blur(120px); pointer-events:none;"></div>
-        <div style="position:absolute; bottom:0; right:25%; width:600px; height:600px; background:rgba(255,109,0,.04); border-radius:50%; filter:blur(150px); pointer-events:none;"></div>
+        <div style="position:absolute; top:0; left:25%; width:500px; height:500px; background:radial-gradient(circle, rgba(255,109,0,.08) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
+        <div style="position:absolute; bottom:0; right:25%; width:600px; height:600px; background:radial-gradient(circle, rgba(255,109,0,.04) 0%, rgba(255,109,0,0) 70%); pointer-events:none;"></div>
         <!-- Subtle Institutional Pattern -->
         <div class="absolute inset-0 z-0 bg-dot-pattern opacity-30"></div>
 
@@ -303,6 +322,11 @@
                         @error('terms')
                             <p class="text-rose-300 font-bold text-xs italic ml-8">{{ $message }}</p>
                         @enderror
+                        <button type="button" @click="showVideoModal = true"
+                                class="inline-flex items-center gap-1.5 ml-8 text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            View Video Again (Demo)
+                        </button>
                     </div>
                     <button type="submit" class="btn-premium mx-auto w-full md:w-auto px-10 md:px-8 !rounded-2xl md:!rounded-[2rem] !text-lg md:!text-xl">
                         Create Business Account
@@ -460,6 +484,11 @@
                         </label>
                         <p x-show="fieldError('terms')" x-cloak x-text="fieldError('terms')"
                            class="text-rose-300 text-[10px] font-black uppercase tracking-widest ml-8"></p>
+                        <button type="button" @click="showVideoModal = true"
+                                class="inline-flex items-center gap-1.5 ml-8 text-[10px] font-black uppercase tracking-widest text-orange-400 hover:text-orange-300 transition-colors">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            View Video Again (Demo)
+                        </button>
                     </div>
 
                     <div x-show="error" x-cloak class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
@@ -481,6 +510,49 @@
             </div>
             @endif
 
+            </div>
+        </div>
+
+        {{-- Setup-walkthrough video modal. Autoplays once per browser session
+             (see VendorRegistrationController::create()); "View Video Again"
+             next to the terms checkbox below reopens it any time afterwards.
+             Streamed straight from local storage — no YouTube embed. --}}
+        <div x-show="showVideoModal"
+             x-cloak
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="app-modal"
+             style="background: rgba(10, 15, 44, 0.95); backdrop-filter: blur(12px);">
+
+            <div class="app-modal__panel max-w-lg custom-scrollbar border border-white/10 rounded-3xl p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl" style="background-color:#0a0f2c;">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-2xl flex items-center justify-center mb-5">
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+
+                <h2 class="text-xl sm:text-2xl font-black text-white italic tracking-tight mb-3">Before You Register, <span class="text-orange-400">Watch This.</span></h2>
+                <p class="text-xs sm:text-sm font-medium text-white/70 leading-relaxed mb-5">
+                    A 2-minute walkthrough of the registration form below — every field, in order, so you can fill it in without any guesswork.
+                </p>
+
+                <div class="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black mb-6">
+                    <video class="w-full h-full" controls playsinline preload="metadata"
+                           poster="{{ asset('logo.png') }}">
+                        <source src="{{ route('videos.vendor-setup', 'part1') }}" type="video/mp4">
+                    </video>
+                </div>
+
+                <button @click="dismissVideoModal()"
+                        class="w-full h-14 rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center transition-all hover:opacity-90 mb-3">
+                    OK, Got It
+                </button>
+                <button @click="dismissVideoModal()"
+                        class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 font-black uppercase tracking-widest text-[10px] flex items-center justify-center transition-all">
+                    Skip For Now
+                </button>
             </div>
         </div>
     </div>

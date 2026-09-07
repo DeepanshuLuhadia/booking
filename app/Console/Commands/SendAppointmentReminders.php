@@ -66,7 +66,13 @@ class SendAppointmentReminders extends Command
                     $booking->customer,
                     "⏰ Appointment Reminder",
                     $message,
-                    ['booking_id' => $booking->id]
+                    [
+                        'booking_id' => $booking->id,
+                        // Tapping the reminder lands on the booking it is about.
+                        // Generated in console context, so this is the one place
+                        // the deep link depends on APP_URL being the live domain.
+                        'url'        => route('bookings.mine'),
+                    ]
                 );
             }
 
@@ -76,7 +82,10 @@ class SendAppointmentReminders extends Command
                     $booking->employee->user,
                     "⏰ Upcoming Appointment",
                     "Reminder: You have an appointment with {$booking->customer_name} starting at {$startsAt}.",
-                    ['booking_id' => $booking->id]
+                    [
+                        'booking_id' => $booking->id,
+                        'url'        => route('employee.dashboard'),
+                    ]
                 );
             }
         }

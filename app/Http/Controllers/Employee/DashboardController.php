@@ -17,10 +17,8 @@ class DashboardController extends Controller
             return redirect('/')->with('error', 'Employee profile not found.');
         }
 
-        if (empty($employee->qr_code_path) || !\Illuminate\Support\Facades\Storage::disk('public')->exists($employee->qr_code_path)) {
-            app(\App\Services\QRCodeService::class)->generateForEmployee($employee);
-            $employee->refresh();
-        }
+        app(\App\Services\QRCodeService::class)->ensureForEmployee($employee);
+        $employee->refresh();
 
         // The shift being worked right now. On an overnight rota this is still
         // yesterday's date at 00:30, which is where that night's queue lives —
@@ -142,5 +140,32 @@ class DashboardController extends Controller
 
         $status = $employee->is_paused ? 'Paused' : 'Resumed';
         return back()->with('success', "Appointments $status successfully.");
+    }
+
+    /**
+     * Start this specialist's own queue over: everyone still waiting is
+     * cancelled and told, and the token counter goes back to zero.
+     *
+     * Scoped to the signed-in employee — there is no employee_id to pass, so
+     * one specialist can never clear another's queue. Destructive and
+     * outward-facing; the confirmation lives in the dashboard UI.
+     */
+    public function restartQueue(\App\Services\QueueRestartService $queues)
+    {
+        $employee = auth()->user()->employee;
+
+        if (!$employee) {
+            return back()->with('error', 'Unauthorized.');
+        }
+
+        $cancelled = $queues->restart($employee, 'employee');
+
+        if ($cancelled === 0) {
+            return back()->with('success', 'Queue restarted. There was nobody waiting.');
+        }
+
+        return back()->with('success', "Queue restarted. {$cancelled} waiting "
+            . ($cancelled === 1 ? 'customer was' : 'customers were')
+            . ' cancelled and notified.');
     }
 }

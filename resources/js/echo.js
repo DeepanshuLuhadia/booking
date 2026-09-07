@@ -11,13 +11,23 @@ window.Pusher = Pusher;
  * on it for correctness. That is why each screen keeps a slow poll as a
  * fallback and only steps it down while `Realtime.connected()` is true.
  */
+const reverbHost = import.meta.env.VITE_REVERB_HOST;
+const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || (window.location.protocol === 'https:' ? 'https' : 'http');
+const reverbPort = import.meta.env.VITE_REVERB_PORT;
+
+const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const host = (reverbHost && !isLocalHost) ? reverbHost : window.location.hostname;
+const isHttps = (reverbScheme === 'https') && (window.location.protocol === 'https:');
+
+const port = reverbPort ? parseInt(reverbPort) : (isLocalHost ? 8080 : (isHttps ? 443 : 80));
+
 window.Echo = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+    wsHost: host,
+    wsPort: port,
+    wssPort: port,
+    forceTLS: isHttps,
     enabledTransports: ['ws', 'wss'],
 });
 
@@ -26,7 +36,8 @@ const pending = new Map();
 window.Realtime = {
     /** Is the socket actually up? Drives whether a page still needs to poll. */
     connected() {
-        return window.Echo?.connector?.pusher?.connection?.state === 'connected';
+        const state = window.Echo?.connector?.pusher?.connection?.state;
+        return state === 'connected';
     },
 
     /**

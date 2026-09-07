@@ -67,7 +67,7 @@
         min-height: 100vh;
         color: var(--theme-body-text, #ffffff);
         font-family: 'Inter', sans-serif;
-        transition: all 0.5s ease;
+        transition: background 0.5s ease, color 0.5s ease;
     }
     h1, h2, h3, h4, h5, h6 { 
         font-family: var(--theme-font-heading, 'Outfit', sans-serif); 
@@ -80,18 +80,45 @@
 /*  SHARED COMPONENTS                              */
 /* ─────────────────────────────────────────────── */
 @layer components {
+    /*
+    | Glass panels.
+    |
+    | Two things here are load-bearing for iPhones, which were locking up on
+    | every tap inside one of these cards:
+    |
+    |  - The hover lift is fenced behind `(hover: hover)`. iOS applies :hover
+    |    to whatever was last tapped and leaves it there, so tapping a toggle
+    |    or a select inside a card used to lift the whole card — a 400ms
+    |    transform + shadow animation on an element with a live backdrop
+    |    blur, re-sampled every frame, then reversed on the next tap.
+    |  - The transition names its properties. `all` also animated
+    |    backdrop-filter, which is about the most expensive thing a GPU can
+    |    be asked to tween.
+    */
     .glass-card {
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 1.5rem;
         box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 255, 255, 0.02);
-        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                    border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .glass-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 40px 80px -15px rgba(0, 0, 0, 0.4);
-        border-color: rgba(255, 255, 255, 0.25);
+    @media (hover: hover) {
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 40px 80px -15px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+    }
+    /* Blur cost scales with radius; on a phone the difference is invisible. */
+    @media (max-width: 768px) {
+        .glass-card {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
     }
 
     .search-bar {
@@ -121,12 +148,14 @@
         color: #ffffff;
         border: none;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
     }
 
-    .search-btn:hover {
-        transform: scale(1.02);
-        filter: brightness(1.1);
+    @media (hover: hover) {
+        .search-btn:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
     }
     
     .category-pill {
@@ -139,14 +168,16 @@
         gap: 8px;
         align-items: center;
         color: white;
-        transition: all 0.2s ease;
+        transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
         text-transform: uppercase;
         font-weight: 900;
         letter-spacing: 0.1em;
     }
     
-    .category-pill:hover {
-        transform: scale(1.05);
+    @media (hover: hover) {
+        .category-pill:hover {
+            transform: scale(1.05);
+        }
     }
     
     .category-pill.active {
@@ -158,7 +189,7 @@
         border: none;
         padding: 1rem 1.5rem;
         color: #ffffff;
-        transition: all 0.2s ease;
+        transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
     }
     .premium-input:focus {
         outline: none;
@@ -170,7 +201,7 @@
         font-weight: 800;
         padding: 1rem 2.5rem;
         border-radius: 1rem;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         cursor: pointer;
         display: inline-flex;
         align-items: center;
@@ -181,16 +212,18 @@
         font-size: 0.75rem;
         border: none;
     }
-    .btn-premium:hover {
-        transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 20px 40px -15px rgba(255, 109, 0, 0.6);
-        filter: brightness(1.1);
+    @media (hover: hover) {
+        .btn-premium:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 20px 40px -15px rgba(255, 109, 0, 0.6);
+            filter: brightness(1.1);
+        }
     }
 …
     .nav-link {
         color: var(--theme-body-text);
         opacity: 0.7;
-        transition: all 0.2s;
+        transition: color 0.2s, background-color 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s, transform 0.2s, filter 0.2s;
         font-weight: 700;
         cursor: pointer;
         position: relative;
@@ -296,7 +329,7 @@ body[class*="theme-"] {
   border-radius: 16px;
   overflow: hidden;
   position: relative;
-  transition: all 0.3s ease;
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease, transform 0.3s ease, filter 0.3s ease;
 }
 
 .card::before {
@@ -313,9 +346,11 @@ body[class*="theme-"] {
   pointer-events: none;
 }
 
-.card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+@media (hover: hover) {
+    .card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
 }
 
 .card-image img {
@@ -336,11 +371,13 @@ body[class*="theme-"] {
   align-items: center;
   justify-content: center;
   color: white;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
 }
 
-.card-btn:hover {
-  transform: scale(1.1);
+@media (hover: hover) {
+    .card-btn:hover {
+      transform: scale(1.1);
+    }
 }
 
 .card-title {
@@ -553,17 +590,19 @@ body[class*="theme-"] {
   border-radius: 12px;
   border: none;
   font-weight: 800;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
 }
 
-.theme-btn:hover {
-  transform: translateY(-2px) scale(1.02);
-  filter: brightness(1.1);
-  box-shadow: 0 20px 40px -15px var(--cat1) !important;
+@media (hover: hover) {
+    .theme-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      filter: brightness(1.1);
+      box-shadow: 0 20px 40px -15px var(--cat1) !important;
+    }
 }
 
 /* --- STRICT MODE OVERRIDES START --- */
@@ -785,7 +824,7 @@ body[class*="theme-"] {
 [data-panel-type] button, 
 [data-panel-type] input, 
 [data-panel-type] select {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Scoped definitions for Admin Panel (Dark Theme Glassmorphism) */
@@ -845,10 +884,12 @@ body[class*="theme-"] {
   box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.3) !important;
 }
 
-[data-panel-type] .btn-primary:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 6px 20px 0 rgba(14, 165, 233, 0.45) !important;
-  filter: brightness(1.1) !important;
+@media (hover: hover) {
+    [data-panel-type] .btn-primary:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 6px 20px 0 rgba(14, 165, 233, 0.45) !important;
+      filter: brightness(1.1) !important;
+    }
 }
 
 [data-panel-type] .btn-outline {

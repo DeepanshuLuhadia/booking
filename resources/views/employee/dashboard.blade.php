@@ -48,45 +48,42 @@
 
         {{-- Employee QR Code Section ------------------------------------------------ --}}
         <div class="glass-card p-5 sm:p-8 bg-white/5 border border-white/10 rounded-3xl" x-data="{ copied: false }">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                <!-- Left: QR Code + Text details -->
-                <div class="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full">
-                    {{--<div class="w-28 h-28 sm:w-24 sm:h-24 rounded-2xl bg-white p-2.5 shrink-0 border border-white/20 shadow-2xl flex items-center justify-center">
-                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code" class="w-full h-full object-contain">
+            <div class="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8">
+                <!-- Left: text details + copy link -->
+                <div class="flex-1 min-w-0 space-y-3 text-center lg:text-left w-full">
+                    <div class="flex items-center justify-center lg:justify-start gap-2">
+                        <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+                        <h3 class="text-lg sm:text-xl font-black text-white italic tracking-tight">Your Personal QR Code</h3>
                     </div>
-                     <div class="flex-1 min-w-0 space-y-2 w-full">
-                        <div class="flex items-center justify-center sm:justify-start gap-2">
-                            <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
-                            <h3 class="text-lg sm:text-xl font-black text-white italic tracking-tight">Your Personal QR Code</h3>
+                    <p class="text-xs text-slate-400 font-medium leading-relaxed max-w-xl">
+                        Customers scan this QR code or use your personal link to access your direct booking page.
+                        Download the poster on the right to print and display at your counter.
+                    </p>
+                    <div class="pt-1 flex items-center justify-center lg:justify-start">
+                        <div class="max-w-full inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10 text-[11px] font-mono text-sky-300 overflow-hidden">
+                            <svg class="w-3.5 h-3.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            <span class="truncate select-all">{{ $employee->public_url }}</span>
                         </div>
-                        <p class="text-xs text-slate-400 font-medium leading-relaxed max-w-xl">
-                            Customers scan this QR code or use your personal link to access your direct booking page.
-                        </p>
-                        <div class="pt-1 flex items-center justify-center sm:justify-start">
-                            <div class="max-w-full inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10 text-[11px] font-mono text-sky-300 overflow-hidden">
-                                <svg class="w-3.5 h-3.5 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                                <span class="truncate select-all">{{ $employee->public_url }}</span>
-                            </div>
-                        </div>
-                    </div> --}}
-                </div>
-
-                <!-- Right: Action Buttons -->
-                <div class="grid grid-cols-2 sm:flex sm:flex-col gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-white/10">
-                    {{-- <button type="button" @click="navigator.clipboard.writeText('{{ $employee->public_url }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                        class="px-4 py-3 rounded-xl bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                    </div>
+                    <button type="button" @click="navigator.clipboard.writeText('{{ $employee->public_url }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="px-4 py-3 rounded-xl bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border border-sky-500/30 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all inline-flex items-center justify-center gap-2">
                         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
                         <span x-text="copied ? 'COPIED!' : 'COPY LINK'"></span>
-                    </button> --}}
-                    <div class="w-28 h-28 sm:w-24 sm:h-24 rounded-2xl bg-white p-2.5 shrink-0 border border-white/20 shadow-2xl flex items-center justify-center">
-                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="QR Code" class="w-full h-full object-contain">
-                    </div>
-                    <a href="{{ asset('storage/' . $employee->qr_code_path) }}" download="qr-{{ $employee->slug }}.svg"
-                        class="px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 border border-white/10 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                        <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        <span>DOWNLOAD QR</span>
-                    </a>
+                    </button>
                 </div>
+
+                <!-- Right: QR thumbnail + poster download -->
+                @if($employee->qr_code_path)
+                    <div class="w-full lg:w-auto shrink-0 flex flex-col items-center gap-4">
+                        <img src="{{ asset('storage/' . $employee->qr_code_path) }}" alt="Your QR code"
+                             class="w-28 h-28 sm:w-24 sm:h-24 rounded-2xl bg-white p-2.5 border border-white/20 shadow-2xl">
+                        <a href="{{ route('employee.qr-poster') }}"
+                           class="px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 border border-white/10 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 w-full">
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Download QR Poster</span>
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -188,6 +185,37 @@
                                 @endif
                             </span>
                             {{ $employee->is_paused ? 'Resume Appointments' : 'Pause Appointments (Take a Break)' }}
+                        </button>
+                    </form>
+
+                    {{-- Start the queue over. Sits under the pause button
+                         because that is the softer thing to reach for first:
+                         a pause holds everyone's token, this cancels them.
+
+                         The confirmation names how many people are actually
+                         standing in the queue — `remaining` is the same count
+                         already on screen above, so the warning and the
+                         dashboard can never disagree. --}}
+                    @php
+                        $waiting = $stats['remaining'] ?? 0;
+                        $restartWarning = $waiting > 0
+                            ? $waiting . ' ' . ($waiting === 1 ? 'person is' : 'people are')
+                                . " waiting in your queue right now.\\n\\n"
+                                . 'Restarting will CANCEL ' . ($waiting === 1 ? 'them' : 'all of them')
+                                . ' and notify them that their appointment is off, and your token counter'
+                                . " goes back to 0.\\n\\nThis cannot be undone. Continue?"
+                            : "Nobody is waiting in your queue right now.\\n\\n"
+                                . 'Restarting just sets your token counter back to 0. Continue?';
+                    @endphp
+                    <form action="{{ route('employee.restart-queue') }}" method="POST" class="mt-4"
+                          onsubmit="return confirm('{{ addslashes($restartWarning) }}')">
+                        @csrf
+                        <button type="submit"
+                                class="group w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black text-xs sm:text-sm uppercase tracking-widest transition-all active:scale-[0.98] bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20">
+                            <span class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform bg-amber-500/20">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            </span>
+                            Restart Queue{{ $waiting > 0 ? ' (' . $waiting . ' waiting)' : '' }}
                         </button>
                     </form>
                 </div>
@@ -361,6 +389,14 @@
             Echo.channel(`queue.${employeeId}`)
                 .listen('.queue.updated', () => window.Realtime.refresh('#emp-live'));
         });
+
+        // Fallback polling: if WebSockets are down or disconnected, refresh every 10 seconds.
+        (function () {
+            setInterval(function () {
+                if (window.Realtime?.connected()) return;
+                window.Realtime.refresh('#emp-live');
+            }, 10000);
+        })();
 
         function queueSlider() {
             return {
