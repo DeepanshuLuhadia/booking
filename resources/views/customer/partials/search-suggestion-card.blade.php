@@ -36,6 +36,7 @@
 <a href="{{ route('vendor.show', $vendor->slug) }}"
    class="bv-sg-card {{ $sgOpen ? '' : 'bv-sg-closed' }}"
    style="--c1:{{ $sgTheme['primary'] }};--c2:{{ $sgTheme['primary_dark'] }};--sgc:{{ $sgRgb }};"
+   onclick="return window.bvHandleVendorLink(event, this.href)"
    role="option">
 
     <span class="bv-sg-img">

@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->trustProxies(at: '*');
 
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
         // Exempt location and notification cookies from encryption so JS-set
         // cookies are readable server-side. The whole user_* set is written by
         // the location consent modal in the layout with document.cookie, so it

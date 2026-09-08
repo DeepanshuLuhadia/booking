@@ -35,6 +35,12 @@ class Employee extends Model
         return route('employee.public.show', $this->slug ?? $this->id);
     }
 
+    /** Screen-display URL — the live token/queue page meant for a shop's own TV or monitor. */
+    public function getDisplayUrlAttribute()
+    {
+        return route('employee.display', $this->slug ?? $this->id);
+    }
+
     protected $casts = [
         'is_active' => 'boolean',
         'is_paused' => 'boolean',

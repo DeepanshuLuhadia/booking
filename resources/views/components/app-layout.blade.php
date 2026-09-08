@@ -1409,7 +1409,7 @@
     </div>
     @endif
 
-    <div x-data="layoutData()" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
+    <div x-data="layoutData()" id="bvLayoutRoot" data-panel-type="{{ $panelType }}" class="relative z-10 flex flex-col min-h-screen">
         <!-- Navigation (Section 4) -->
         <nav @scroll.window="scrolled = (window.pageYOffset > 50)"
              :class="{ 'bg-[#0a0f2c]/80 backdrop-blur-2xl border-b border-white/5 py-3': scrolled, 'bg-transparent py-5 md:py-6': !scrolled }"
@@ -2135,6 +2135,28 @@
     <x-distance-warning-modal />
 
     <script>
+        // Shared precheck: asks the vendor/employee page for its distance_warning
+        // flag (an AJAX-only response — see CustomerDiscoveryController::show /
+        // EmployeePublicBookingController::show) before we actually navigate.
+        // Returns the warning payload, or null if the vendor is in range /
+        // the user hasn't shared a location.
+        async function bvCheckVendorDistance(vendorUrl) {
+            const userLat = document.cookie.split('; ').find(row => row.startsWith('user_lat'))?.split('=')[1];
+            const userLng = document.cookie.split('; ').find(row => row.startsWith('user_lng'))?.split('=')[1];
+            if (!userLat || !userLng) return null;
+
+            try {
+                const response = await fetch(vendorUrl, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await response.json();
+                return data.distance_warning ? data : null;
+            } catch (error) {
+                console.error('Error checking vendor distance:', error);
+                return null;
+            }
+        }
+
         function layoutData() {
             return {
                 scrolled: false,
@@ -2146,36 +2168,15 @@
                 async handleVendorClick(event, vendorUrl) {
                     event.preventDefault();
 
-                    try {
-                        // Check if vendor has location enabled (cookie exists)
-                        const userLat = document.cookie.split('; ').find(row => row.startsWith('user_lat'))?.split('=')[1];
-                        const userLng = document.cookie.split('; ').find(row => row.startsWith('user_lng'))?.split('=')[1];
-
-                        // Only check distance if user has shared location
-                        if (userLat && userLng) {
-                            const response = await fetch(vendorUrl, {
-                                headers: {
-                                    'Accept': 'application/json',
-                                },
-                            });
-
-                            const data = await response.json();
-
-                            if (data.distance_warning) {
-                                this.distanceWarning = data;
-                                this.pendingVendorUrl = vendorUrl;
-                                this.showDistanceWarning = true;
-                                return;
-                            }
-                        }
-
-                        // No warning or no location, proceed normally
-                        window.location.href = vendorUrl;
-                    } catch (error) {
-                        console.error('Error checking vendor distance:', error);
-                        // On error, allow navigation
-                        window.location.href = vendorUrl;
+                    const warning = await bvCheckVendorDistance(vendorUrl);
+                    if (warning) {
+                        this.distanceWarning = warning;
+                        this.pendingVendorUrl = vendorUrl;
+                        this.showDistanceWarning = true;
+                        return;
                     }
+
+                    window.location.href = vendorUrl;
                 },
 
                 async confirmDistanceWarning() {
@@ -2188,6 +2189,29 @@
                 }
             };
         }
+
+        // For vendor/employee links rendered outside the layoutData() Alpine
+        // scope — e.g. the search-suggestions dropdown, which is reparented to
+        // <body> so it can be positioned above everything else. Reaches into
+        // the layout root's Alpine data to drive the same distance-warning
+        // modal instead of duplicating it.
+        window.bvHandleVendorLink = async function (event, vendorUrl) {
+            event.preventDefault();
+
+            const root = document.getElementById('bvLayoutRoot');
+            const scope = root && window.Alpine ? window.Alpine.$data(root) : null;
+            const warning = await bvCheckVendorDistance(vendorUrl);
+
+            if (warning && scope) {
+                scope.distanceWarning = warning;
+                scope.pendingVendorUrl = vendorUrl;
+                scope.showDistanceWarning = true;
+                return false;
+            }
+
+            window.location.href = vendorUrl;
+            return false;
+        };
     </script>
 </body>
 </html>

@@ -45,6 +45,12 @@ class Vendor extends Model
      */
     protected $appends = ['is_currently_open'];
 
+    /** Screen-display URL — the live all-staff queue slider meant for a shop's own TV or monitor. */
+    public function getDisplayUrlAttribute(): string
+    {
+        return route('vendor.display', $this->slug);
+    }
+
     /**
      * Get the full URL to the vendor's QR code image.
      * Auto-generates the QR code if qr_code_path is missing or unusable.

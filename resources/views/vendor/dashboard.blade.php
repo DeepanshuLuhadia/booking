@@ -128,7 +128,16 @@
                         <h3 class="text-xl font-black text-slate-100 uppercase tracking-wide">Latest Bookings</h3>
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Real-time transaction stream</p>
                     </div>
-                    <a href="{{ route('vendor.bookings.index') }}" class="btn-outline px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest self-start sm:self-auto">Full Logs</a>
+                    <div class="flex items-center gap-3 self-start sm:self-auto">
+                        {{-- Public, no-login page meant for a shop's own TV/monitor:
+                             every specialist's live token and next appointment,
+                             sliding one to the next every couple of seconds. --}}
+                        <a href="{{ $vendor->display_url }}" target="_blank" rel="noopener" class="btn-outline px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Screen Display
+                        </a>
+                        <a href="{{ route('vendor.bookings.index') }}" class="btn-outline px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Full Logs</a>
+                    </div>
                 </div>
                 <div class="table-responsive-wrapper">
                     <table class="w-full text-left">
@@ -377,7 +386,7 @@
                        class="w-full h-14 rounded-xl bg-gradient-to-r from-orange-500 to-amber-400 text-slate-900 font-black uppercase tracking-widest text-xs flex items-center justify-center transition-all hover:opacity-90">
                         Complete Setup Now
                     </a>
-                    <a href="https://youtu.be/Wrj0YvUGD0M" target="_blank" rel="noopener"
+                    <a href="https://youtu.be/xLia7zHJBOU" target="_blank" rel="noopener"
                        class="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all">
                         <svg class="w-4 h-4 text-rose-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 00.5 6.2 31.3 31.3 0 000 12a31.3 31.3 0 00.5 5.8 3 3 0 002.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 002.1-2.1A31.3 31.3 0 0024 12a31.3 31.3 0 00-.5-5.8zM9.6 15.6V8.4L15.8 12l-6.2 3.6z"/></svg>
                         Watch Setup Video

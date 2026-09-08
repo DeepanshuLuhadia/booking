@@ -38,6 +38,7 @@
             <a href="{{ $sgEmp->public_url }}"
                class="bv-sg-card"
                style="--sgc:41,121,255;"
+               onclick="return window.bvHandleVendorLink(event, this.href)"
                role="option">
 
                 <span class="bv-sg-img bv-sg-emp-av">

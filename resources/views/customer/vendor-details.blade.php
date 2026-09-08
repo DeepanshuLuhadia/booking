@@ -1451,6 +1451,13 @@
                     setTimeout(() => {
                         window.dispatchEvent(new Event('trigger-notification-prompt'));
                     }, 500);
+                } else if (res.status === 401) {
+                    // The server found the session authenticated against an
+                    // account that no longer exists and force-logged it out
+                    // (see BookingController@store) — nothing left to retry
+                    // here, only a fresh login can fix it.
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.error || 'Please log in again.', type: 'error' } }));
+                    setTimeout(() => { window.location.href = '{{ route('login') }}'; }, 1500);
                 } else {
                     window.dispatchEvent(new CustomEvent('toast', { detail: { message: data.error || 'ALLOCATION FAILED', type: 'error' } }));
 

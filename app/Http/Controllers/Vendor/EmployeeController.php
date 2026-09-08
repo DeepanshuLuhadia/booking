@@ -261,6 +261,27 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee)
     {
         if ($employee->vendor_id !== auth()->user()->vendor->id) abort(403);
+
+        /*
+        | bookings.employee_id cascades on delete, so removing an employee
+        | with a live or upcoming booking would silently wipe it out from
+        | under the customer. Worse, a customer already on that employee's
+        | booking form at the moment of deletion hits a bare 1452 foreign
+        | key failure when their submit finally reaches Booking::create()
+        | (BookingController@store) — seen in production as a misleading
+        | "slot was just booked" error. Blocking the delete here removes
+        | that window entirely rather than racing to close it.
+        */
+        $hasActiveBookings = $employee->bookings()
+            ->whereIn('status', ['confirmed', 'pending'])
+            ->whereDate('booking_date', '>=', now()->toDateString())
+            ->exists();
+
+        if ($hasActiveBookings) {
+            return redirect()->route('vendor.employees.index')
+                ->with('error', 'This specialist has active or upcoming bookings and cannot be removed. Reassign or complete them first.');
+        }
+
         $employee->delete();
         return redirect()->route('vendor.employees.index')->with('success', 'Employee removed.');
     }

@@ -676,6 +676,13 @@
                             setTimeout(() => {
                                 window.dispatchEvent(new Event('trigger-notification-prompt'));
                             }, 500);
+                        } else if (response.status === 401) {
+                            // The server found the session authenticated against
+                            // an account that no longer exists and force-logged
+                            // it out (see BookingController@store) — only a
+                            // fresh login can fix it, nothing left to retry here.
+                            alert(result.error || 'Please log in again.');
+                            window.location.href = '{{ route('login') }}';
                         } else {
                             alert(result.error || 'Failed to complete booking.');
 

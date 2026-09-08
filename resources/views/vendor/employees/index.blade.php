@@ -51,6 +51,11 @@
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             </a>
                         @endif
+                        {{-- Public, no-login live status page for this specialist's
+                             own screen — running token / next appointment. --}}
+                        <a href="{{ $employee->display_url }}" target="_blank" rel="noopener" title="Open Screen Display" class="w-14 h-14 bg-indigo-500/20 text-indigo-300 rounded-xl hover:bg-indigo-500/30 transition-all flex items-center justify-center border border-indigo-500/30">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </a>
                         {{-- Start this specialist's queue over. Everyone still
                              waiting is cancelled and pushed a notification, so
                              the confirm names how many people that actually is

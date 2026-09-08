@@ -586,6 +586,43 @@ class BookingController extends Controller
             \Illuminate\Support\Facades\Log::warning('BookingController@store database conflict: ' . $e->getMessage());
 
             /*
+            | customer_id points at a users row that no longer exists, even
+            | though auth() resolved it at the top of this same request — the
+            | session is authenticated against an account that has since been
+            | removed (e.g. a test/duplicate account pruned directly in the
+            | database while the browser's session cookie was still live).
+            | Nothing on this platform ever deletes a user row itself, so
+            | this is a stale-session symptom, not a slot problem: force the
+            | logout so the next attempt re-authenticates against a real
+            | account, instead of retrying the same broken session forever.
+            */
+            if (str_contains($e->getMessage(), 'bookings_customer_id_foreign')) {
+                auth()->logout();
+                $request->session()->invalidate();
+
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'Your session is no longer valid. Please log in again to complete this booking.',
+                ], 401);
+            }
+
+            /*
+            | A foreign key failure (1452) is not a slot collision — it means
+            | the employee (or vendor) this booking pointed at stopped
+            | existing between the page loading and this submit reaching the
+            | database, e.g. the vendor removed that staff member moments
+            | earlier. Reporting it as "slot was just booked" sent the
+            | customer back to a screen where nothing was wrong with the
+            | slot, and retrying would only fail the same way again.
+            */
+            if (str_contains($e->getMessage(), 'a foreign key constraint fails')) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'The selected staff member is no longer available. Please refresh the page and choose another.',
+                ], 409);
+            }
+
+            /*
             | Only a time-slot shop can lose a slot to somebody else. A token
             | shop hands out sequential numbers — there is no time to choose and
             | nothing for a customer to do differently — so telling them to

@@ -344,3 +344,17 @@ Route::middleware(['auth', 'ensure.vendor.active'])->prefix('employee')->name('e
 });
 
 Route::get('/employee/{employee}', [\App\Http\Controllers\EmployeePublicBookingController::class, 'show'])->name('employee.public.show');
+
+/*
+| Screen-display pages — public, no auth. Meant to be left open on a shop's
+| own TV or monitor so a walk-in guest can read the live queue without
+| asking anyone. The vendor one slides through every active specialist; the
+| employee one is a single-specialist landing page for their own screen.
+| Each has a small JSON endpoint the page polls/refreshes from so a booking,
+| a cancellation or a specialist going on hold updates the screen without a
+| full reload.
+*/
+Route::get('/vendors/{vendor:slug}/display', [\App\Http\Controllers\DisplayController::class, 'vendor'])->name('vendor.display');
+Route::get('/vendors/{vendor:slug}/display/data', [\App\Http\Controllers\DisplayController::class, 'vendorData'])->name('vendor.display.data');
+Route::get('/employee/{employee}/display', [\App\Http\Controllers\DisplayController::class, 'employee'])->name('employee.display');
+Route::get('/employee/{employee}/display/data', [\App\Http\Controllers\DisplayController::class, 'employeeData'])->name('employee.display.data');

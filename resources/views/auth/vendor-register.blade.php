@@ -515,8 +515,7 @@
 
         {{-- Setup-walkthrough video modal. Autoplays once per browser session
              (see VendorRegistrationController::create()); "View Video Again"
-             next to the terms checkbox below reopens it any time afterwards.
-             Streamed straight from local storage — no YouTube embed. --}}
+             next to the terms checkbox below reopens it any time afterwards. --}}
         <div x-show="showVideoModal"
              x-cloak
              x-transition:enter="transition ease-out duration-300"
@@ -539,10 +538,8 @@
                 </p>
 
                 <div class="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black mb-6">
-                    <video class="w-full h-full" controls playsinline preload="metadata"
-                           poster="{{ asset('logo.png') }}">
-                        <source src="{{ route('videos.vendor-setup', 'part1') }}" type="video/mp4">
-                    </video>
+                    <iframe class="w-full h-full" src="https://www.youtube.com/embed/m-f6Yz2h0C0" title="Vendor Registration Walkthrough"
+                            frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                 </div>
 
                 <button @click="dismissVideoModal()"

@@ -181,7 +181,7 @@
             </p>
 
             <div class="w-full aspect-video rounded-2xl overflow-hidden border border-white/10 bg-black mb-6">
-                <iframe class="w-full h-full" src="https://www.youtube.com/embed/Wrj0YvUGD0M" title="Vendor Setup Guide"
+                <iframe class="w-full h-full" src="https://www.youtube.com/embed/xLia7zHJBOU" title="Vendor Setup Guide"
                         frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen></iframe>
             </div>

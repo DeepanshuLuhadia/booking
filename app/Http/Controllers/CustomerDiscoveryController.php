@@ -927,21 +927,25 @@ private function distanceKm(?float $lat1, ?float $lng1, ?float $lat2, ?float $ln
         $this->coordinate($vendor->longitude)
     );
 
-    // Check if vendor is beyond 50 km radius - always return JSON response if AJAX request
+    // The distance-warning popup is a client-side precheck: the frontend hits
+    // this same route with an AJAX request before navigating, and only shows
+    // the "vendor is far away" confirmation if this responds with a warning.
+    // A normal (non-AJAX) page load must never receive raw JSON here, or the
+    // browser renders it as text on a blank page — so it always falls through
+    // to the real vendor page below, out-of-range or not.
     $isAjaxRequest = $request->expectsJson() || $request->has('_check_distance');
 
-    if ($userLat !== null && $userLng !== null && $vendor->distance_km !== null && $vendor->distance_km > self::DISCOVERY_RADIUS_KM) {
-        return response()->json([
-            'distance_warning' => true,
-            'vendor_id' => $vendor->id,
-            'vendor_name' => $vendor->business_name,
-            'distance_km' => $vendor->distance_km,
-            'message' => "This vendor is {$vendor->distance_km} km away from your current location. Are you sure you want to continue?"
-        ]);
-    }
-
-    // For AJAX requests with no distance warning, return minimal JSON
     if ($isAjaxRequest) {
+        if ($userLat !== null && $userLng !== null && $vendor->distance_km !== null && $vendor->distance_km > self::DISCOVERY_RADIUS_KM) {
+            return response()->json([
+                'distance_warning' => true,
+                'vendor_id' => $vendor->id,
+                'vendor_name' => $vendor->business_name,
+                'distance_km' => $vendor->distance_km,
+                'message' => "This vendor is {$vendor->distance_km} km away from your current location. Are you sure you want to continue?"
+            ]);
+        }
+
         return response()->json([
             'distance_warning' => false,
             'vendor_id' => $vendor->id,
