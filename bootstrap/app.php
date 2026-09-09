@@ -16,6 +16,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->trustProxies(at: '*');
 
+        $middleware->validateCsrfTokens(except: [
+            'vendor/plans/callback',
+            'payment/razorpay/callback',
+            'api/*',
+        ]);
+
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         // Exempt location and notification cookies from encryption so JS-set

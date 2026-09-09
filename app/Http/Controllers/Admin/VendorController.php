@@ -149,4 +149,40 @@ class VendorController extends Controller
 
         return back()->with('success', "Vendor '{$vendor->business_name}' reinstated.");
     }
+
+    /**
+     * Comps a vendor who isn't on a paid autopay subscription: no charge
+     * until the given date, with access extended to match (never shortened).
+     * Refused for a vendor with a live Razorpay mandate — comps never touch
+     * a running paid subscription, only vendors without one (e.g. still on
+     * the Free plan).
+     */
+    public function grantFreeAccess(Request $request, Vendor $vendor, \App\Services\PaymentService $paymentService)
+    {
+        $data = $request->validate([
+            'free_days' => 'nullable|integer|min:1',
+            'free_until_date' => 'nullable|date|after:today',
+        ]);
+
+        $until = ($data['free_until_date'] ?? null)
+            ? \Carbon\Carbon::parse($data['free_until_date'])->endOfDay()
+            : (($data['free_days'] ?? null) ? now()->addDays((int) $data['free_days']) : null);
+
+        if (!$until) {
+            return back()->with('error', 'Provide either a number of free days or a target date.');
+        }
+
+        if (!$paymentService->grantFreeAccess($vendor, $until)) {
+            return back()->with('error', "{$vendor->business_name} has an active paid auto-renewal subscription — free access can only be granted to a vendor without one (e.g. still on the Free plan).");
+        }
+
+        return back()->with('success', "{$vendor->business_name} won't be charged until {$until->format('d M Y')}.");
+    }
+
+    public function endFreeAccess(Vendor $vendor, \App\Services\PaymentService $paymentService)
+    {
+        $paymentService->endFreeAccessNow($vendor);
+
+        return back()->with('success', "Free access ended for {$vendor->business_name}. Billing will resume normally.");
+    }
 }

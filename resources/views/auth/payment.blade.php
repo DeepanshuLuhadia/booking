@@ -71,10 +71,6 @@
                                             INITIALIZE RAZORPAY
                                             <svg class="w-8 h-8 transition-transform group-hover:translate-x-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                                         </button>
-
-                                        <button onclick="simulateSuccess()" class="w-full h-12 text-slate-400 hover:text-emerald-600 font-black italic text-[10px] uppercase tracking-[0.2em] transition-colors">
-                                            OR BYPASS FOR DEMO TESTING
-                                        </button>
                                     </div>
                                 @endif
                             </div>
@@ -86,7 +82,7 @@
             <form action="{{ route('payment.callback') }}" method="POST" id="payment-form" class="hidden">
                 @csrf
                 <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
-                <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                <input type="hidden" name="razorpay_subscription_id" id="razorpay_subscription_id">
                 <input type="hidden" name="razorpay_signature" id="razorpay_signature">
             </form>
 
@@ -94,23 +90,22 @@
             <script>
                 function simulateSuccess() {
                     document.getElementById('razorpay_payment_id').value = 'pay_demo_' + Math.random().toString(36).substr(2, 9);
-                    document.getElementById('razorpay_order_id').value = 'order_demo_' + Math.random().toString(36).substr(2, 9);
+                    document.getElementById('razorpay_subscription_id').value = 'sub_demo_' + Math.random().toString(36).substr(2, 9);
                     document.getElementById('razorpay_signature').value = 'simulated_signature';
                     document.getElementById('payment-form').submit();
                 }
 
                 document.addEventListener('DOMContentLoaded', function() {
-                    @if(isset($order))
+                    @if(isset($subscription))
                     var options = {
                         "key": "{{ $keyId ?? '' }}",
-                        "amount": "{{ $order->amount ?? 0 }}",
-                        "currency": "INR",
+                        "subscription_id": "{{ $subscription->id ?? '' }}",
                         "name": "{{ config('app.name') }}",
-                        "description": "Institutional Subscription: {{ $vendor->business_name }}",
-                        "order_id": "{{ $order->id ?? '' }}",
+                        "description": "Institutional Subscription: {{ $vendor->business_name }} (auto-renews yearly)",
+                        "recurring": 1,
                         "handler": function (response){
                             document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
-                            document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
+                            document.getElementById('razorpay_subscription_id').value = response.razorpay_subscription_id;
                             document.getElementById('razorpay_signature').value = response.razorpay_signature;
                             document.getElementById('payment-form').submit();
                         },

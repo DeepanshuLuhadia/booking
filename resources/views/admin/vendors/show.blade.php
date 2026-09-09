@@ -91,6 +91,39 @@
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Subscription Expires</p>
                         <p class="font-semibold text-slate-100 mt-1">{{ optional($vendor->subscription_expires_at)->format('M d, Y') ?? 'N/A' }}</p>
                     </div>
+                    @if($vendor->razorpay_subscription_id)
+                    <div>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Auto-Renewal (Autopay)</p>
+                        <span class="inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest
+                            {{ $vendor->razorpay_subscription_status === 'active' ? 'bg-emerald-50 text-emerald-600' : (in_array($vendor->razorpay_subscription_status, ['halted', 'cancelled']) ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500') }}">
+                            {{ ucfirst($vendor->razorpay_subscription_status ?? 'unknown') }}
+                        </span>
+                    </div>
+                    @endif
+
+                    @php
+                        $hasLiveAutopay = $vendor->razorpay_subscription_id && !in_array($vendor->razorpay_subscription_status, ['cancelled', 'completed']);
+                    @endphp
+                    <div class="pt-2 border-t border-white/10 space-y-3">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grant Free Access (No Charge)</p>
+                        @if($hasLiveAutopay)
+                            <p class="text-[10px] text-slate-500 italic">Not available &mdash; this vendor is on an active paid auto-renewal subscription. Comps only apply to vendors without one (e.g. still on the Free plan).</p>
+                        @elseif($vendor->free_access_until)
+                            <p class="text-emerald-400 font-bold text-xs">Free until {{ $vendor->free_access_until->format('M d, Y') }} &mdash; they'll be asked to choose a plan after that, same as any other expiry.</p>
+                            <form action="{{ route('admin.vendors.end-free-access', $vendor) }}" method="POST" class="m-0">
+                                @csrf
+                                <button type="submit" class="btn-outline w-full py-2 text-[10px] font-black uppercase tracking-widest rounded-lg" onclick="return confirm('End the free period now? Access will expire immediately.')">End Early</button>
+                            </form>
+                        @else
+                            <form action="{{ route('admin.vendors.grant-free-access', $vendor) }}" method="POST" class="grid grid-cols-2 gap-2 m-0">
+                                @csrf
+                                <input type="number" name="free_days" min="1" placeholder="Free days" class="glass-input rounded-lg px-3 py-2 text-xs font-semibold">
+                                <input type="date" name="free_until_date" class="glass-input rounded-lg px-3 py-2 text-xs font-semibold">
+                                <button type="submit" class="btn-primary col-span-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg">Grant Free Access</button>
+                            </form>
+                            <p class="text-[9px] text-slate-500">Fill either "free days" or a target date — not both.</p>
+                        @endif
+                    </div>
                     <div>
                         <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Token Booking</p>
                         <span class="inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest {{ $vendor->token_booking_enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-white/10 text-slate-400' }}">

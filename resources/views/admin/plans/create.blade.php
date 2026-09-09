@@ -13,16 +13,28 @@
                     <input type="text" name="name" required class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold" placeholder="e.g. Enterprise">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Price (₹)</label>
                         <input type="number" name="price" required class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold" placeholder="4999">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Billing Period</label>
+                        <select name="billing_period" class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold">
+                            <option value="yearly">Yearly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Max Employees</label>
                         <input type="number" name="max_employees" required class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold" placeholder="20">
                     </div>
                 </div>
+
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" name="is_active" value="1" checked class="w-5 h-5 rounded accent-blue-600">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Visible to vendors (uncheck to hide from signups/upgrades)</span>
+                </label>
 
                 <div id="features-container" class="space-y-3">
                     <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Plan Features</label>

@@ -262,7 +262,7 @@
                                             <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-white/40">/ 1 MONTH TRIAL</span>
                                         @else
                                             <span class="text-4xl font-black tracking-tighter italic">₹{{ number_format($plan->price) }}</span>
-                                            <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-white/40">/ YEAR</span>
+                                            <span class="pricing-cycle text-[9px] font-black uppercase tracking-widest text-white/40">/ {{ $plan->billing_period === 'monthly' ? 'MONTH' : 'YEAR' }}</span>
                                         @endif
                                     </div>
 
@@ -279,7 +279,7 @@
                                         @empty
                                             <div class="flex items-center gap-3">
                                                 <svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                                <span class="text-[10px] font-black uppercase tracking-widest">Up to {{ $plan->max_employees }} Staff Members</span>
+                                                <span class="text-[10px] font-black uppercase tracking-widest">Up to {{ $plan->max_employees }} {{ Str::plural('Staff Member', $plan->max_employees) }}</span>
                                             </div>
                                             <div class="flex items-center gap-3">
                                                 <svg class="w-4 h-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>

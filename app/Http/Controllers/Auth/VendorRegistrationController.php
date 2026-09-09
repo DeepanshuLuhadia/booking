@@ -62,7 +62,7 @@ class VendorRegistrationController extends Controller
             $referrer = Vendor::where('referral_code', $request->referral_code)->first();
         }
 
-        $plan = SubscriptionPlan::findOrFail($request->subscription_plan_id);
+        $plan = SubscriptionPlan::where('is_active', true)->findOrFail($request->subscription_plan_id);
         $isFreePlan = ($plan->price == 0);
 
         $user = User::create([

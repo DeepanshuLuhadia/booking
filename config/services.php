@@ -29,8 +29,12 @@ return [
     ],
 
     'razorpay' => [
-        'key' => env('RAZORPAY_KEY'),
-        'secret' => env('RAZORPAY_SECRET'),
+        // Matches the var names PaymentController/.env actually use — the previous
+        // RAZORPAY_KEY/RAZORPAY_SECRET names here were never set anywhere, so
+        // config('services.razorpay.*') always resolved to null.
+        'key' => env('RAZORPAY_KEY_ID'),
+        'secret' => env('RAZORPAY_KEY_SECRET'),
+        'webhook_secret' => env('RAZORPAY_WEBHOOK_SECRET'),
     ],
 
     'google' => [

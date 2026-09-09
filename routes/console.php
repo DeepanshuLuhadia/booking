@@ -36,6 +36,18 @@ Schedule::call(function (ShiftService $shifts) {
 Schedule::command('app:send-appointment-reminders')->everyTenMinutes();
 
 /*
+| Subscription expiry reminders: emails vendors 5 days and 1 day before
+| subscription_expires_at. Runs once a day — the command itself dedupes
+| per (vendor, expiry date, days-before) so a second run the same day is
+| a no-op even without withoutOverlapping(). onOneServer() guards against
+| the cron entry running on every EC2 instance if this environment ever
+| scales beyond one — without it, every instance would fire this at 09:00
+| and could each send the same vendor a duplicate email in the race
+| between the dedupe check and the DB insert.
+*/
+Schedule::command('app:send-subscription-expiry-reminders')->dailyAt('09:00')->onOneServer();
+
+/*
 | Closed shop = clean queue. Runs every minute rather than once at midnight:
 | a shop that shuts at 8 PM should not carry "now serving #14" until the small
 | hours, and a shop trading through midnight must NOT be reset mid-service.

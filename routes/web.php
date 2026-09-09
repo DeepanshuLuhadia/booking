@@ -187,7 +187,7 @@ Route::post('/logout', [SessionController::class, 'destroy'])->name('logout');
 // Payment
 Route::middleware(['auth'])->group(function () {
     Route::get('/payment/razorpay', [\App\Http\Controllers\PaymentController::class, 'show'])->name('payment.razorpay');
-    Route::post('/payment/razorpay/callback', [\App\Http\Controllers\PaymentController::class, 'callback'])->name('payment.callback');
+    Route::match(['get', 'post'], '/payment/razorpay/callback', [\App\Http\Controllers\PaymentController::class, 'callback'])->name('payment.callback');
 });
 
 // Vendor Panel
@@ -257,8 +257,9 @@ Route::middleware(['auth', 'subscription.active'])->prefix('vendor')->group(func
     Route::post('/reviews/{review}/report', [\App\Http\Controllers\Vendor\ReviewController::class, 'report'])->name('vendor.reviews.report');
 
     Route::resource('/employees', \App\Http\Controllers\Vendor\EmployeeController::class, ['as' => 'vendor']);
-    Route::post('/plans/{plan}/checkout', [\App\Http\Controllers\PaymentController::class, 'planCheckout'])->name('vendor.plan.checkout');
-    Route::post('/plans/callback', [\App\Http\Controllers\PaymentController::class, 'planCallback'])->name('vendor.plan.callback');
+    Route::match(['get', 'post'], '/plans/{plan}/checkout', [\App\Http\Controllers\PaymentController::class, 'planCheckout'])->name('vendor.plan.checkout');
+    Route::match(['get', 'post'], '/plans/callback', [\App\Http\Controllers\PaymentController::class, 'planCallback'])->name('vendor.plan.callback');
+    Route::post('/plans/cancel-autopay', [\App\Http\Controllers\PaymentController::class, 'cancelAutopay'])->name('vendor.plan.cancel-autopay');
 
     // Printable QR posters — presentation only, built from the QR codes
     // QRCodeService already generated. See QrPosterController.
@@ -294,11 +295,14 @@ Route::middleware(['auth', 'admin.only'])->prefix('admin')->group(function () {
     Route::get('/reports/export', [\App\Http\Controllers\Admin\ReportController::class, 'export'])->name('admin.reports.export');
 
     Route::resource('/plans', \App\Http\Controllers\Admin\PlanController::class, ['as' => 'admin']);
+    Route::patch('/plans/{plan}/toggle-active', [\App\Http\Controllers\Admin\PlanController::class, 'toggleActive'])->name('admin.plans.toggle-active');
     Route::resource('/vendors', \App\Http\Controllers\Admin\VendorController::class, ['as' => 'admin'])->only(['index', 'show', 'destroy', 'update']);
     Route::post('/vendors/{vendor}/approve',   [\App\Http\Controllers\Admin\VendorController::class, 'approve'])->name('admin.vendors.approve');
     Route::post('/vendors/{vendor}/reject',    [\App\Http\Controllers\Admin\VendorController::class, 'reject'])->name('admin.vendors.reject');
     Route::post('/vendors/{vendor}/suspend',   [\App\Http\Controllers\Admin\VendorController::class, 'suspend'])->name('admin.vendors.suspend');
     Route::post('/vendors/{vendor}/reinstate', [\App\Http\Controllers\Admin\VendorController::class, 'reinstate'])->name('admin.vendors.reinstate');
+    Route::post('/vendors/{vendor}/grant-free-access', [\App\Http\Controllers\Admin\VendorController::class, 'grantFreeAccess'])->name('admin.vendors.grant-free-access');
+    Route::post('/vendors/{vendor}/end-free-access', [\App\Http\Controllers\Admin\VendorController::class, 'endFreeAccess'])->name('admin.vendors.end-free-access');
     Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('admin.reviews.index');
     Route::delete('/reviews/{review}', [\App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
     Route::post('/reviews/{review}/unreport', [\App\Http\Controllers\Admin\ReviewController::class, 'unreport'])->name('admin.reviews.unreport');

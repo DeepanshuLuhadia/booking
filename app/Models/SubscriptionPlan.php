@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SubscriptionPlan extends Model
 {
-    protected $fillable = ['name', 'price', 'max_employees', 'features', 'is_active'];
+    protected $fillable = ['name', 'price', 'max_employees', 'features', 'is_active', 'billing_period', 'razorpay_plan_id'];
     protected $casts = [
         'features' => 'array',
         'is_active' => 'boolean',

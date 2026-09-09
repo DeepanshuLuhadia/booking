@@ -14,16 +14,32 @@
                     <input type="text" name="name" value="{{ $plan->name }}" required class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Price (₹)</label>
                         <input type="number" name="price" value="{{ $plan->price }}" required class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Billing Period</label>
+                        <select name="billing_period" class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold">
+                            <option value="yearly" {{ $plan->billing_period === 'yearly' ? 'selected' : '' }}>Yearly</option>
+                            <option value="monthly" {{ $plan->billing_period === 'monthly' ? 'selected' : '' }}>Monthly</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Max Employees</label>
                         <input type="number" name="max_employees" value="{{ $plan->max_employees }}" required class="w-full glass-input min-h-[2.75rem] rounded-xl px-4 py-2.5 text-sm font-semibold">
                     </div>
                 </div>
+
+                @if($plan->price > 0 && $plan->razorpay_plan_id)
+                <p class="text-[10px] font-bold text-amber-400/80 italic">Changing price or period here starts a fresh Razorpay Plan for new checkouts only — vendors already subscribed keep their current price until they re-subscribe.</p>
+                @endif
+
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" name="is_active" value="1" {{ $plan->is_active ? 'checked' : '' }} class="w-5 h-5 rounded accent-blue-600">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Visible to vendors (uncheck to hide from signups/upgrades)</span>
+                </label>
 
                 <div id="features-container" class="space-y-3">
                     <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Plan Features</label>

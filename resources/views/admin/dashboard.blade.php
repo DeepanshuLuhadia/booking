@@ -95,7 +95,7 @@
                         <ul class="text-xs font-semibold text-slate-400 space-y-2.5 mb-6">
                             <li class="flex items-center gap-2">
                                 <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                                Up to {{ $plan->max_employees }} employees
+                                Up to {{ $plan->max_employees }} {{ Str::plural('employee', $plan->max_employees) }}
                             </li>
                             @foreach($plan->features as $feature)
                                 <li class="flex items-center gap-2">

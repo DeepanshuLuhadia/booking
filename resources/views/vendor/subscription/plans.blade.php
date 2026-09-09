@@ -16,7 +16,7 @@
                         <h3 class="text-2xl font-black italic text-white uppercase tracking-tighter mb-2">{{ $plan->name }}</h3>
                         <div class="flex items-baseline gap-2">
                             <span class="text-4xl font-black italic text-blue-600">₹{{ number_format($plan->price) }}</span>
-                            <span class="text-[9px] font-black text-slate-300 uppercase italic tracking-widest">/ Cycle</span>
+                            <span class="text-[9px] font-black text-slate-300 uppercase italic tracking-widest">/ {{ $plan->billing_period === 'monthly' ? 'Month' : 'Year' }}</span>
                         </div>
                     </div>
 
@@ -49,4 +49,23 @@
             </div>
         @endforeach
     </div>
+
+    @if($vendor->razorpay_subscription_id && !in_array($vendor->razorpay_subscription_status, ['cancelled', 'completed']))
+    <div class="glass-card p-8 mt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest italic mb-1">Auto-Renewal</p>
+            <p class="text-sm font-black text-white italic">
+                Your plan renews itself automatically each year via UPI Autopay.
+                @if($vendor->subscription_expires_at)
+                    Next charge around {{ $vendor->subscription_expires_at->format('d M Y') }}.
+                @endif
+            </p>
+        </div>
+        <form action="{{ route('vendor.plan.cancel-autopay') }}" method="POST"
+              onsubmit="return confirm('Stop auto-renewal? Your plan stays active until it expires, but will not renew itself after that.');">
+            @csrf
+            <button type="submit" class="btn-outline h-12 px-8 justify-center text-rose-400 border-rose-400/30 hover:bg-rose-400/10">Cancel Auto-Renewal</button>
+        </form>
+    </div>
+    @endif
 </x-vendor-layout>

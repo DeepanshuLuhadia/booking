@@ -34,7 +34,9 @@ class SecurityHeaders
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: blob: https:",
             "connect-src 'self' https: wss:",
-            "frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://accounts.google.com https://checkout.razorpay.com",
+            // api.razorpay.com is where Checkout.js actually opens the payment
+            // modal iframe; checkout.razorpay.com is only the script host.
+            "frame-src 'self' https://www.youtube.com https://www.google.com https://maps.google.com https://accounts.google.com https://checkout.razorpay.com https://api.razorpay.com",
             "frame-ancestors 'self'",
             "object-src 'none'",
             "base-uri 'self'",

@@ -28,20 +28,20 @@ class InitialDataSeeder extends Seeder
             [
                 'name' => 'Basic',
                 'price' => 199,
-                'max_employees' => 2,
-                'features' => ['Up to 2 employees', 'Basic analytics', 'Online bookings', 'QR Code'],
+                'max_employees' => 1,
+                'features' => ['Up to 1 employee', 'Basic analytics', 'Online bookings', 'QR Code'],
             ],
             [
                 'name' => 'Standard',
                 'price' => 299,
-                'max_employees' => 5,
-                'features' => ['Up to 5 employees', 'Pro analytics', 'Online bookings', 'Priority support', 'QR Code'],
+                'max_employees' => 3,
+                'features' => ['Up to 3 employees', 'Pro analytics', 'Online bookings', 'Priority support', 'QR Code'],
             ],
             [
                 'name' => 'Premium',
                 'price' => 399,
-                'max_employees' => 15,
-                'features' => ['Up to 15 employees', 'Advanced analytics', 'Online bookings', 'Dedicated account manager', 'QR Code'],
+                'max_employees' => 5,
+                'features' => ['Up to 5 employees', 'Advanced analytics', 'Online bookings', 'Dedicated account manager', 'QR Code'],
             ],
         ];
 
