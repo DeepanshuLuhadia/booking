@@ -154,6 +154,29 @@ class ShiftService
     }
 
     /**
+     * Is this specific employee inside their own working window right now?
+     *
+     * Uses employeeShift() (already clamped to the vendor's hours), so a
+     * specialist who clocks off before the shop's own closing time reads as
+     * closed on their own screen even while the shop itself is still open —
+     * the one-employee display is meant to answer "is *this* person taking
+     * customers", not "is the shop trading".
+     */
+    public function isWithinEmployeeWorkingHours(Employee $employee, ?Vendor $vendor = null, ?Carbon $now = null): bool
+    {
+        $now   = $now ? $now->copy() : Carbon::now();
+        $shift = $this->employeeShift($employee, $vendor, $now);
+
+        if (!$shift) {
+            return false;
+        }
+
+        [, $start, $end] = $shift;
+
+        return $now->gte($start) && $now->lte($end);
+    }
+
+    /**
      * Has the shift finished, including the post-close grace period? Drives the
      * queue reset, so a shop that has just shut still shows its last token for
      * a few minutes rather than blanking mid-service.

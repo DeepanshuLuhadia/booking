@@ -324,6 +324,16 @@ Route::middleware(['auth', 'admin.only'])->prefix('admin')->group(function () {
     Route::get('/settlements', [\App\Http\Controllers\Admin\SettlementController::class, 'index'])->name('admin.settlements.index');
     Route::get('/settlements/{id}', [\App\Http\Controllers\Admin\SettlementController::class, 'show'])->name('admin.settlements.show');
     Route::post('/settlements/{id}/mark-paid', [\App\Http\Controllers\Admin\SettlementController::class, 'markAsPaid'])->name('admin.settlements.markAsPaid');
+
+    // Nightly DB backups (config/backup.php) plus an on-demand trigger.
+    Route::get('/backups', [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('admin.backups.index');
+    Route::post('/backups', [\App\Http\Controllers\Admin\BackupController::class, 'store'])->name('admin.backups.store');
+    Route::get('/backups/{filename}/download', [\App\Http\Controllers\Admin\BackupController::class, 'download'])
+        ->where('filename', '[A-Za-z0-9._-]+')
+        ->name('admin.backups.download');
+    Route::delete('/backups/{filename}', [\App\Http\Controllers\Admin\BackupController::class, 'destroy'])
+        ->where('filename', '[A-Za-z0-9._-]+')
+        ->name('admin.backups.destroy');
 });
 
 // Employee Panel

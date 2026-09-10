@@ -18,18 +18,21 @@
         </include>
     </source>
     <php>
-        <env name="APP_ENV" value="testing"/>
+        <env name="APP_ENV" value="production"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_HOST" value="apnibaaridb.cva2mkiywg34.ap-south-1.rds.amazonaws.com"/>
         <env name="DB_PORT" value="3306"/>
-        <env name="DB_DATABASE" value="online_booking_test"/>
+        <env name="DB_DATABASE" value="apnibaari"/>
         <env name="DB_USERNAME" value="root"/>
-        <env name="DB_PASSWORD" value="root"/>
+        <env name="DB_PASSWORD" value="OMf0E3xdmQ3XqUAhuKPe"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="RAZORPAY_KEY_ID" value="rzp_test_phpunit"/>
+        <env name="RAZORPAY_KEY_SECRET" value="phpunit_test_key_secret"/>
+        <env name="RAZORPAY_WEBHOOK_SECRET" value="phpunit_test_webhook_secret"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

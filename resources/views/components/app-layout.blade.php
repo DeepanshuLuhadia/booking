@@ -83,7 +83,7 @@
         // inside that window got written instructions instead of the real dialog.
         // register() is async and does not block rendering.
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/firebase-messaging-sw.js?v=7').catch(function () {});
+            navigator.serviceWorker.register('/firebase-messaging-sw.js?v=8').catch(function () {});
         }
     </script>
 
@@ -1430,7 +1430,7 @@
                     {{--  <div class="nav-brand-mark w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl theme-gradient-bg flex items-center justify-center text-white text-xl md:text-2xl font-black theme-glow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
                         {{ $theme['icon'] ?? 'B' }}
                     </div>--}}
-                    <img src="{{ asset('logo.png') }}?v=2" alt="Logo" class="h-12 sm:h-14 md:h-[75px] w-auto max-w-full object-contain">
+                    <img src="{{ asset('logo.png') }}?v=3" alt="Logo" class="h-12 sm:h-14 md:h-[75px] w-auto max-w-full object-contain">
                     {{--<span class="text-xl md:text-2xl font-black tracking-tighter text-white whitespace-nowrap">
                          {{ config('brand.logo_prefix') }}<span class="nav-brand-word theme-gradient-text">{{ config('brand.logo_suffix') }}</span>
                     </span>--}}
@@ -1825,10 +1825,10 @@
 
     <!-- Toast Notifications -->
     <div x-data="{
-        show: false, message: '', type: 'success', timer: null,
-        triggerToast(msg, type = 'success', playSound = false) {
-            this.message = msg; this.type = type; this.show = true;
-            
+        show: false, message: '', type: 'success', timer: null, url: null,
+        triggerToast(msg, type = 'success', playSound = false, url = null) {
+            this.message = msg; this.type = type; this.show = true; this.url = url;
+
             if (playSound) {
                 let sound = document.getElementById('notification-sound');
                 if (sound) {
@@ -1858,9 +1858,10 @@
             @endif
         }
     }"
-    @toast.window="triggerToast($event.detail.message, $event.detail.type, $event.detail.sound)"
+    @toast.window="triggerToast($event.detail.message, $event.detail.type, $event.detail.sound, $event.detail.url)"
     class="fixed bottom-12 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
         <div x-show="show"
+             @click="if (url) { window.location.href = url; }"
              x-transition:enter="transition ease-out duration-500"
              x-transition:enter-start="opacity-0 translate-y-20 scale-90"
              x-transition:enter-end="opacity-100 translate-y-0 scale-100"
@@ -1871,7 +1872,8 @@
              :class="{
                 'bg-emerald-600/90 text-white border-emerald-400/30': type === 'success',
                 'bg-rose-600/90 text-white border-rose-400/30': type === 'error',
-                'bg-blue-600/90 text-white border-blue-400/30': type === 'info'
+                'bg-blue-600/90 text-white border-blue-400/30': type === 'info',
+                'cursor-pointer': url
              }" x-cloak>
             <div class="w-10 h-10 rounded-2xl bg-white/5/20 flex items-center justify-center shrink-0">
                 <template x-if="type === 'success'"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></template>
@@ -1935,7 +1937,7 @@
                 if (!messaging) return;
                 
                 if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=7')
+                    navigator.serviceWorker.register('/firebase-messaging-sw.js?v=8')
                         .then((registration) => {
                             messaging.useServiceWorker(registration);
                             return messaging.getToken({ vapidKey: "{{ env('FIREBASE_VAPID_KEY', 'YOUR_VAPID_KEY') }}" });
@@ -1969,10 +1971,21 @@
             };
 
             if (messaging) {
-                // On foreground message
+                // On foreground message. Payload is data-only (see FcmService),
+                // so title/body/url all come from payload.data — and the toast
+                // is clickable straight to that url, same destination a
+                // background push would open.
                 messaging.onMessage((payload) => {
                     console.log('Message received. ', payload);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: { message: payload.notification.title + ': ' + payload.notification.body, type: 'info', sound: true } }));
+                    const data = payload.data || {};
+                    window.dispatchEvent(new CustomEvent('toast', {
+                        detail: {
+                            message: (data.title || 'Notification') + ': ' + (data.body || ''),
+                            type: 'info',
+                            sound: true,
+                            url: data.url || null
+                        }
+                    }));
                 });
             }
 

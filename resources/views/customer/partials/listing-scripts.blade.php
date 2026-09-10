@@ -191,7 +191,7 @@
 
                     if (query === lastQuery) { show(); return; }
 
-                    debounce = setTimeout(() => load(query), 2000);
+                    debounce = setTimeout(() => load(query), 500);
                 };
 
                 input.addEventListener('input', onType);

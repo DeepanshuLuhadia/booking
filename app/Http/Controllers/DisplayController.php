@@ -124,6 +124,9 @@ class DisplayController extends Controller
             'photo_url'        => $employee->photo ? asset('storage/' . $employee->photo) : null,
             'is_active'        => (bool) $employee->is_active,
             'is_paused'        => (bool) $employee->is_paused,
+            // This employee's own working-hours window, not the shop's — a
+            // specialist off shift reads as closed even while the shop trades on.
+            'is_open'          => $this->shifts->isWithinEmployeeWorkingHours($employee, $vendor),
             'mode'             => $mode,
             'now_serving'      => $serving['now_serving'],
             'is_serving'       => $serving['is_serving'],

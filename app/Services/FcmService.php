@@ -70,18 +70,27 @@ class FcmService
 
         $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
 
+        // Sent as a data-only message (no top-level/webpush `notification` block)
+        // so the browser never auto-displays it and Firebase's own click handling
+        // never engages. That leaves display and click navigation entirely to our
+        // service worker (public/firebase-messaging-sw.js), which is the only way
+        // to guarantee a background push opens the right page instead of relying
+        // on the FCM SDK's undocumented default (which silently opens '/' when a
+        // caller forgot to pass a `url`, and can't be pointed at a specific record).
+        $payload = array_merge($data, [
+            'title' => $title,
+            'body' => $body,
+            'url' => $data['url'] ?? url('/'),
+        ]);
+
         $message = [
             'message' => [
                 'token' => $token,
-                'notification' => [
-                    'title' => $title,
-                    'body' => $body,
-                ],
                 // FCM data payload requires all values to be strings AND the field to be a
                 // JSON object. Casting to (object) makes an empty array serialize as {} rather
                 // than [] — otherwise FCM rejects the whole message with INVALID_ARGUMENT
                 // ("Cannot bind a list to map for field 'data'").
-                'data' => (object) array_map('strval', $data),
+                'data' => (object) array_map('strval', $payload),
                 'android' => [
                     'notification' => [
                         'sound' => 'default',
@@ -92,19 +101,6 @@ class FcmService
                         'aps' => [
                             'sound' => 'default',
                         ],
-                    ],
-                ],
-                'webpush' => [
-                    'notification' => [
-                        'sound' => '/audio/notification.wav',
-                        'icon' => '/favicon.ico',
-                    ],
-                    // The URL the browser opens/focuses when the user taps the
-                    // system notification. Without this, tapping a background
-                    // push does nothing — the whole point of the notification
-                    // (get vendor/customer to the screen it's about) is lost.
-                    'fcm_options' => [
-                        'link' => $data['url'] ?? url('/'),
                     ],
                 ],
             ],

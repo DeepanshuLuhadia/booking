@@ -96,13 +96,13 @@
                 </div>
             </div>
         @empty
-            <div class="col-span-full bg-white/5 p-24 text-center border-4 border-dashed border-white/10 rounded-[4rem]">
+            <div class="col-span-full bg-white/5 p-8 sm:p-16 md:p-24 text-center border-4 border-dashed border-white/10 rounded-[2.5rem] md:rounded-[4rem]">
                 <div class="opacity-10 mb-8 flex justify-center">
-                    <svg class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg class="h-16 w-16 md:h-20 md:w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                 </div>
-                <p class="text-xl font-black text-slate-300 uppercase italic tracking-widest mb-10">Roster Empty</p>
+                <p class="text-lg md:text-xl font-black text-slate-300 uppercase italic tracking-widest mb-10">Roster Empty</p>
                 <a @if($vendor->isProfileComplete()) href="{{ route('vendor.employees.create') }}" @endif
-                   class="px-12 py-5 bg-slate-900 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all italic shadow-2xl shadow-slate-900/20 {{ !$vendor->isProfileComplete() ? 'opacity-20 cursor-not-allowed grayscale' : '' }}">Initialize Team</a>
+                   class="inline-flex items-center justify-center w-full sm:w-auto px-6 sm:px-12 py-5 bg-slate-900 text-white rounded-[2rem] text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all italic shadow-2xl shadow-slate-900/20 whitespace-nowrap {{ !$vendor->isProfileComplete() ? 'opacity-20 cursor-not-allowed grayscale' : '' }}">Initialize Team</a>
             </div>
         @endforelse
     </div>

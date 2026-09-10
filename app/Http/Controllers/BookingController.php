@@ -510,7 +510,12 @@ class BookingController extends Controller
                 $notificationService->sendWebPush(
                     $dummyUser,
                     $title,
-                    "Your appointment with {$employee->name} at {$vendor->business_name} is confirmed."
+                    "Your appointment with {$employee->name} at {$vendor->business_name} is confirmed.",
+                    [
+                        'booking_id'   => $booking->id,
+                        'token_number' => $booking->token_number,
+                        'url'          => route('bookings.mine'),
+                    ]
                 );
             }
 

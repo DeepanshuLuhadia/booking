@@ -13,8 +13,8 @@ return [
     |
     */
 
-    'admin_email' => env('ADMIN_CONTACT_EMAIL', 'support@bookappointment.com'),
+    'admin_email' => env('ADMIN_CONTACT_EMAIL', 'apnibaari.support@gmail.com'),
 
-    'admin_phone' => env('ADMIN_CONTACT_PHONE', '+911234567890'),
+    'admin_phone' => env('ADMIN_CONTACT_PHONE', '+917610090041'),
 
 ];

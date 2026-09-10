@@ -29,11 +29,17 @@ try {
 
   const messaging = firebase.messaging();
 
+  // Messages are sent data-only (see FcmService::sendToToken) precisely so that
+  // nothing is auto-displayed by the browser/SDK — we own display AND click
+  // navigation here, end to end, instead of depending on FCM's undocumented
+  // default click behaviour (which only ever opens '/').
   messaging.onBackgroundMessage(function (payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    const title = (payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'Notification';
-    const body = (payload.notification && payload.notification.body) || (payload.data && payload.data.body) || '';
+    const data = payload.data || {};
+    const title = data.title || 'Notification';
+    const body = data.body || '';
+    const url = data.url || '/';
 
     // Play sound in open clients if there are any
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
@@ -46,10 +52,40 @@ try {
       });
     });
 
-    // Note: We do NOT call self.registration.showNotification here because the Firebase SDK
-    // automatically detects the 'notification' payload in the message and displays the
-    // notification in the background to prevent duplicates.
+    return self.registration.showNotification(title, {
+      body: body,
+      icon: '/favicon.ico',
+      data: { url: url }
+    });
   });
 } catch (e) {
   console.error('[firebase-messaging-sw.js] Firebase init failed (SW still valid):', e);
 }
+
+// The single owner of "what happens when a background notification is
+// tapped" — opens the page the notification is actually about (a booking,
+// a vendor's queue, an admin record) instead of just focusing/opening the
+// site root. Guest customers get this too: their push carries the same
+// `url` (built server-side in NotificationService) as a signed-in user's.
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+
+  const url = (event.notification.data && event.notification.data.url) || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
+      for (const client of clients) {
+        // Reuse an already-open tab on the same origin rather than piling up
+        // new ones — most vendors keep the dashboard open all day.
+        if (client.url && new URL(client.url).origin === self.location.origin && 'focus' in client) {
+          client.focus();
+          if ('navigate' in client) {
+            return client.navigate(url);
+          }
+          return;
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});

@@ -108,6 +108,13 @@
                 </svg>
                 <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Site Settings</span>
             </a>
+            <a href="{{ route('admin.backups.index') }}"
+                class="flex items-center gap-4 px-6 py-4 rounded-2xl transition-all {{ request()->routeIs('admin.backups.*') ? 'bg-white/5 text-white shadow-sm' : 'text-slate-300 hover:bg-white/5/50' }}">
+                <svg class="h-5 w-5 {{ request()->routeIs('admin.backups.*') ? 'text-white' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7c0-1.657 3.582-3 8-3s8 1.343 8 3-3.582 3-8 3-8-1.343-8-3zm0 0v10c0 1.657 3.582 3 8 3s8-1.343 8-3V7m-16 5c0 1.657 3.582 3 8 3s8-1.343 8-3" />
+                </svg>
+                <span class="font-black italic uppercase tracking-widest text-[11px] whitespace-nowrap">Backups</span>
+            </a>
             <x-install-app-button variant="mobile" />
             <div class="h-px bg-white/10 mx-6 my-2"></div>
         </div>
@@ -201,6 +208,12 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Site Settings</span>
+                </a>
+
+                <a href="{{ route('admin.backups.index') }}"
+                    class="flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 {{ request()->routeIs('admin.backups.*') ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/30' : 'text-slate-400 hover:bg-white/5 hover:translate-x-1' }}">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7c0-1.657 3.582-3 8-3s8 1.343 8 3-3.582 3-8 3-8-1.343-8-3zm0 0v10c0 1.657 3.582 3 8 3s8-1.343 8-3V7m-16 5c0 1.657 3.582 3 8 3s8-1.343 8-3" /></svg>
+                    <span class="font-black italic uppercase tracking-widest text-[10px] whitespace-nowrap">Backups</span>
                 </a>
 
                 <x-install-app-button variant="desktop" />
